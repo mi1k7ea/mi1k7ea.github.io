@@ -1,0 +1,577 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Java,Struts2,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Struts2基础篇之基本概念 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Struts2基础篇之基本概念
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-06-27T07:53:24.000Z">
+        2020-06-27
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Struts2/">Struts2</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-参考"><a href="#0x00-参考" class="headerlink" title="0x00 参考"></a>0x00 参考</h2><p>本笔记直接参考或引自如下链接文章：</p>
+<p><a href="http://c.biancheng.net/struts2/" target="_blank" rel="noopener">http://c.biancheng.net/struts2/</a></p>
+<p><a href="https://www.w3cschool.cn/struts_2/" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/</a></p>
+<h2 id="0x01-Struts2简介"><a href="#0x01-Struts2简介" class="headerlink" title="0x01 Struts2简介"></a>0x01 Struts2简介</h2><p>Struts2 是 Apache 软件组织推出的一个基于 MVC 模式的轻量级 Web 框架，自问世以来，就受到了广大 Web 开发者的欢迎。目前，Struts2 在 Java Web 开发领域中已占据了十分重要的地位。</p>
+<p>目前为止，Struts 框架拥有两个主要版本：Struts1.x 和 Struts2.x。Struts1 是最早的基于 MVC 模式的轻量级 Web 框架，它能够合理划分代码结构，并包含验证框架、国际化框架等多种实用工具框架。</p>
+<p>随着技术的不断进步，Struts1 的局限性也越来越多地暴露出来。为了符合更加灵活、高效的开发需求，Struts2 框架应运而生，并在逐渐取代 Struts1 框架。</p>
+<p>Struts2 是在 Struts1 和 WebWork 技术（WebWork 是由 OpenSymphony 组织开发的、致力于组件化和代码重用的 J2EE Web 框架，它也是一个 MVC 框架）的基础上进行合并后的全新框架。</p>
+<p>虽然 Struts2 的名字与 Struts1 相似，但其设计思想有很大不同，因为 Struts2 是以 WebWork 为核心的，它是 WebWork 技术与 Struts1 技术的结合，所以 Struts2 可以理解为 WebWork 的更新产品。</p>
+<p>Struts2的优点如下：</p>
+<ul>
+<li><strong>POJO表单及POJO操作</strong> - Struts2 去除掉了Struts框架中的Action Forms部分。在Struts2框架下，你可以用任何一POJO来接收表单输入，同样的，你可以把任一POJO视为一个Action类。</li>
+<li><strong>标签支持</strong> - Struts2 改进了标签表单，而新的标签可让开发人员减少代码编写量。</li>
+<li><strong>AJAX支持</strong> - Struts2 被认可接收进Web 2.0技术，并创建了功能非常类似于标准的Struts2 标签的AJAX标签，把AJAX支持整合进其结果中。</li>
+<li><strong>易于整合</strong> - Struts有多种整合方式可使用，现在与其他类型的框架，如Spring、Tiles、SiteMesh之类的，整合更为容易了。</li>
+<li><strong>模板支持</strong> - 支持使用模板生成视图。</li>
+<li><strong>插件支持</strong> - 有大量的插件可用于Struts2，而使用插件可以增强和扩大Struts2 核心行为。</li>
+<li><strong>性能分析</strong> - Struts2 为调试和配置应用程序提供综合的性能分析，此外，Struts也以嵌入调试工具的形式提供集成调试。</li>
+<li><strong>易于修改标签</strong> - 在Struts2 中，可使用Freemarker的模板对标签标记进行调整，而修改标签不需要JSP或是Java知识，基本的HTML、XML和CSS知识就足够了。</li>
+<li><strong>促进减少配置</strong> - Struts2 使用各种设置的默认值促进减少配置，而你不需要再配置什么除非是偏离了Struts2 设定的默认设置。</li>
+<li><strong>视图技术</strong> - Struts2 为多种视图选项（JSP、Freemarker、Velocity、XSLT等）提供支持。</li>
+</ul>
+<p>尽管Struts2 有一大列的优点，但我们还是要提到关于它的一些仍需不断改进的缺点：</p>
+<ul>
+<li><strong>更大的学习曲线</strong> - 使用Struts MVC，你必须要熟悉JSP、Servlet APIs标准以及一个大型、复杂的框架。</li>
+<li><strong>文档缺乏</strong> - 相比于Servlet和JSP APIs标准，Struts的在线资源较少，许多初学者会发现Apache在线文档混乱并缺乏整理。</li>
+<li><strong>不够透明</strong> - 相比于使用正常的基于Java的Web应用程序，使用Struts的应用程序有许多是进行在后台，这使得框架不易于理解。</li>
+</ul>
+<p>最后说明一点，一个好的框架应该提供各种类型的应用程序都可以使用的通用行为，Struts2 是最好的Web框架之一，并频繁用于RIA（Rich Internet Applications）的发展。</p>
+<h2 id="0x02-Struts2目录结构和基础Jar包"><a href="#0x02-Struts2目录结构和基础Jar包" class="headerlink" title="0x02 Struts2目录结构和基础Jar包"></a>0x02 Struts2目录结构和基础Jar包</h2><p>Struts2 的官方下载网址为：<a href="http://struts.apache.org" target="_blank" rel="noopener">http://struts.apache.org</a></p>
+<p>这里下载2.3.37版本来演示。</p>
+<h3 id="目录结构"><a href="#目录结构" class="headerlink" title="目录结构"></a>目录结构</h3><p>下载成功后，将 struts-2.3.37-all.zip 压缩包进行解压，解压后的目录如图：</p>
+<p><img src="/2020/06/27/Struts2基础篇之基本概念/2.png" alt=""></p>
+<p>各个目录介绍如下表：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>apps</td>
+<td>用于存放官方提供的 Struts2 示例程序，这些程序可以作为学习者的参考资料。各示例均为 war 文件，可以通过 zip 方式进行解压。</td>
+</tr>
+<tr>
+<td>docs</td>
+<td>用于存放官方提供的 Struts2 文档，包括 Struts2 的快速入门、Struts2 的文档，以及 API 文档等内容。</td>
+</tr>
+<tr>
+<td>lib</td>
+<td>用于存放 Struts2 的核心类库，以及 Struts2 的第三方插件类库。</td>
+</tr>
+<tr>
+<td>src</td>
+<td>用于存放该版本 Struts2 框架对应的源代码。</td>
+</tr>
+</tbody>
+</table>
+<p>打开其中的lib目录，可以看到 Struts2 开发中可能用到的所有 JAR 包（此版本有 106 个 JAR 包）。在一般的 Web 开发中，只需要将 lib 文件夹下所依赖的几个基础 JAR 包复制到 Web 项目的 WEB-INF/lib 路径下即可使用 Struts2 框架。</p>
+<p>下面看看几个基础的Jar包。</p>
+<h3 id="基础Jar包"><a href="#基础Jar包" class="headerlink" title="基础Jar包"></a>基础Jar包</h3><p>Struts2 2.3.37版本依赖的 JAR 包介绍如下表：</p>
+<table>
+<thead>
+<tr>
+<th>文件名</th>
+<th>说   明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>asm-3.3.jar</td>
+<td>操作 Java 字节码的类库</td>
+</tr>
+<tr>
+<td>asm-commons-3.3.jar</td>
+<td>提供了基于事件的表现形式</td>
+</tr>
+<tr>
+<td>asm-tree-3.3.jar</td>
+<td>提供了基于对象的表现形式</td>
+</tr>
+<tr>
+<td>struts2-core-2.3.37.jar</td>
+<td>Struts2 框架的核心类库</td>
+</tr>
+<tr>
+<td>xwork-core-2.3.37.jar</td>
+<td>Web Work 核心库，Struts2 的构建基础</td>
+</tr>
+<tr>
+<td>ognl-3.0.6.jar</td>
+<td>对象图导航语言（Object Graph Navigation Language），Struts2 框架通过其读/写对象的属性</td>
+</tr>
+<tr>
+<td>freemarker-2.3.22.jar</td>
+<td>Struts2 标签模板使用的类库</td>
+</tr>
+<tr>
+<td>javassist-3.11.0.GA.jar</td>
+<td>JavaScript 字节码解释器</td>
+</tr>
+<tr>
+<td>commons-fileupload-1.4.jar</td>
+<td>Struts2 文件上传组件依赖包</td>
+</tr>
+<tr>
+<td>commons-io-2.2.jar</td>
+<td>Struts2 的输入/输出，传文件依赖的 JAR</td>
+</tr>
+<tr>
+<td>commons-lang-2.4.jar</td>
+<td>包含一些数据类型工具，是对 java.lang 包的增强</td>
+</tr>
+<tr>
+<td>log4j-api-2.2.jar</td>
+<td>Struts2 的日志管理组件依赖包的 API</td>
+</tr>
+<tr>
+<td>log4j-core-2.2.jar</td>
+<td>Struts2 的日志管理组件依赖包</td>
+</tr>
+</tbody>
+</table>
+<p>可以看出，此版本的 Struts2 项目所依赖的基础 JAR 包共 13 个。Struts2 根据版本的不同所依赖的基础 JAR 包可能不完全相同，不过基本变化不大。</p>
+<h2 id="0x03-Struts2架构"><a href="#0x03-Struts2架构" class="headerlink" title="0x03 Struts2架构"></a>0x03 Struts2架构</h2><p>Struts2是一个以MVC为基础的框架。</p>
+<p>从一个高水平角度看，Struts2 是一个MVC拉动的（或MVC2）框架，Struts2 的模型-视图-控制器模式是通过以下五个核心部分进行实现的：</p>
+<ul>
+<li>操作（Actions）</li>
+<li>拦截器（Interceptors）</li>
+<li>值栈（Value Stack）/OGNL</li>
+<li>结果（Result）/结果类型</li>
+<li>视图技术</li>
+</ul>
+<p>而Struts2 与传统的MVC框架略有不同，因为它由Action扮演模型的角色，而不是控制器，虽然这样会有一些重叠。</p>
+<p><img src="/2020/06/27/Struts2基础篇之基本概念/1.png" alt=""></p>
+<p>上图描述了Struts2 高级系统架构下的模型、视图及控制器。控制器是通过Struts2 分派servlet过滤器以及拦截器进行实现，模型是通过Actions进行实现，而视图则是结果类型和结果的结合。值栈和OGNL提供共同的路线、链接以及与其他组件之间的集成。</p>
+<p>除了上述部分，还有许多组件相关的信息。web应用程序组件、Actions组件、拦截器组件、结果组件等等。</p>
+<p><strong>请求生命周期</strong></p>
+<p>通过上述图片的描述，我们可以依照下面几点解释在Struts2 中用户的请求生命周期：</p>
+<ul>
+<li>用户发送一个资源需求的请求到服务器（例如：页面）。</li>
+<li>核心控制器查看请求后确定适当的动作。</li>
+<li>使用验证、文件上传等配置拦截器功能。</li>
+<li>执行选择的动作来完成请求的操作。</li>
+<li>另外，如果需要的话，配置的拦截器可做任何后期处理。</li>
+<li>最后，由视图显示结果并返回给用户。</li>
+</ul>
+<h2 id="0x04-HelloWorld程序"><a href="#0x04-HelloWorld程序" class="headerlink" title="0x04 HelloWorld程序"></a>0x04 HelloWorld程序</h2><h3 id="新建项目"><a href="#新建项目" class="headerlink" title="新建项目"></a>新建项目</h3><p>在IDEA新建一个Web项目，命名为st2test，整个完整目录结构如图：</p>
+<p><img src="/2020/06/27/Struts2基础篇之基本概念/4.png" alt=""></p>
+<p>先导入如上lib目录中必需的基础Jar包。</p>
+<h3 id="配置-Struts2-的核心过滤器"><a href="#配置-Struts2-的核心过滤器" class="headerlink" title="配置 Struts2 的核心过滤器"></a>配置 Struts2 的核心过滤器</h3><p>打开项目的 web.xml 文件，在文件中添加 Struts2 的核心过滤器 org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter，具体如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">web-app</span> <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xmlns</span>=<span class="string">"http://java.sun.com/xml/ns/javaee"</span> <span class="attr">xmlns:web</span>=<span class="string">"http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">id</span>=<span class="string">"WebApp_ID"</span> <span class="attr">version</span>=<span class="string">"3.0"</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- 配置Struts2核心过滤器 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>struts2<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-class</span>&gt;</span></span><br><span class="line">            org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter</span><br><span class="line">        <span class="tag">&lt;/<span class="name">filter-class</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>struts2<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">web-app</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p> 在 web.xml 文件中，<code>&lt;filter&gt;</code> 标签中配置的信息就是 Struts2 的核心过滤器，该过滤器的名称为 struts2，过滤器类为 org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter，而 <code>&lt;filter-mapping&gt;</code> 标签中配置的是该过滤器的映射。</p>
+<p>需要注意的是，在 Struts2.1 版本之前，所使用的核心过滤器类是 org.apache.struts2.dispatcher.FilterDispatcher，从 Struts2.1 版本之后，这个过滤器类已经不推荐使用了，而是使用 org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter 类。</p>
+<h3 id="创建-Action-类"><a href="#创建-Action-类" class="headerlink" title="创建 Action 类"></a>创建 Action 类</h3><p>在项目的 src 目录下，新建一个名称为 com.mi1k7ea 的包，在包中创建一个名为 HelloWorldAction 的类，并使其继承 ActionSupport 类（Struts2 框架所提供的类）。在 HelloWorldAction 类中定义一个 execute() 方法，返回值为 SUCCESS，编辑后的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.opensymphony.xwork2.ActionSupport;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HelloWorldAction</span> <span class="keyword">extends</span> <span class="title">ActionSupport</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">execute</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> SUCCESS;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在上述 HelloWorldAction.java 中，execute() 方法的返回值 SUCCESS 是从父类中继承的常量字段，用于表示执行成功，并返回结果页面。execute() 方法的返回值对应 struts.xml 文件中 <code>&lt;result&gt;</code> 标签中 name 属性的值，Struts2 框架会根据 name 属性值执行对应处理结果下的视图资源。</p>
+<h3 id="编写-Struts2-的配置文件"><a href="#编写-Struts2-的配置文件" class="headerlink" title="编写 Struts2 的配置文件"></a>编写 Struts2 的配置文件</h3><p>在 src 目录下新建一个名称为 struts.xml 的文件，编辑代码后如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 指定 Struts2 配置文件的 DTD 信息 --&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE struts PUBLIC</span></span><br><span class="line"><span class="meta">        "-//Apache Software Foundation//DTD Struts Configuration 2.3//EN"</span></span><br><span class="line"><span class="meta">        "http://struts.apache.org/dtds/struts-2.3.dtd"&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- Struts2配置文件的根元素 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">struts</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- Struts2的Action必须放在指定的包空间下定义 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">package</span> <span class="attr">name</span>=<span class="string">"hello"</span> <span class="attr">namespace</span>=<span class="string">"/"</span> <span class="attr">extends</span>=<span class="string">"struts-default"</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 定义 action，该 action 对应的类为 com.mi1k7ea.HelloWorldAction 类--&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">name</span>=<span class="string">"helloWorld"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.HelloWorldAction"</span>&gt;</span></span><br><span class="line">            <span class="comment">&lt;!-- 定义处理结果和视图资源之间的映射关系 --&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">result</span> <span class="attr">name</span>=<span class="string">"success"</span>&gt;</span>/success.jsp<span class="tag">&lt;/<span class="name">result</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">action</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">package</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">struts</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在 struts.xml 文件中，<code>&lt;action&gt;</code> 标签中定义了请求路径，以及与其对应的 Action 类的映射关系，子标签 <code>&lt;result&gt;</code> 定义了处理结果和视图资源之间的映射关系。</p>
+<h3 id="创建视图首页文件"><a href="#创建视图首页文件" class="headerlink" title="创建视图首页文件"></a>创建视图首页文件</h3><p>在 web 目录下创建一个名称为 index.jsp 的页面文件，在其中编写一个超链接，用于访问 Action 对象，此链接指向的地址为 helloWorld.action，如下所示：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page language=<span class="string">"java"</span> contentType=<span class="string">"text/html; charset=utf-8"</span></span><br><span class="line">         pageEncoding=<span class="string">"utf-8"</span>%&gt;</span><br><span class="line">&lt;!DOCTYPE html PUBLIC <span class="string">"-//W3C//DTD HTML 4.01 Transitional//EN"</span> <span class="string">"http://www.w3.org/TR/html4/loose.dtd"</span>&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">  &lt;title&gt;首页&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">&lt;a href=<span class="string">"$&#123;pageContext.request.contextPath &#125;/helloWorld.action"</span>&gt;</span><br><span class="line">  第一个 Struts2 程序！</span><br><span class="line">&lt;/a&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="创建返回页面"><a href="#创建返回页面" class="headerlink" title="创建返回页面"></a>创建返回页面</h3><p>在 web 下再创建一个名称为 success.jsp 的文件，作为 Action 对象处理成功后的返回页面，如下所示：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page language=<span class="string">"java"</span> contentType=<span class="string">"text/html; charset=utf-8"</span></span><br><span class="line">         pageEncoding=<span class="string">"utf-8"</span>%&gt;</span><br><span class="line">&lt;!DOCTYPE html PUBLIC <span class="string">"-//W3C//DTD HTML 4.01 Transitional//EN"</span> <span class="string">"http://www.w3.org/TR/html4/loose.dtd"</span>&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">    &lt;title&gt;成功页面&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">您的第一个小程序执行成功，欢迎来到Struts2的世界！</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="运行"><a href="#运行" class="headerlink" title="运行"></a>运行</h3><p><img src="/2020/06/27/Struts2基础篇之基本概念/5.png" alt=""></p>
+<h2 id="0x05-Struts2工作流程"><a href="#0x05-Struts2工作流程" class="headerlink" title="0x05 Struts2工作流程"></a>0x05 Struts2工作流程</h2><p>Struts2工作流程图：</p>
+<p><img src="/2020/06/27/Struts2基础篇之基本概念/3.png" alt=""></p>
+<p>从上图所示的流程图中可以看出，一个请求在 Struts2 框架中的处理大概可以分为以下几个步骤。</p>
+<p>1）首先客户端浏览器发送一个请求（HttpServletRequest）。</p>
+<p>2）接着程序会调用 StrutsPrepareAndExecuteFilter，然后询问 ActionMapper 这个请求是否需要调用某个 Action。</p>
+<p>3）如果 ActionMapper 决定需要调用某个 Action，StrutsPrepareAndExecuteFilter 会把请求的处理交给 ActionProxy。</p>
+<p>4）ActionProxy 通过配置管理器（Configuration Manager）从配置文件（struts.xml）中读取框架的配置信息，从而找到需要调用的 Action 类。</p>
+<p>5）ActionProxy 会创建一个 ActionInvocation 的实例。</p>
+<p>6）ActionInvocation 使用命名模式调用 Action，在调用 Action 前，会依次调用所有配置的拦截器（Intercepter1、Intercepter2……）。</p>
+<p>7）一旦 Action 执行完，则返回结果字符串，ActionInvocation 就会负责查找结果字符串对应的 Result，然后执行这个 Result。通常情况下 Result 会调用一些模板（JSP 等）呈现页面。</p>
+<p>8）产生的 Result 信息返回给 ActionInvocation，在此过程中拦截器会被再次执行（顺序与 Action 执行之前相反）。</p>
+<p>9）最后产生一个 HttpServletResponse 的响应行为，通过 StrutsPrepareAndExecuteFilter 反馈给客户端。</p>
+<h2 id="0x06-Struts2配置文件"><a href="#0x06-Struts2配置文件" class="headerlink" title="0x06 Struts2配置文件"></a>0x06 Struts2配置文件</h2><p>这里介绍下Struts2中web.xml、struts.xml、struts-config.xml以及struts.properties等配置文件。</p>
+<h3 id="struts-xml"><a href="#struts-xml" class="headerlink" title="struts.xml"></a>struts.xml</h3><p>struts.xml 是 Struts2 框架的核心配置文件，该文件主要用于配置 Action 和请求的对应关系，以及配置逻辑视图和物理视图（逻辑视图就是在 struts.xml 文件中配置的 <code>&lt;result&gt;</code> 元素，它的 name 属性值就是逻辑视图名；物理视图是指 <code>&lt;result&gt;</code> 元素中配置的结果页面，如 JSP 文件）资源的对应关系。</p>
+<p>struts.xml 文件通常放在 Web 应用的 WEB-INF/classes 目录下，在该目录下的 struts.xml 文件可以被 Struts2 框架自动加载。由于 MyEclipse 开发工具在编译时会自动将 src 路径下的 struts.xml 文件编译后放到 WEB-INF/classes 路径下，所以直接将其放到项目的 src 路径下即可。</p>
+<p>下面来看一个典型的 struts.xml 文件结构，如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8" ?&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE struts PUBLIC</span></span><br><span class="line"><span class="meta">  "-//Apache Software Foundation//DTD Struts Configuration 2.3//EN"</span></span><br><span class="line"><span class="meta">  "http://struts.apache.org/dtds/struts-2.3.dtd"&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">struts</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--&lt;constant&gt;元素用常量的配置--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">constant</span> <span class="attr">name</span>=<span class="string">"struts.enable.DynamicMethodInvocation"</span> <span class="attr">value</span>=<span class="string">"false"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">constant</span> <span class="attr">name</span>=<span class="string">"struts.devMode"</span> <span class="attr">value</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--&lt;package&gt;元素用于包配置--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">package</span> <span class="attr">name</span>=<span class="string">"default"</span> <span class="attr">namespace</span>=<span class="string">"/"</span> <span class="attr">extends</span>=<span class="string">"struts-default"</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--配置Action--&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">name</span>=<span class="string">"index"</span> <span class="attr">class</span>=<span class="string">"Xxx"</span>/&gt;</span></span><br><span class="line">            <span class="comment">&lt;!--配置Result--&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">result</span> <span class="attr">type</span>=<span class="string">"dispatcher"</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">param</span> <span class="attr">name</span>=<span class="string">"location"</span>&gt;</span>/index.jsp<span class="tag">&lt;/<span class="name">param</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">result</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">action</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">package</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- &lt;include&gt;元素用于包含配置 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">include</span> <span class="attr">file</span>=<span class="string">"example.xml"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">struts</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在上述文件中，元素说明如下：</p>
+<ul>
+<li><code>&lt;struts&gt;</code> 元素是文件的根元素，所有其他元素都放在 <code>&lt;struts&gt;&lt;/struts&gt;</code> 中。</li>
+<li><code>&lt;constant&gt;</code> 元素用于进行常量配置。</li>
+<li><code>&lt;package&gt;</code> 元素用于进行包配置，在 Struts2 框架中，包用于组织 Action 和拦截器等信息，每个包都是由零个或多个拦截器以及 Action 所组成的集合。</li>
+<li><code>&lt;include&gt;</code> 元素用于在一个 struts.xml 配置文件中包含其他的配置文件。</li>
+</ul>
+<p>下面，将分别针对这些常用的元素及其配置进行详细讲解。</p>
+<h4 id="常量配置"><a href="#常量配置" class="headerlink" title="常量配置"></a>常量配置</h4><p>在使用 Struts2 框架开发的项目中，通常需要使用大量的常量，这些常量大多在默认的配置文件中已经配置好，但由于用户的需求不同，开发的要求也有所不同，这时可能就需要对这些常量值进行修改，其修改的方法就是在配置文件中对常量进行重新配置。</p>
+<p>在 Struts2 中，常量的配置通常使用以下三种方式。</p>
+<ul>
+<li>在 struts.xml 文件中使用 <code>&lt;constant&gt;</code> 元素配置常量（常用方式）。</li>
+<li>在 struts.properties 文件中配置常量。</li>
+<li>在 web.xml 文件中通过 <code>&lt;init-param&gt;</code> 元素配置常量。</li>
+</ul>
+<p>上述三种配置方式中，在 struts.xml 文件中通过 <code>&lt;constant&gt;</code> 元素配置常量，是项目开发时最常用的方式，教程中的常量配置也是通过此种方式实现的，所以这里只介绍通过 <code>&lt;constant&gt;</code> 元素配置常量的方式，其他两种方式读者只需了解即可。</p>
+<p>在 struts.xml 文件中通过 <code>&lt;constant.../&gt;</code> 元素配置常量时，需要指定两个必填的属性 name 和 value。其中 name 属性用于指定常量的常量名，value 属性用于指定常量的常量值。其配置的示例代码如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">struts</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--设置默认编码集为UTF-8--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">constant</span> <span class="attr">name</span>=<span class="string">"struts.il8n.encoding"</span> <span class="attr">value</span>=<span class="string">"UTF-8"</span> /&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--设置使用开发模式--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">constant</span> <span class="attr">name</span>=<span class="string">"struts.devMode"</span> <span class="attr">value</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">struts</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在上述示例代码中，配置了常量 struts.i18n.encoding 和 struts.devMode。其中 struts.i18n.encoding 用于指定 Struts2 应用程序的默认编码集为 UTF-8，struts.devMode 用于指定项目使用的是开发模式。</p>
+<p>Struts2 所支持的常量数量很多，在 struts2-core-2.3.37.jar 压缩文件的 org/apache/struts2 路径下有一个 default.properties 文件，该文件里为 Struts2 的所有常量都指定了默认值，读者可以通过查看该文件了解 Struts2 所支持的常量。</p>
+<p>除了可以通过上述的三种方式配置常量以外，在 Struts2 内置的一些配置文件中也有对常量的配置。因此，如果在多个文件中配置了同一个 Struts2 常量，则 Struts2 框架加载常量是有一定顺序的，通常的搜索顺序如下。</p>
+<p>1）default.properties：该文件保存在 struts2-core-2.3.37.jar 中的 org.apache.struts2 包中。</p>
+<p>2）struts-default.xml：该文件保存在 struts2-core-2.3.37.jar 文件中。</p>
+<p>3）struts-plugin.xml：该文件保存在 struts-Xxx-2.3.37.jar 等 Struts2 插件 JAR 包中。</p>
+<p>4）struts.xml：该文件是 Web 应用自身的 Struts2 配置文件。</p>
+<p>5）struts.properties：该文件是 Web 应用默认的 Struts2 配置文件。</p>
+<p>6）web.xml：该文件是 Web 应用的配置文件。</p>
+<p>上面指定了 Struts2 框架搜索 Struts2 常量的顺序，需要注意的是，如果在多个文件中配置了同一个 Struts2 常量，则后一个文件中配置的常量值会覆盖前面文件中配置的常量值。  </p>
+<h4 id="包配置"><a href="#包配置" class="headerlink" title="包配置"></a>包配置</h4><p>在 Struts2 框架中，包用于管理 Action 和拦截器，每个包就是多个 Action、多个拦截器、多个拦截器引用的集合。在 struts.xml 文件中，使用 <code>&lt;package&gt;</code> 元素定义包配置，每个 <code>&lt;package&gt;</code> 元素都定义了一个包配置，其示例代码下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">package</span> <span class="attr">name</span>=<span class="string">"default"</span> <span class="attr">namespace</span>=<span class="string">"/"</span> <span class="attr">extends</span>=<span class="string">"struts-default"</span>&gt;</span></span><br><span class="line">    ...</span><br><span class="line"><span class="tag">&lt;/<span class="name">package</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在上述代码中，<code>&lt;package&gt;</code> 元素用到了三个关键属性 name、namespace、extends，具体说明如下。</p>
+<ul>
+<li>name：必填属性，用于指定该包的名称（该名称在配置文件中必须是唯一的），此名称是该包被其他包引用的 Key。</li>
+<li>namespace：可选属性，用于定义该包的命名空间。</li>
+<li>extends：可选属性，用于指定该包继承自其他包。其属性值必须是另一个包的 name 属性值，但该属性值通常都设置为 struts-default，这样该包中的 Action 就具有了 Struts2 框架默认的拦截器等功能。</li>
+</ul>
+<h4 id="包含配置"><a href="#包含配置" class="headerlink" title="包含配置"></a>包含配置</h4><p>Struts2 允许将一个配置文件分解成多个配置文件，从而提高配置文件的可读性，<code>&lt;include&gt;</code> 元素用于在一个 struts.xml 配置文件中包含其他的配置文件。Struts2 默认只加载 WEB-INF/classes 下的 struts.xml 文件，一旦通过多个 XML 文件配置 Action，就必须通过 <code>&lt;include&gt;</code>元素包含其他配置文件。</p>
+<p>在 struts.xml 文件中包含配置的示例代码如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">struts</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--不指定路径，默认在src下时的方式--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">include</span> <span class="attr">file</span>=<span class="string">"struts-post.xml"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">include</span> <span class="attr">file</span>=<span class="string">"struts-user.xml"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">include</span> <span class="attr">file</span>=<span class="string">"struts-dept.xml"</span>/&gt;</span></span><br><span class="line">    <span class="comment">&lt;!--配置文件在具体包中时的方式--&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">include</span> <span class="attr">file</span>=<span class="string">"com/mengma/action/struts-product.xml"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">struts</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在上述代码中，struts.xml 文件通过 <code>&lt;include&gt;</code> 元素包含了四个配置文件，其中 file 属性用于指定被包含配置文件的名称。如果被包含的配置文件在 src 路径下，则直接指定文件名即可，如果被包含的配置文件在具体的包中，则需要引入被包含文件的包路径。</p>
+<p>需要注意的是，每一个被包含的配置文件都是标准的 Struts2 配置文件，同样包含 DTD 信息、Struts2 配置文件的根元素等信息。由于 struts.xml 文件包含了其他的配置文件，所以在 Struts2 框架自动加载 struts.xml 文件时，就会完成所有配置信息的加载。</p>
+<h3 id="web-xml"><a href="#web-xml" class="headerlink" title="web.xml"></a>web.xml</h3><p>web.xml配置文件是一种J2EE配置文件，决定Servlet容器的HTTP元素需求如何进行处理。它严格来说不是一个Struts2配置文件，但它是Struts2运作所需要进行配置的文件。</p>
+<p>正如前面所讨论的，这个文件为每个Web应用程序提供接入点。在部署描述符（web.xml）中，Struts2应用程序的接入点将会定义为一个过滤器。因此我们将在web.xml里定义一个StrutsPrepareAndExecuteFilter类的接入点，而这个web.xml文件需要在<strong>WebContent/WEB-INF</strong>文件夹下创建。</p>
+<p>如果你开始时没有模板或工具（比如Eclipse或Maven2）的辅助来生成，那这就是第一个你需要配置的文件。下面是我们在上一个例子中用到的web.xml的内容。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">web-app</span> <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xmlns</span>=<span class="string">"http://java.sun.com/xml/ns/javaee"</span> <span class="attr">xmlns:web</span>=<span class="string">"http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">id</span>=<span class="string">"WebApp_ID"</span> <span class="attr">version</span>=<span class="string">"3.0"</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- 配置Struts2核心过滤器 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filter</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>struts2<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-class</span>&gt;</span></span><br><span class="line">            org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter</span><br><span class="line">        <span class="tag">&lt;/<span class="name">filter-class</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filter-name</span>&gt;</span>struts2<span class="tag">&lt;/<span class="name">filter-name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">url-pattern</span>&gt;</span>/*<span class="tag">&lt;/<span class="name">url-pattern</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">filter-mapping</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">web-app</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>注意，我们将Struts2过滤器映射到<code>/*</code>，而不是<code>/*.action</code>，这意味着所有的url都会被Struts2过滤器解析。</p>
+<p>注意：自2.1.3版本开始，ActionContextCleanUp和FilterDispatcher都由StrutsPrepareAndExecuteFilter代替。</p>
+<h3 id="struts-config-xml"><a href="#struts-config-xml" class="headerlink" title="struts-config.xml"></a>struts-config.xml</h3><p>struts-config.xml配置文件是Web Client中View和Model组件之间的链接，但在你99.99％的项目里你不必使用这些设置。 struts-config.xml配置文件包含以下主要元素：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">序号</th>
+<th style="text-align:left">拦截器和说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">1</td>
+<td style="text-align:left"><strong>struts-config</strong>这是配置文件的根节点。</td>
+</tr>
+<tr>
+<td style="text-align:left">2</td>
+<td style="text-align:left"><strong>form-beans</strong>这是你将ActionForm子类映射到name的位置，你可以在struts-config.xml文件的其余部分，甚至在JSP页面上，将这个name用作ActionForm的别名。</td>
+</tr>
+<tr>
+<td style="text-align:left">3</td>
+<td style="text-align:left"><strong>global forwards</strong>此部分将你在webapp上的页面映射到name，你可以使用这个name来引用实际页面。这避免了对你网页上的URL进行硬编码。</td>
+</tr>
+<tr>
+<td style="text-align:left">4</td>
+<td style="text-align:left"><strong>action-mappings</strong>这是你声明表单处理程序的地方，也被称为<strong>操作映射（action mappings）</strong>。</td>
+</tr>
+<tr>
+<td style="text-align:left">5</td>
+<td style="text-align:left"><strong>controller</strong>这部分是配置Struts的内部，在实际情况中很少使用。</td>
+</tr>
+<tr>
+<td style="text-align:left">6</td>
+<td style="text-align:left"><strong>plug-in</strong> 这部分告诉Struts在哪里找到属性文件，它包含提示和错误消息。</td>
+</tr>
+</tbody>
+</table>
+<p>下面是struts-config.xml文件的示例：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="ISO-8859-1" ?&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE struts-config PUBLIC</span></span><br><span class="line"><span class="meta">"-//Apache Software Foundation//DTD Struts Configuration 1.0//EN"</span></span><br><span class="line"><span class="meta">"http://jakarta.apache.org/struts/dtds/struts-config_1_0.dtd"&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">struts-config</span>&gt;</span></span><br><span class="line"></span><br><span class="line">   <span class="comment">&lt;!-- ========== Form Bean Definitions ============ --&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">form-beans</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">form-bean</span> <span class="attr">name</span>=<span class="string">"login"</span> <span class="attr">type</span>=<span class="string">"test.struts.LoginForm"</span> /&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="name">form-beans</span>&gt;</span></span><br><span class="line"></span><br><span class="line">   <span class="comment">&lt;!-- ========== Global Forward Definitions ========= --&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">global-forwards</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="name">global-forwards</span>&gt;</span></span><br><span class="line"></span><br><span class="line">   <span class="comment">&lt;!-- ========== Action Mapping Definitions ======== --&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">action-mappings</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">action</span></span></span><br><span class="line"><span class="tag">         <span class="attr">path</span>=<span class="string">"/login"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">type</span>=<span class="string">"test.struts.LoginAction"</span> &gt;</span></span><br><span class="line"></span><br><span class="line">         <span class="tag">&lt;<span class="name">forward</span> <span class="attr">name</span>=<span class="string">"valid"</span> <span class="attr">path</span>=<span class="string">"/jsp/MainMenu.jsp"</span> /&gt;</span></span><br><span class="line">         <span class="tag">&lt;<span class="name">forward</span> <span class="attr">name</span>=<span class="string">"invalid"</span> <span class="attr">path</span>=<span class="string">"/jsp/LoginView.jsp"</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">action</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;/<span class="name">action-mappings</span>&gt;</span></span><br><span class="line"></span><br><span class="line">   <span class="comment">&lt;!-- ========== Controller Definitions ======== --&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">controller</span> </span></span><br><span class="line"><span class="tag">      <span class="attr">contentType</span>=<span class="string">"text/html;charset=UTF-8"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">debug</span>=<span class="string">"3"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">maxFileSize</span>=<span class="string">"1.618M"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">locale</span>=<span class="string">"true"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">nocache</span>=<span class="string">"true"</span>/&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">struts-config</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>有关struts-config.xml文件的更多详细内容，可查看Struts Documentation。</p>
+<h3 id="struts-properties"><a href="#struts-properties" class="headerlink" title="struts.properties"></a>struts.properties</h3><p>这个配置文件提供了一种机制来改变框架的默认行为。实际上，<strong>struts.properties</strong>配置文件中包含的所有属性也可以在<strong>web.xml</strong>中配置使用<strong>init-param</strong>，以及在<strong>struts.xml</strong>配置文件中使用<strong>constant</strong>标签。 但如果你想保持事件独立以及保留更多struts细节，那么你可以在<strong>WEB-INF/classes</strong>文件夹下创建这个文件。</p>
+<p><strong>struts.properties</strong></p>
+<p>文件中配置的值将覆盖。</p>
+<p><strong>default.properties</strong></p>
+<p>文件中配置的默认值，这些值包含在struts2-core-x.y.z.jar分布中。有一些属性，你可以考虑改为使用。</p>
+<p><strong>struts.properties</strong></p>
+<p>文件：</p>
+<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">### When set to true, Struts will act much more friendly for developers</span></span><br><span class="line"><span class="meta">struts.devMode</span> = <span class="string">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">### Enables reloading of internationalization files</span></span><br><span class="line"><span class="meta">struts.i18n.reload</span> = <span class="string">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">### Enables reloading of XML configuration files</span></span><br><span class="line"><span class="meta">struts.configuration.xml.reload</span> = <span class="string">true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">### Sets the port that the server is run on</span></span><br><span class="line"><span class="meta">struts.url.http.port</span> = <span class="string">8080</span></span><br></pre></td></tr></table></figure>
+<p>这里任何以<code>＃</code>开头的行都将被假定为注释，并且它会被Struts2默认忽略。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-参考"><span class="toc-text">0x00 参考</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Struts2简介"><span class="toc-text">0x01 Struts2简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Struts2目录结构和基础Jar包"><span class="toc-text">0x02 Struts2目录结构和基础Jar包</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#目录结构"><span class="toc-text">目录结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基础Jar包"><span class="toc-text">基础Jar包</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-Struts2架构"><span class="toc-text">0x03 Struts2架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-HelloWorld程序"><span class="toc-text">0x04 HelloWorld程序</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#新建项目"><span class="toc-text">新建项目</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#配置-Struts2-的核心过滤器"><span class="toc-text">配置 Struts2 的核心过滤器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建-Action-类"><span class="toc-text">创建 Action 类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#编写-Struts2-的配置文件"><span class="toc-text">编写 Struts2 的配置文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建视图首页文件"><span class="toc-text">创建视图首页文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建返回页面"><span class="toc-text">创建返回页面</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#运行"><span class="toc-text">运行</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-Struts2工作流程"><span class="toc-text">0x05 Struts2工作流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-Struts2配置文件"><span class="toc-text">0x06 Struts2配置文件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#struts-xml"><span class="toc-text">struts.xml</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#常量配置"><span class="toc-text">常量配置</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#包配置"><span class="toc-text">包配置</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#包含配置"><span class="toc-text">包含配置</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#web-xml"><span class="toc-text">web.xml</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#struts-config-xml"><span class="toc-text">struts-config.xml</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#struts-properties"><span class="toc-text">struts.properties</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/06/14/ThinkPHP-V3-2-3-SQL注入总结/" rel="next" title="ThinkPHP V3.2.3 SQL注入总结">
+          ThinkPHP V3.2.3 SQL注入总结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/06/30/Struts2基础篇之Action/" rel="prev" title="Struts2基础篇之Action">
+            Struts2基础篇之Action
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

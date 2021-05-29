@@ -1,0 +1,317 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Windows,SQL Server,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>SQL Server常用操作远程桌面语句 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        SQL Server常用操作远程桌面语句
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-01-26T13:16:47.000Z">
+        2021-01-26
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-Server/">SQL Server</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Windows/">Windows</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>参考Micro8系列第七课：<a href="https://micro8.gitbook.io/micro8/contents-1/1-10/7sqlserver-chang-yong-cao-zuo-yuan-cheng-zhuo-mian-yu-ju" target="_blank" rel="noopener">https://micro8.gitbook.io/micro8/contents-1/1-10/7sqlserver-chang-yong-cao-zuo-yuan-cheng-zhuo-mian-yu-ju</a></p>
+<h2 id="0x01-是否开启远程桌面"><a href="#0x01-是否开启远程桌面" class="headerlink" title="0x01 是否开启远程桌面"></a>0x01 是否开启远程桌面</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">EXEC master..xp_regread &apos;HKEY_LOCAL_MACHINE&apos;,</span><br><span class="line">&apos;SYSTEM\CurrentControlSet\Control\Terminal Server&apos;,</span><br><span class="line">&apos;fDenyTSConnections&apos;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>1：表示关闭</li>
+<li>0：表示开启</li>
+</ul>
+<p><img src="/2021/01/26/SQL-Server常用操作远程桌面语句/1.png" alt=""></p>
+<h2 id="0x02-读取远程桌面端口"><a href="#0x02-读取远程桌面端口" class="headerlink" title="0x02 读取远程桌面端口"></a>0x02 读取远程桌面端口</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">EXEC master..xp_regread &apos;HKEY_LOCAL_MACHINE&apos;,</span><br><span class="line">&apos;SYSTEM\CurrentControlSet\Control\TerminalServer\WinStations\RDP-Tcp&apos;,</span><br><span class="line">&apos;PortNumber&apos;</span><br></pre></td></tr></table></figure>
+<p>本地的注册表位置中<code>TerminalServer</code>中间是需要加个空格的，看具体情况而定：</p>
+<p><img src="/2021/01/26/SQL-Server常用操作远程桌面语句/2.png" alt=""></p>
+<h2 id="0x03-开启远程桌面"><a href="#0x03-开启远程桌面" class="headerlink" title="0x03 开启远程桌面"></a>0x03 开启远程桌面</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">EXEC master.dbo.xp_regwrite&apos;HKEY_LOCAL_MACHINE&apos;,</span><br><span class="line">&apos;SYSTEM\CurrentControlSet\Control\TerminalServer&apos;,</span><br><span class="line">&apos;fDenyTSConnections&apos;,&apos;REG_DWORD&apos;,0;</span><br></pre></td></tr></table></figure>
+<p>reg文件开启远程桌面，保存以下内容为<code>mi1k7ea.reg</code>：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Windows Registry Editor Version 5.00HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\TerminalServer]</span><br><span class="line">&quot;fDenyTSConnections&quot;=dword:00000000[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\TerminalServer\WinStations\RDP-Tcp]</span><br><span class="line">&quot;PortNumber&quot;=dword:00000d3d</span><br></pre></td></tr></table></figure>
+<p>然后执行<code>regedit /s mi1k7ea.reg</code>。</p>
+<p>注意：如果是第一次开启远程桌面，部分需要配置防火墙规则允许远程端口。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">netsh advfirewall firewall add rule name=<span class="string">"Remote Desktop"</span> protocol=TCP dir=<span class="keyword">in</span> localport=<span class="number">3389</span> action=allow</span><br></pre></td></tr></table></figure>
+<h2 id="0x04-关闭远程桌面"><a href="#0x04-关闭远程桌面" class="headerlink" title="0x04 关闭远程桌面"></a>0x04 关闭远程桌面</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">EXEC master.dbo.xp_regwrite&apos;HKEY_LOCAL_MACHINE&apos;,</span><br><span class="line">&apos;SYSTEM\CurrentControlSet\Control\TerminalServer&apos;,</span><br><span class="line">&apos;fDenyTSConnections&apos;,&apos;REG_DWORD&apos;,1;</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-是否开启远程桌面"><span class="toc-text">0x01 是否开启远程桌面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-读取远程桌面端口"><span class="toc-text">0x02 读取远程桌面端口</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-开启远程桌面"><span class="toc-text">0x03 开启远程桌面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-关闭远程桌面"><span class="toc-text">0x04 关闭远程桌面</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/01/20/Linux提权之快速查找EXP/" rel="next" title="Linux提权之快速查找EXP">
+          Linux提权之快速查找EXP
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/01/30/BurpExtender开发之CORS跨域漏洞扫描器/" rel="prev" title="BurpExtender开发之CORS跨域漏洞扫描器">
+            BurpExtender开发之CORS跨域漏洞扫描器
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,471 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Web Service,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Web Service渗透测试 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Web Service渗透测试
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-01-16T06:58:45.000Z">
+        2021-01-16
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web-Service/">Web Service</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>内部是没有Web Service特别是SOAP型这块资料的，于此补充一下。</p>
+<h2 id="0x01-Web-Service基础"><a href="#0x01-Web-Service基础" class="headerlink" title="0x01 Web Service基础"></a>0x01 Web Service基础</h2><h3 id="Web-Service简介"><a href="#Web-Service简介" class="headerlink" title="Web Service简介"></a>Web Service简介</h3><p>Web Service是一个平台独立的、低耦合的、自包含的、基于可编程的Web的应用程序，可使用开放的XML（标准通用标记语言下的一个子集）标准来描述、发布、发现、协调和配置这些应用程序，用于开发分布式的交互操作的应用程序。</p>
+<p>Web Service技术， 能使得运行在不同机器上的不同应用无须借助附加的、专门的第三方软件或硬件， 就可相互交换数据或集成。依据Web Service规范实施的应用之间， 无论它们所使用的语言、 平台或内部协议是什么， 都可以相互交换数据。Web Service是自描述、 自包含的可用网络模块， 可以执行具体的业务功能。Web Service也很容易部署， 因为它们基于一些常规的产业标准以及已有的一些技术，诸如标准通用标记语言下的子集XML、HTTP。Web Service减少了应用接口的花费。Web Service为整个企业甚至多个组织之间的业务流程的集成提供了一个通用机制。</p>
+<p><strong>网Web Service的本质，就是通过网络调用其他网站的资源。Web Service架构的基本思想，就是尽量把非核心功能交给其他人去做，自己全力开发核心功能。</strong></p>
+<p>更简单地说，Web Service是一种跨编程语言、跨操作系统平台的远程调用技术。</p>
+<h3 id="Web-Service基本原理"><a href="#Web-Service基本原理" class="headerlink" title="Web Service基本原理"></a>Web Service基本原理</h3><p>Web Service通过HTTP协议发送请求和接收结果时，发送的请求内容和结果内容都采用XML格式封装，并增加了一些特定的HTTP消息头，以说明HTTP消息的内容格式，这些特定的HTTP消息头和XML内容格式就是SOAP协议规定的。</p>
+<p>Web Service服务器端首先要通过一个WSDL文件来说明自己有什么服务可以对外调用。WSDL就像是一个说明书，用于描述Web Service及其方法、参数和返回值。WSDL文件保存在Web服务器上，通过一个URL地址就可以访问到它。客户端要调用一个Web Service服务之前，要知道该服务的WSDL文件的地址。Web Service服务提供商可以通过两种方式来暴露它的WSDL文件地址：1.注册到UDDI服务器，以便被人查找；2.直接告诉给客户端调用者。</p>
+<p>Web Service交互的过程就是，Web Service遵循SOAP协议通过XML封装数据，然后由HTTP协议来传输数据。</p>
+<h3 id="Web-Service分类"><a href="#Web-Service分类" class="headerlink" title="Web Service分类"></a>Web Service分类</h3><p>一般的，Web Service分为：</p>
+<ul>
+<li>SOAP型Web Service：SOAP型Web Service允许使用XML格式与服务器进行通信；</li>
+<li>REST型Web Service：REST型Web Service允许使用JSON格式（也可以使用XML格式）与服务器进行通信。与HTTP类似，该类型服务支持GET、POST、PUT、DELETE方法。不需要WSDL、UDDI；</li>
+</ul>
+<h3 id="Web-Service三要素"><a href="#Web-Service三要素" class="headerlink" title="Web Service三要素"></a>Web Service三要素</h3><p>Web Service三要素包括SOAP（Simple Object Access Protocol）、WSDL（WebServicesDescriptionLanguage）、UDDI（UniversalDescriptionDiscovery andIntegration）。其中SOAP用来描述传递信息的格式， WSDL用来描述如何访问具体的接口， UDDI用来管理、分发、查询Web Service 。</p>
+<h3 id="Web-Service相关技术"><a href="#Web-Service相关技术" class="headerlink" title="Web Service相关技术"></a>Web Service相关技术</h3><h4 id="SOAP"><a href="#SOAP" class="headerlink" title="SOAP"></a>SOAP</h4><p>SOAP（Simple Object Access Protocol）简单对象访问协议是交换数据的一种协议规范，是一种轻量的、简单的、基于XML（标准通用标记语言下的一个子集）的协议，它被设计成在WEB上交换结构化的和固化的信息。SOAP不是Web Service的专有协议。</p>
+<p>SOAP使用HTTP来发送XML格式的数据，可以简单理解为：<code>SOAP = HTTP +XML</code></p>
+<p>SOAP结构如图：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/31.png" alt=""></p>
+<p>包括以下元素：</p>
+<ul>
+<li>必需的 Envelope 元素，可把此 XML 文档标识为一条 SOAP 消息</li>
+<li>可选的 Header 元素，包含头部信息</li>
+<li>必需的 Body 元素，包含所有的调用和响应信息</li>
+<li>可选的 Fault 元素，提供有关在处理此消息所发生错误的信息</li>
+</ul>
+<p><img src="/2021/01/16/Web-Service渗透测试/25.png" alt=""></p>
+<h4 id="REST"><a href="#REST" class="headerlink" title="REST"></a>REST</h4><p>REST（Representational State Transfer）即表述性状态传递，是Roy Fielding博士在2000年他的博士论文中提出来的一种软件架构风格。它是一种针对网络应用的设计和开发方式，可以降低开发的复杂性，提高系统的可伸缩性。</p>
+<p>REST是一组架构约束条件和原则。满足这些约束条件和原则的应用程序或设计就是RESTful。需要注意的是，REST是设计风格而不是标准。REST通常基于使用HTTP，URI，和XML（标准通用标记语言下的一个子集）以及HTML（标准通用标记语言下的一个应用）这些现有的广泛流行的协议和标准。</p>
+<p>在三种主流的Web服务实现方案中，因为REST模式的Web服务与复杂的SOAP和XML-RPC对比来讲明显的更加简洁，越来越多的Web服务开始采用REST风格设计和实现。例如，Amazon.com提供接近REST风格的Web服务进行图书查找；雅虎提供的Web服务也是REST风格的。</p>
+<h4 id="WSDL"><a href="#WSDL" class="headerlink" title="WSDL"></a>WSDL</h4><p>WSDL（Web Services Description Language）即网络服务描述语言，用于描述Web服务的公共接口。这是一个基于XML的关于如何与Web服务通讯和使用的服务描述；也就是描述与目录中列出的Web服务进行交互时需要绑定的协议和信息格式。通常采用抽象语言描述该服务支持的操作和信息，使用的时候再将实际的网络协议和信息格式绑定给该服务。</p>
+<p>WSDL给出了SOAP型Web Service的基本定义，WSDL基于XML语言，描述了与服务交互的基本元素，说明服务端接口、方法、参数和返回值，WSDL是随服务发布成功，自动生成，无需编写。少数情况下，WSDL也可以用来描述REST型Web Service。SOAP也是基于XML（标准通用标记语言下的一个子集）和XSD的，XML是SOAP的数据编码方式。</p>
+<h4 id="WADL"><a href="#WADL" class="headerlink" title="WADL"></a>WADL</h4><p>WADL（Web Application Description Language）即Web应用程序描述语言，是一个可用计算机处理的表达基于HTTP的Web应用（如RESTWeb服务）的XML词汇。WADL描述了Web服务提供的资源及他们的联系。WADL试图简化重用基于HTTP架构的Web服务。它是一个平台，且与语言无关，并试图推动除Web浏览器的基本使用外的应用重用。</p>
+<p>WADL于2009年8月31日由Sun微系统提交至万维网联盟，但联盟目前没有标准化它的计划并且它并没有被广泛地支持。WADL依照描述基于SOAP的RPC式服务的XML词汇WSDL定义，用于描述REST服务，而WSDL也可用于描述RESTWeb服务。</p>
+<p>WADL主要用于REST基础。</p>
+<p>WADL与WSDL的区别：</p>
+<ul>
+<li>WSDL是面向接口的描述，WADL是面向资源的描述；</li>
+<li>WADL是基于HTTP的，WSDL 2.0是接口独立的；</li>
+</ul>
+<h4 id="UDDI"><a href="#UDDI" class="headerlink" title="UDDI"></a>UDDI</h4><p>UDDI（Universal Description Discovery and Integration）即统一描述、发现和集成，是一种用于描述、发现、集成Web Service的技术，它是Web Service协议栈的一个重要部分。通过UDDI，企业可以根据自己的需要动态查找并使用Web服务，也可以将自己的Web服务动态地发布到UDDI注册中心，供其他用户使用。</p>
+<p>UDDI是核心的Web服务标准之一。它通过SOAP进行消息传输，用Web服务描述语言描述Web服务及其接口使用。</p>
+<h3 id="SOAP型Web-Service服务架构"><a href="#SOAP型Web-Service服务架构" class="headerlink" title="SOAP型Web Service服务架构"></a>SOAP型Web Service服务架构</h3><p>如图，Web Service服务提供方将自己的Web服务通过SOAP动态地发布到UDDI注册中心，其中是以WSDL文件来进行描述，Web Service服务消费方先向UDDI注册中心通过SOAP请求WSDL文件回来解析服务提供方提供哪些方法后，再和提供方建立XML格式的HTTP通信：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/32.png" alt=""></p>
+<h3 id="WSDL文档结构"><a href="#WSDL文档结构" class="headerlink" title="WSDL文档结构"></a>WSDL文档结构</h3><p>WSDL文档结构如下，以本地WSDL文档为例，：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/26.png" alt=""></p>
+<p>标签说明：</p>
+<ul>
+<li>definitions：所有WSDL文档的根元素都是definitions元素；</li>
+<li>types：数据类型(标签)定义的容器，里面使用schema定义了一些标签结构供message引用 ；</li>
+<li><p>message：通信消息的数据结构的抽象类型化定义。引用types中定义的标签；</p>
+</li>
+<li><p>operation：对服务中所支持的操作的抽象描述，一个operation描述了一个访问入口的请求消息与响应消息对；</p>
+</li>
+<li><p>portType：对于某个访问入口点类型所支持的操作的抽象集合，这些操作可以由一个或多个服务访问点来支持；</p>
+</li>
+<li><p>binding：特定端口类型的具体协议和数据格式规范的绑定；</p>
+</li>
+<li><p>service：相关服务访问点的集合；</p>
+</li>
+<li><p>port：定义为协议/数据格式绑定与具体Web访问地址组合的单个服务访问点；</p>
+</li>
+</ul>
+<p>那么我们一般如何阅读WSDL文件呢？——WSDL文档都是<strong>从下往上</strong>阅读的。</p>
+<p>先看最底下的service标签，查看其中port标签的binding属性值，然后通过值查找上面的binding标签：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/27.png" alt=""></p>
+<p>通过binding标签可以获得具体协议等信息，然后查看binding的type属性：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/28.png" alt=""></p>
+<p>通过binding的type属性，查找对应的portType，可以获得可操作的方法和参数、返回值等：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/29.png" alt=""></p>
+<p>通过portType下的operation标签的message属性，可以向上查找message获取具体的数据参数：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/30.png" alt=""></p>
+<h2 id="0x02-编写Web-Service程序"><a href="#0x02-编写Web-Service程序" class="headerlink" title="0x02 编写Web Service程序"></a>0x02 编写Web Service程序</h2><p>简单看下各语言怎么编写Web Service程序。</p>
+<h3 id="Java版"><a href="#Java版" class="headerlink" title="Java版"></a>Java版</h3><p>编写接口类ICalculator，其中声明两个方法，注意接口要用<code>@WebService</code>修饰：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.jws.WebService;</span><br><span class="line"></span><br><span class="line"><span class="meta">@WebService</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ICalculator</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">int</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span></span>;</span><br><span class="line">    <span class="function">String <span class="title">concat</span><span class="params">(String a, String b)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编写接口实现类CalculatorImpl，其中重写实现两个方法，在<code>@WebService</code>修饰中指定端点接口为com.mi1k7ea.ICalculator且服务名为Calcutator：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.jws.WebService;</span><br><span class="line"></span><br><span class="line"><span class="meta">@WebService</span>(endpointInterface = <span class="string">"com.mi1k7ea.ICalculator"</span>, serviceName = <span class="string">"Calcutator"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CalculatorImpl</span> <span class="keyword">implements</span> <span class="title">ICalculator</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a + b;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">concat</span><span class="params">(String a, String b)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a + b;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编写Web Service服务端，通过Endpoint.publish()函数来发布指定地址上的Web Service服务：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.mi1k7ea.CalculatorImpl;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.xml.ws.Endpoint;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WebService</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"[*]Start Web Service..."</span>);</span><br><span class="line">        CalculatorImpl calculator = <span class="keyword">new</span> CalculatorImpl();</span><br><span class="line"></span><br><span class="line">        String address = <span class="string">"http://127.0.0.1:8081/calculator"</span>;</span><br><span class="line">        Endpoint.publish(address, calculator);</span><br><span class="line"></span><br><span class="line">        System.out.println(<span class="string">"[*]Web Service is working..."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行服务即可访问：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/1.png" alt=""></p>
+<h3 id="PHP版"><a href="#PHP版" class="headerlink" title="PHP版"></a>PHP版</h3><p>参考：<a href="https://github.com/snoopysecurity/dvws" target="_blank" rel="noopener">https://github.com/snoopysecurity/dvws</a></p>
+<h3 id="NodeJS版"><a href="#NodeJS版" class="headerlink" title="NodeJS版"></a>NodeJS版</h3><p>参考：<a href="https://github.com/snoopysecurity/dvws-node" target="_blank" rel="noopener">https://github.com/snoopysecurity/dvws-node</a></p>
+<h3 id="Net版"><a href="#Net版" class="headerlink" title=".Net版"></a>.Net版</h3><p>参考：<a href="https://xz.aliyun.com/t/7541#toc-4" target="_blank" rel="noopener">https://xz.aliyun.com/t/7541#toc-4</a></p>
+<h2 id="0x03-搜索Web-Service服务"><a href="#0x03-搜索Web-Service服务" class="headerlink" title="0x03 搜索Web Service服务"></a>0x03 搜索Web Service服务</h2><h3 id="Google-Hack"><a href="#Google-Hack" class="headerlink" title="Google Hack"></a>Google Hack</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">filetype:asmx inurl:(_vti_bin | api | webservice | ws )</span><br><span class="line">allinurl:dll?wsdl filetype:dll</span><br><span class="line"></span><br><span class="line">inurl:jws?wsdl</span><br><span class="line">inurl:asmx?wsdl</span><br><span class="line">inurl:aspx?wsdl</span><br><span class="line">inurl:ascx?wsdl</span><br><span class="line">inurl:ashx?wsdl</span><br><span class="line">inurl:dll?wsdl</span><br><span class="line">inurl:exe?wsdl</span><br><span class="line">inurl:php?wsdl</span><br><span class="line">inurl:pl?wsdl</span><br><span class="line">inurl:?wsdl</span><br><span class="line">filetype:jws</span><br><span class="line">filetype:asmx</span><br><span class="line">filetype:ascx</span><br><span class="line">filetype:aspx</span><br><span class="line">filetype:ashx</span><br><span class="line">filetype:dll</span><br><span class="line">filetype:exe</span><br><span class="line">filetype:php</span><br><span class="line">filetype:pl</span><br><span class="line">filetype:wsdl</span><br></pre></td></tr></table></figure>
+<h3 id="通过代理流量筛选"><a href="#通过代理流量筛选" class="headerlink" title="通过代理流量筛选"></a>通过代理流量筛选</h3><p>可以在如BurpSuite这种代理工具中设定的过滤规则来筛选Web Service请求。比如“.dll?wsdl”、“.ashx?wsdl”、“.exe?wsdl”、“.php?wsdl”等。</p>
+<h3 id="Fuzz"><a href="#Fuzz" class="headerlink" title="Fuzz"></a>Fuzz</h3><p>…</p>
+<h2 id="0x04-针对Web-Service的渗透测试"><a href="#0x04-针对Web-Service的渗透测试" class="headerlink" title="0x04 针对Web Service的渗透测试"></a>0x04 针对Web Service的渗透测试</h2><p>Web Service服务也是一些包装过的接口而已，针对Web Service服务的渗透测试和对常规API渗透测试是一样的、只是，可以使用安全工具来辅助进行，包括但不限于如下的工具：</p>
+<ul>
+<li>WebScarap</li>
+<li>SoapUI</li>
+<li>WCFStorm</li>
+<li>SOA Cleaner</li>
+<li>WSDigger</li>
+<li>wsScanner</li>
+<li>Wfuzz</li>
+<li>RESTClient</li>
+<li>BurpSuite</li>
+<li>WS-Attacker</li>
+<li>ZAP</li>
+<li>Metasploit</li>
+<li>WSDL Analyze</li>
+</ul>
+<p>这里主要讲下如何使用BurpSuite和ReadAPI/SoapUI这两个工具来对Web Service服务进行渗透服务。</p>
+<h3 id="ReadyAPI-BurpSuite"><a href="#ReadyAPI-BurpSuite" class="headerlink" title="ReadyAPI+BurpSuite"></a>ReadyAPI+BurpSuite</h3><p>网上的资料都是说的用SoapUI NG Pro+BurpSuite组合进行Web Service的渗透测试，但是现在SoapUI NG Pro试用版的下载已经更名为ReadyAPI了。</p>
+<p>下载地址：<a href="https://smartbear.com/product/ready-api/api-functional-testing/free-trial/" target="_blank" rel="noopener">https://smartbear.com/product/ready-api/api-functional-testing/free-trial/</a></p>
+<p>整个过程如图：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/2.png" alt=""></p>
+<p>其实就是SoapUI NG Pro作为Web Service的测试工具，Burp作为代理、监听SoapUI NG Pro用自己构造的payload报文打Web Service的流量报文，其中可以篡改对应的报文参数实现渗透测试。</p>
+<p>这里本地以ReadyAPI为例。</p>
+<p>先设置Burp代理，在File-&gt;Preferences-&gt;Proxy中设置Burp代理服务器地址：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/3.png" alt=""></p>
+<p>然后新建安全测试任务，选择WSDL相关的API模块定义：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/4.png" alt=""></p>
+<p><img src="/2021/01/16/Web-Service渗透测试/5.png" alt=""></p>
+<p>填写目标Web Service的WSDL地址，这里以前面编写的Demo为例：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/6.png" alt=""></p>
+<p>点击Next，当WSDL解析完成后，会自动生成一系列的安全测试用例，默认都选上安全测试用例，点击Finish，然后运行测试用例：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/7.png" alt=""></p>
+<p>扫描完成之后会给出扫描总结报告、还提供PDF版详细报告供查阅：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/8.png" alt=""></p>
+<p>此时Burp中已经监听到了大量ReadAPI安全测试用例的报文，只需要将对应的报文放到Repeater中修改参数值继续进行渗透测试或者发到Intruder中进行Fuzzing即可：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/9.png" alt=""></p>
+<p>后面就是针对常见API接口安全的渗透测试了，套路都是一样的。</p>
+<h3 id="SoapUI-BurpSuite"><a href="#SoapUI-BurpSuite" class="headerlink" title="SoapUI+BurpSuite"></a>SoapUI+BurpSuite</h3><p>当使用没有安全测试用例扫描功能的SoapUI时，也可以用来生成对应格式的报文给Burp进行手工渗透测试。</p>
+<p>这里以SoapUI Pro为例，前面的设置操作都是和ReadyAPI一样，只是没有了安全测试用例扫描功能而已。</p>
+<p>设置好Burp代理，新建SOAP项目，填入WSDL地址完成解析后会显示如下图左边所有的Web Service服务和方法，其中可以单个填入参数值发送对应的请求报文并获取结果回显到界面中：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/10.png" alt=""></p>
+<p>这里Burp监听到该报文，只需要修改参数值，而无须构造XML格式：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/11.png" alt=""></p>
+<p>后面就是针对常见API接口安全的渗透测试了，套路都是一样的。</p>
+<h3 id="BurpSuite插件之Wslder"><a href="#BurpSuite插件之Wslder" class="headerlink" title="BurpSuite插件之Wslder"></a>BurpSuite插件之Wslder</h3><p>Wslder是BurpSuite，其在Extender的BApp Store中可以直接下载安装。虽然比前面的方法简便，但是有时候生成的请求会存在问题导致无法成功发包，此时就需要用到前面的方法了。</p>
+<p>安装成功后，在Requests中右键选中<code>Parse WSDL</code>就能直接用了：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/12.png" alt=""></p>
+<p>解析WSDL完成之后，在Wsdler栏可以看到解析出来对应的Web Service服务和方法以及对应的请求参数样例等，直接修改对应的参数值即可进行渗透测试：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/13.png" alt=""></p>
+<h2 id="0x05-Web-Service漏洞案例"><a href="#0x05-Web-Service漏洞案例" class="headerlink" title="0x05 Web Service漏洞案例"></a>0x05 Web Service漏洞案例</h2><p>SOAP型Web Service漏洞和Web漏洞并没有区别，只是请求的payload构造需要满足一些格式要求而已，具体还是要看Web Service服务端代码是怎么写的。比如命令注入、SQL注入、XSS、XXE、XPath注入、DoS、逻辑漏洞、信息泄露…等等。</p>
+<p>这里以DVWS靶场为例演示几个SOAP类型Web Service请求的漏洞利用。</p>
+<h3 id="XSS"><a href="#XSS" class="headerlink" title="XSS"></a>XSS</h3><p>换SOAP请求攻击时，注意点就是在SOAP中XSS payload的尖括号要进行HTML编码，不然会造成SOAP标签解析错误从而报错：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/17.png" alt=""></p>
+<p><img src="/2021/01/16/Web-Service渗透测试/18.png" alt=""></p>
+<p>此外，一般Web Service服务站点也是支持上传XML文件的，这里就可以使用xhtml来触发XML XSS：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">xhtml:html</span> <span class="attr">xmlns:xhtml</span>=<span class="string">"http://www.w3.org/1999/xhtml"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">xhtml:script</span>&gt;</span></span><br><span class="line">    alert(document.location)</span><br><span class="line">    <span class="tag">&lt;/<span class="name">xhtml:script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">xhtml:html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2021/01/16/Web-Service渗透测试/20.png" alt=""></p>
+<p><img src="/2021/01/16/Web-Service渗透测试/21.png" alt=""></p>
+<h3 id="XXE"><a href="#XXE" class="headerlink" title="XXE"></a>XXE</h3><p>回显型XXE，注意exp的XML内容要写在SOAP的前面才能正常解析利用：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/14.png" alt=""></p>
+<p><img src="/2021/01/16/Web-Service渗透测试/19.png" alt=""></p>
+<h3 id="任意用户枚举"><a href="#任意用户枚举" class="headerlink" title="任意用户枚举"></a>任意用户枚举</h3><p>就是常规的API逻辑漏洞而已，利用响应结果二元组来推断：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/15.png" alt=""></p>
+<p><img src="/2021/01/16/Web-Service渗透测试/16.png" alt=""></p>
+<h3 id="express-fileupload原型链污染攻击"><a href="#express-fileupload原型链污染攻击" class="headerlink" title="express-fileupload原型链污染攻击"></a>express-fileupload原型链污染攻击</h3><p>有意思的是，这里有个express-fileupload &lt; 1.1.10版本的原型链污染漏洞，可导致DoS（某些情况下可导致任意代码执行）：</p>
+<p><img src="/2021/01/16/Web-Service渗透测试/22.png" alt=""></p>
+<p><img src="/2021/01/16/Web-Service渗透测试/23.png" alt=""></p>
+<p><img src="/2021/01/16/Web-Service渗透测试/24.png" alt=""></p>
+<h3 id="DoS"><a href="#DoS" class="headerlink" title="DoS"></a>DoS</h3><p>Web Service服务的交互很多都是用的XML格式数据。请求中的XML数据会由服务端的XML解析器进行解析和处理。</p>
+<p>目前主要有两类XML解析器：</p>
+<ul>
+<li>基于SAX（Simple API for XML）的XML解析器：内存中最多容纳2个元素。在这种情况下，基于SAX的解析器不会存在DoS问题；</li>
+<li>基于DOM（Document Object Model）的XML解析器：会一次性读取客户端存储的所有XML数据，因此会导致内存中存在庞大的对象数据从而导致存在DoS问题。漏洞根源在于没有检查XML中节点的大小和数量；</li>
+</ul>
+<p>针对元素名称的DoS攻击的示例：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">soapenv:Envelope</span> <span class="attr">xmlns:soapenv</span>=<span class="string">"http://schemas.xmlsoap.org/soap/envelope/"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">soapenv:Header</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">soapenv:Body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">TEST</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">BGABGABGABGABGABGABGABGABGABGABGABGABGABGABGABGA………BGABGABGABGABGABGABGABGABGABGA</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">TEST</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">soapenv:Body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">soapenv:Envelope</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>针对元素属性的DoS攻击的示例：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">soapenv:Envelope</span> <span class="attr">xmlns:soapenv</span>=<span class="string">"http://schemas.xmlsoap.org/soap/envelope/"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">soapenv:Header</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">soapenv:Body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">TEST</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">BGA</span> <span class="attr">attribute</span>=<span class="string">”BGABGABGABGABGABGABGABGABGABGABGABGABGABGABGABGA………BGABGABGABGABGABGABGABGABGABGA”</span>&gt;</span><span class="tag">&lt;/<span class="name">BGA</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">TEST</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">soapenv:Body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">soapenv:Envelope</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>针对元素个数的DoS攻击的示例（也可以通过重复某个特定元素达到同样效果）：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">soapenv:Envelope</span> <span class="attr">xmlns:soapenv</span>=<span class="string">"http://schemas.xmlsoap.org/soap/envelope/"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">soapenv:Header</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">soapenv:Body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">TEST</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">BGA</span> <span class="attr">attribute1</span>=<span class="string">”BGABGABGABGABGABGABGABGABGABGABGABGABGABGABGABGA...BGABGABGABGABGABGABGABGABGABGA”</span> <span class="attr">attribute2</span>=<span class="string">”BGABGABGABGABGABGABGABGABGABGABGABGABGABGABGABGA...BGABGABGABGABGABGABGABGABGABGA”</span> <span class="attr">attribute3</span>=<span class="string">”BGABGABGABGABGABGABGABGABGABGABGABGABGABGABGABGA...BGABGABGABGABGABGABGABGABGABGA”</span>&gt;</span><span class="tag">&lt;/<span class="name">BGA</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">TEST</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">soapenv:Body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">soapenv:Envelope</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>当然，存在XXE时，就可以进行XXE DoS攻击：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version=&quot;1.0&quot; encoding=&quot;ISO-8859-1&quot;?&gt;</span><br><span class="line">&lt;!DOCTYPE bga [</span><br><span class="line">&lt;!ELEMENT ANY &gt;</span><br><span class="line">&lt;!ENTITY bga1 &quot;bga1&quot;&gt;</span><br><span class="line">&lt;!ENTITY bga2 &quot;&amp;bga1;&amp;bga1;&amp;bga1;&amp;bga1;&amp;bga1;&amp;bga1;&quot;&gt;</span><br><span class="line">&lt;!ENTITY bga3 &quot;&amp;bga2;&amp;bga2;&amp;bga2;&amp;bga2;&amp;bga2;&amp;bga2;&quot;&gt;</span><br><span class="line">&lt;!ENTITY bga4 &quot;&amp;bga3;&amp;bga3;&amp;bga3;&amp;bga3;&amp;bga3;&amp;bga3;&quot;&gt;</span><br><span class="line">&lt;!ENTITY bga5 &quot;&amp;bga4;&amp;bga4;&amp;bga4;&amp;bga4;&amp;bga4;&amp;bga4;&quot;&gt;</span><br><span class="line">&lt;!ENTITY bga6 &quot;&amp;bga5;&amp;bga5;&amp;bga5;&amp;bga5;&amp;bga5;&amp;bga5;&quot;&gt;</span><br><span class="line">]&gt;</span><br><span class="line">&lt;bga&gt;&amp;bga6;&lt;/bga&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="0x06-参考"><a href="#0x06-参考" class="headerlink" title="0x06 参考"></a>0x06 参考</h2><p><a href="https://t0data.gitbooks.io/burpsuite/content/chapter17.html" target="_blank" rel="noopener">使用Burp Suite测试Web Services服务</a></p>
+<p><a href="https://xz.aliyun.com/t/7541" target="_blank" rel="noopener">浅析接口安全之WebService</a></p>
+<p><a href="https://www.anquanke.com/post/id/85910" target="_blank" rel="noopener">【技术分享】Web Service 渗透测试从入门到精通</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Web-Service基础"><span class="toc-text">0x01 Web Service基础</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Web-Service简介"><span class="toc-text">Web Service简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Web-Service基本原理"><span class="toc-text">Web Service基本原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Web-Service分类"><span class="toc-text">Web Service分类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Web-Service三要素"><span class="toc-text">Web Service三要素</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Web-Service相关技术"><span class="toc-text">Web Service相关技术</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#SOAP"><span class="toc-text">SOAP</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#REST"><span class="toc-text">REST</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#WSDL"><span class="toc-text">WSDL</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#WADL"><span class="toc-text">WADL</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#UDDI"><span class="toc-text">UDDI</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SOAP型Web-Service服务架构"><span class="toc-text">SOAP型Web Service服务架构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#WSDL文档结构"><span class="toc-text">WSDL文档结构</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-编写Web-Service程序"><span class="toc-text">0x02 编写Web Service程序</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Java版"><span class="toc-text">Java版</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PHP版"><span class="toc-text">PHP版</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#NodeJS版"><span class="toc-text">NodeJS版</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Net版"><span class="toc-text">.Net版</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-搜索Web-Service服务"><span class="toc-text">0x03 搜索Web Service服务</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Google-Hack"><span class="toc-text">Google Hack</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#通过代理流量筛选"><span class="toc-text">通过代理流量筛选</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Fuzz"><span class="toc-text">Fuzz</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-针对Web-Service的渗透测试"><span class="toc-text">0x04 针对Web Service的渗透测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#ReadyAPI-BurpSuite"><span class="toc-text">ReadyAPI+BurpSuite</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SoapUI-BurpSuite"><span class="toc-text">SoapUI+BurpSuite</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BurpSuite插件之Wslder"><span class="toc-text">BurpSuite插件之Wslder</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-Web-Service漏洞案例"><span class="toc-text">0x05 Web Service漏洞案例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#XSS"><span class="toc-text">XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#XXE"><span class="toc-text">XXE</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#任意用户枚举"><span class="toc-text">任意用户枚举</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#express-fileupload原型链污染攻击"><span class="toc-text">express-fileupload原型链污染攻击</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DoS"><span class="toc-text">DoS</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-参考"><span class="toc-text">0x06 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/" rel="next" title="杜绝CSRF的方案：SameSite cookies">
+          杜绝CSRF的方案：SameSite cookies
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/01/20/Windows提权之快速查找EXP及MS11-080/" rel="prev" title="Windows提权之快速查找EXP及MS11-080">
+            Windows提权之快速查找EXP及MS11-080
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

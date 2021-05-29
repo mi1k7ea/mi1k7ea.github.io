@@ -1,0 +1,466 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="渗透测试,内网渗透,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>内网渗透基础与域环境搭建 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        内网渗透基础与域环境搭建
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-02-15T12:34:33.000Z">
+        2020-02-15
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/内网渗透/">内网渗透</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/渗透测试/">渗透测试</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-参考"><a href="#0x00-参考" class="headerlink" title="0x00 参考"></a>0x00 参考</h2><p>《内网安全攻防》笔记。</p>
+<h2 id="0x01-内网基本概念"><a href="#0x01-内网基本概念" class="headerlink" title="0x01 内网基本概念"></a>0x01 内网基本概念</h2><h3 id="工作组"><a href="#工作组" class="headerlink" title="工作组"></a>工作组</h3><p>工作组（Work Group）是局域网中的一个概念。它是最常见最简单最普通的资源管理模式，就是将不同的电脑按功能分别列入不同的组中，以方便管理。在这个概念中，并不存在集中管理的节点，即无服务器和客户机的区分。</p>
+<p>怎么设置工作组？——右键我的电脑-&gt;属性-&gt;更改设置-&gt;更改：</p>
+<p><img src="/2020/02/15/内网渗透基础/1.png" alt=""></p>
+<h3 id="域"><a href="#域" class="headerlink" title="域"></a>域</h3><p>Windows域是计算机网络的一种形式，其中所有用户帐户 ，计算机，打印机和其他安全主体都在位于称为域控制器的一个或多个中央计算机集群上的中央数据库中注册。 身份验证在域控制器上进行。 在域中使用计算机的每个人都会收到一个唯一的用户帐户，然后可以为该帐户分配对该域内资源的访问权限。Windows域的概念与工作组的概念形成对比，在该工作组中，每台计算机都维护自己的安全主体数据库。</p>
+<p>域(Domain)是Windows网络中独立运行的单位，域之间相互访问则需要建立信任关系(即Trust Relation)。信任关系是连接在域与域之间的桥梁。当一个域与其他域建立了信任关系后，2个域之间不但可以按需要相互进行管理，还可以跨网分配文件和打印机等设备资源，使不同的域之间实现网络资源的共享与管理，以及相互通信和数据传输。</p>
+<p>域既是 Windows 网络操作系统的逻辑组织单元，也是Internet的逻辑组织单元，在 Windows 网络操作系统中，域是安全边界。域管理员只能管理域的内部，除非其他的域显式地赋予他管理权限，他才能够访问或者管理其他的域，每个域都有自己的安全策略，以及它与其他域的安全信任关系。</p>
+<h4 id="域控制器（DC）"><a href="#域控制器（DC）" class="headerlink" title="域控制器（DC）"></a>域控制器（DC）</h4><p>域控制器（Domain Controller，简写为DC）是指在“域”模式下，至少有一台服务器负责每一台联入网络的电脑和用户的验证工作，相当于一个单位的门卫一样。域内的计算机若想互相访问，需要经过域控制器的审核。域控制器中存在由这个域的账户、密码、属于这个域的计算机等信息构成的数据库。当电脑联入网络时，域控制器首先要鉴别这台电脑是否是属于这个域的，用户使用的登录账号是否存在、密码是否正确。如果以上信息有一样不正确，那么域控制器就会拒绝这个用户从这台电脑登录。不能登录，用户就不能访问服务器上有权限保护的资源，他只能以对等网用户的方式访问Windows共享出来的资源，这样就在一定程度上保护了网络上的资源。</p>
+<p><img src="/2020/02/15/内网渗透基础/2.png" alt=""></p>
+<h4 id="单域"><a href="#单域" class="headerlink" title="单域"></a>单域</h4><p>单域即只有一个域，通常满足小公司的需求。一般来说至少两个域服务器，一台作为DC，另一台作为备份DC。</p>
+<h4 id="父域和子域"><a href="#父域和子域" class="headerlink" title="父域和子域"></a>父域和子域</h4><p>出于管理和其他一些需求，需要在网络中划分多个域。其中第一个域称为父域，各分部的域称为该域的子域。</p>
+<h4 id="域树"><a href="#域树" class="headerlink" title="域树"></a>域树</h4><p>域树由多个域组成，这些域共享同一表结构和配置，形成一个连续的名字空间。</p>
+<p>树中的域通过信任关系连接起来，活动目录包含一个或多个域树。域树中的域层次越深级别越低，一个“.”代表一个层次，如域child.Microsoft.com 就比 Microsoft.com这个域级别低，因为它有两个层次关系，而Microsoft.com只有一个层次。而域Grandchild.Child.Microsoft.com又比 Child.Microsoft.com级别低，道理一样。他们都属于同一个域树。Child.Microsoft.com就属于Microsoft.com的子域。</p>
+<p><img src="/2020/02/15/内网渗透基础/3.png" alt=""></p>
+<p>多个域树可以组成一个域林。</p>
+<h4 id="域林"><a href="#域林" class="headerlink" title="域林"></a>域林</h4><p>域林是指由一个或多个没有形成连续名字空间的域树通过建立信任关系组成的集合，它与域树最明显的区别就在于域林之间没有形成连续的名字空间，而域树则是由一些具有连续名字空间的域组成。</p>
+<p><img src="/2020/02/15/内网渗透基础/4.png" alt=""></p>
+<h4 id="域名服务器"><a href="#域名服务器" class="headerlink" title="域名服务器"></a>域名服务器</h4><p>DNS（Domain Name Server，域名服务器）是进行域名(domain name)和与之相对应的IP地址 (IP address)转换的服务器。DNS中保存了一张域名(domain name)和与之相对应的IP地址 (IP address)的表，以解析消息的域名。 域名是Internet上某一台计算机或计算机组的名称，用于在数据传输时标识计算机的电子方位（有时也指地理位置）。域名是由一串用点分隔的名字组成的，通常包含组织名，而且始终包括两到三个字母的后缀，以指明组织的类型或该域所在的国家或地区。</p>
+<p>在前面域树中看到域树中的域名和DNS域名很像。因为域中的计算机是使用DNS来定位域控制器、服务器和其他计算机、网络服务的，因此域的名字就是DNS域的名字。</p>
+<p>对于内网渗透而言，一般是通过寻找DNS服务器来确定域控制器的位置的（通常DNS服务器和域控制器配置在同一台机器上）。</p>
+<h4 id="域中计算机的分类"><a href="#域中计算机的分类" class="headerlink" title="域中计算机的分类"></a>域中计算机的分类</h4><p>在域中，计算机一般分为：域控制器、成员服务器、客户机、独立服务器等。</p>
+<p>其中域控制器是域所必需的，因为其存放活动目录数据库。</p>
+<h5 id="域控制器"><a href="#域控制器" class="headerlink" title="域控制器"></a>域控制器</h5><p>DC的概念在前面已说过。</p>
+<p>可以在网络中配置多态DC，用来分担用户的登录、访问等操作。多个DC可以一起工作，自动备份用户账户和活动目录数据，提高网络的安全性和稳定性。</p>
+<h5 id="成员服务器"><a href="#成员服务器" class="headerlink" title="成员服务器"></a>成员服务器</h5><p>成员服务器是指安装了服务器OS并加入了域、但没有安装活动目录的计算机，其主要任务是提供网络资源。</p>
+<p>成员服务器的类型通常有文件服务器、应用服务器、数据库服务器、Web服务器、邮件服务器、防火墙、远程访问服务器、打印服务器等。</p>
+<h5 id="客户机"><a href="#客户机" class="headerlink" title="客户机"></a>客户机</h5><p>客户机是域中用户使用的计算机，用户通过客户机和域中的账户就能登录访问域。</p>
+<h5 id="独立服务器"><a href="#独立服务器" class="headerlink" title="独立服务器"></a>独立服务器</h5><p>独立服务器和域没啥关系。如果服务器没加入域，也没安装活动目录，则称为独立服务器。</p>
+<p>独立服务器可以创建工作组、与网络中的其他计算机共享资源，但不能使用活动目录提供的任何服务。</p>
+<h4 id="域内权限"><a href="#域内权限" class="headerlink" title="域内权限"></a>域内权限</h4><p>组（Group）是用户账号的集合。通过向一组用户分配权限，就可以不必向每个用户分别分配权限。</p>
+<p>下面看下几个类型的组。</p>
+<h5 id="域本地组"><a href="#域本地组" class="headerlink" title="域本地组"></a>域本地组</h5><p>域本地组是指多域用户访问单域资源（访问同一个域），主要用于授权本域内资源的访问权限。</p>
+<p>域本地组的成员可以来自域林中的任何域，域本地组用来访问同一域中的资源。</p>
+<h5 id="全局组"><a href="#全局组" class="headerlink" title="全局组"></a>全局组</h5><p>全局组是指单域用户访问多域资源（必须是一个域里面的用户），只能在创建该全局组的域中添加用户和全局组。</p>
+<p>全局组的成员可包括其所在域中的其他组和账户，而且可在林中的任何域中指派权限。</p>
+<h5 id="通用组"><a href="#通用组" class="headerlink" title="通用组"></a>通用组</h5><p>通用组是指多域用户访问多域资源。</p>
+<p>通用组的成员可包括域树或域林中任何域的其他组和账户，而且可在该域树或域林中的任何域中指派权限。</p>
+<h5 id="小Trick"><a href="#小Trick" class="headerlink" title="小Trick"></a>小Trick</h5><ul>
+<li>域本地组：来自全林，作用于本域；</li>
+<li>全局组：来自本域，作用于全林；</li>
+<li>通用组：来自全林，作用于全林；</li>
+</ul>
+<h5 id="A-G-DL-P策略"><a href="#A-G-DL-P策略" class="headerlink" title="A-G-DL-P策略"></a>A-G-DL-P策略</h5><p>A-G-DL-P策略（A：Account，用户账号；G：Global Group，全局组；DL：Domain Local Group，域本地组；P：Permission，资源权限）是指将用户账号添加到全局组中，将全局组添加到域本地组中，然后为域本地组分配资源权限。</p>
+<p>A-G-DL-P策略是为了方便对用户进行组织和管理。当需要给一个用户添加某个权限时，只需要把这个用户添加到某一个域本地组中就可以了。</p>
+<h5 id="内置组"><a href="#内置组" class="headerlink" title="内置组"></a>内置组</h5><p>在安装DC时，系统会自动生成一些组，即内置组。内置组内定义了一些常用的权限。通过将用户添加到内置组中，可以是用户获得相应的权限。</p>
+<p>“Active Directory 用户和计算机”中的”Builtin”和”Users”组织单元中的组就是内置组，内置的域本地组在”Builtin”中，内置的全局组和通用组在”Users”中。</p>
+<p>几个比较重要的域本地组权限：</p>
+<ul>
+<li>管理员组（Administrators）的成员可以完全不受限制地存取计算机/域的资源，不仅是最具权力的一个组，也是在活动目录和域控制器中具有默认的管理员权限的组。该组的成员可以更改 Enterprise Admins、Schem Admins 和 Domain Admins 组的成员关系，是域森林中强大的服务管理组。</li>
+<li>远程登录组（Remote Desktop Users）的成员被授予远程登录的权限。</li>
+<li>打印机操作员组（Print Operators）的成员可以管理网络打印机，包括建立、管理及删除网络打印机，并可以在本地登录和关闭域控制器。</li>
+<li>账号操作员组（Account Operators）的成员可以创建和管理该域中的用户和组，并可以设置其权限，但是，不能更改隶属 Administrators 或 Domain Admins 组的账户，也不能修改这些组。Account Operators 可以在本地登录域控制器。在默认情况下，该组中没有成员。</li>
+<li>服务器操作员组（Server Operators）的成员可以管理域服务器，包括建立/管理/删除任何服务器的共享目录、管理网络打印机、备份任何服务器的文件、格式化服务器硬盘、锁定服务器，以及变更服务器的系统时间等权限，并能关闭域控制器。在默认情况下，该组中没有成员。</li>
+<li>备份操作员组（Backup Operators）的成员可以在域控制器上执行备份和还原操作，并可以在本地登录和关闭域控制器。在默认情况下，该组中没有成员。</li>
+</ul>
+<p>几个比较重要的全局组、通用组的权限：</p>
+<ul>
+<li>域管理员组（Domain Admins）的成员在所有加入域的服务器和工作站、域控制器和活动目录上均默认拥有完整的管理员权限。因为该组会被添加到自己所在域的 Administrators 组 中，因此可以继承 Administrators 组的所有权限。同时，该组默认会被添加到每台域成员计算机的本地 Administrators 组中，这样，Domain Admins 就对域中的所有计算机拥有了所有权。如果希望某用户成为域系统管理器，建议将该用户加至 Domain Admins 组中，而不要直接将该用户添加到 Administrators 组中。</li>
+<li>企业系统管理员组（Enterprise Admins）是域森林根域中的一个组。该组在域森林中的每个域内都是 Administrators 组的成员，因此对所有域控制器都有完全访问权。</li>
+<li>架构管理员组（Schema Admins）是域森林根域中的一个组，可以修改活动目录域森林的模式。由于管理员组是提供活动目录和域控制器完整权限的域用户组，该组成员的资格是非常重要的。</li>
+<li>域用户组（Domain Users）是所有域的成员。在预设的情况下，任何由我们建立的用户账户都是 Domain Users 组的成员，而任何由我们建立的计算机账户都是 Domain Computers 组的成员。因此，如果想让所有账户都具有某种资源存取权限，可以将该权限指定给 Domain Users 组，或者让 Domain Users 组属于具有该权限的组。Domain Users 组在预设的情况下是内建域局域 Users 组的成员。</li>
+</ul>
+<h3 id="活动目录"><a href="#活动目录" class="headerlink" title="活动目录"></a>活动目录</h3><p>活动目录（Active Directory，简称AD）是指域环境中提供目录服务的组件。AD存储了有关网络对象（比如用户、组、计算机、共享资源、打印机等）的信息，并且让管理员和用户能够轻松地查找和使用这些信息。AD使用了一种结构化的数据存储方式，并以此作为基础对目录信息进行合乎逻辑的分层组织。</p>
+<p>域树/域林内的所有域共享一个活动目录，每个域只存储该域内的数据。</p>
+<p>活动目录(Active Directory)主要提供以下功能：</p>
+<ol>
+<li>服务器及客户端计算机管理：管理服务器及客户端计算机账户，所有服务器及客户端计算机加入域管理并实施组策略。</li>
+<li>用户服务：管理用户域账户、用户信息、企业通讯录（与电子邮件系统集成）、用户组管理、用户身份认证、用户授权管理等，按省实施组管理策略。</li>
+<li>资源管理：管理打印机、文件共享服务等网络资源。</li>
+<li>桌面配置：系统管理员可以集中的配置各种桌面配置策略，如：用户使用域中资源权限限制、界面功能的限制、应用程序执行特征限制、网络连接限制、安全配置限制等。</li>
+<li>应用系统支撑：支持财务、人事、电子邮件、企业信息门户、办公自动化、补丁管理、防病毒系统等各种应用系统。</li>
+</ol>
+<p><strong>域控制器与活动目录的区别</strong></p>
+<p>AD库：活动目录数据库，是指用于将大型网络中众多的对象（如计算机、用户、用户组、打印机、共享文件等）分类存放并将检索信息整理好以便于查找、管理和使用这些对象的数据库。</p>
+<p>可知，这个AD库是实现域环境的关键。<strong>如果内网中某台计算机安装了AD，那么它就成为了DC（用于存储活动目录数据库的计算机）</strong>。</p>
+<h3 id="安全域的划分"><a href="#安全域的划分" class="headerlink" title="安全域的划分"></a>安全域的划分</h3><p>安全域划分即将同一安全等级的计算机划入同一个的网段，这样这些计算机都拥有相同的网络边界，并在网络边界上通过部署防火墙来实现对其他安全域的网络访问控制策略（NACL）。在一个用路由器连接的局域网中,我们可以将网络划分为三个区域：安全级别最高的LAN Area（内网），安全级别中等的DMZ区域和安全级别最低的Internet区域（外网）。三个区域因担负不同的任务而拥有不同的访问策略。</p>
+<p>而安全域的划分一般分为DMZ和内网。</p>
+<p>典型的中小型内网的安全域划分如图，这里有两个安全域即两个虚线划出来的安全边界：</p>
+<p><img src="/2020/02/15/内网渗透基础/5.png" alt=""></p>
+<h4 id="DMZ"><a href="#DMZ" class="headerlink" title="DMZ"></a>DMZ</h4><p>两个防火墙之间的空间被称为DMZ。安全性：<code>Internet &lt; DMZ &lt; 内网</code>。</p>
+<p>DMZ（Demilitarized Zone），隔离区，也称非军事化区。它是为了解决安装防火墙后外部网络的访问用户不能访问内部网络服务器的问题，而设立的一个非安全系统与安全系统之间的缓冲区。该缓冲区位于企业内部网络和外部网络之间的小网络区域内。在这个小网络区域内可以放置一些必须公开的服务器设施，如企业Web服务器、FTP服务器和论坛等。另一方面，通过这样一个DMZ区域，更加有效地保护了内部网络。因为这种网络部署，比起一般的防火墙方案，对来自外网的攻击者来说又多了一道关卡。</p>
+<p>DMZ的屏障功能：</p>
+<ol>
+<li>内网可以访问外网：内网的用户显然需要自由地访问外网。在这一策略中，防火墙需要进行源地址转换。</li>
+<li>内网可以访问DMZ：此策略是为了方便内网用户使用和管理DMZ中的服务器。</li>
+<li>外网不能访问内网：很显然，内网中存放的是公司内部数据，这些数据不允许外网的用户进行访问。</li>
+<li>外网可以访问DMZ：DMZ中的服务器本身就是要给外界提供服务的，所以外网必须可以访问DMZ。同时，外网访问DMZ需要由防火墙完成对外地址到服务器实际地址的转换。</li>
+<li>DMZ访问内网有限制：很明显，如果违背此策略，则当入侵者攻陷DMZ时，就可以进一步进攻到内网的重要数据。</li>
+<li>DMZ不能访问外网：此条策略也有例外，比如DMZ中放置邮件服务器时，就需要访问外网，否则将不能正常工作。在网络中，非军事区(DMZ)是指为不信任系统提供服务的孤立网段，其目的是把敏感的内部网络和其他提供访问服务的网络分开，阻止内网和外网直接通信，以保证内网安全。</li>
+</ol>
+<h4 id="内网"><a href="#内网" class="headerlink" title="内网"></a>内网</h4><p>内网在安全域划分中是安全级别最高的，其中可以分为办公区和核心区。</p>
+<h2 id="0x02-内网域环境搭建"><a href="#0x02-内网域环境搭建" class="headerlink" title="0x02 内网域环境搭建"></a>0x02 内网域环境搭建</h2><p>内网渗透很大程度上就是域渗透，这里使用Windows Server 2012 R2、Windows Server 2008 R2和Windows 7搭建最为简单的迷你型域环境，其中将Windows Server 2012 R2服务器安装AD升级为DC，然后将Windows Server 2008 R2和Windows 7加入到该域中。此外，再安装Monowall来构建含有防火墙的二级内网。</p>
+<p>下面推荐几个下载OS镜像的地址：</p>
+<ul>
+<li><a href="https://msdn.itellyou.cn/" target="_blank" rel="noopener">https://msdn.itellyou.cn/</a></li>
+<li><a href="https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/" target="_blank" rel="noopener">https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/</a></li>
+<li><a href="https://pcriver.com/operating-systems/windows-xp-professional-iso-download.html" target="_blank" rel="noopener">https://pcriver.com/operating-systems/windows-xp-professional-iso-download.html</a></li>
+</ul>
+<p>注意，为了 更逼真的内网环境，两台机子的虚拟网卡都选择Host-only模式。</p>
+<h3 id="搭建域控制器"><a href="#搭建域控制器" class="headerlink" title="搭建域控制器"></a>搭建域控制器</h3><p>这里先安装好Windows Server 2012 R2系统，按如下步骤操作。</p>
+<h4 id="设置IP"><a href="#设置IP" class="headerlink" title="设置IP"></a>设置IP</h4><p>这里设置服务器IP为192.168.1.1，而且一般域控制器和DNS服务器都是装在一起的，因此DNS服务器地址也写本机就好：</p>
+<p><img src="/2020/02/15/内网渗透基础/6.png" alt=""></p>
+<h4 id="更改计算机名"><a href="#更改计算机名" class="headerlink" title="更改计算机名"></a>更改计算机名</h4><p>在“控制面板-&gt;系统和安全-&gt;系统”中点击“更改设置-&gt;更改”，然后把计算机名改为“DC”，点击确定后重启计算机生效。</p>
+<h4 id="安装域控制器和DNS服务"><a href="#安装域控制器和DNS服务" class="headerlink" title="安装域控制器和DNS服务"></a>安装域控制器和DNS服务</h4><p>Windows Server 2012 R2在开机时会自动打开服务器管理器，我们直接点击“添加角色和功能”：</p>
+<p><img src="/2020/02/15/内网渗透基础/7.png" alt=""></p>
+<blockquote>
+<p>保持默认设置，单击“下 一步”按钮，进入“安装类型”页面。选择“基于角色或者基于功能的安装”选项，单击“下一 步”按钮，进入“服务器选择”选择页面。目前的服务器池中只有当前这一台机器，保持默认设置。单击“下一步”按钮，在“服务器角色”页面勾选“Active Directory 域服务”和“DNS 服务器”复选框：</p>
+</blockquote>
+<p><img src="/2020/02/15/内网渗透基础/8.png" alt=""></p>
+<p>在“功能”页面，保持默认设置，单击“下一步”按钮，进入“确认”页面。确认需要安装 的组件后，勾选“如果需要，自动重新启动目标服务器”复选框，然后单击安装：</p>
+<p><img src="/2020/02/15/内网渗透基础/9.png" alt=""></p>
+<h4 id="升级服务器"><a href="#升级服务器" class="headerlink" title="升级服务器"></a>升级服务器</h4><blockquote>
+<p>Active Directory 域服务安装完成后，需要将此服务器提升为域控制器。单击“将此服务器提 升为域控制器”选项（如果不慎单击了“关闭”按钮，可以在“服务器管理器”页面中打开相关 页面），在右上角可以看到一个中间有“！”的三角形按钮。单击该按钮，提升服务器：</p>
+</blockquote>
+<p><img src="/2020/02/15/内网渗透基础/10.png" alt=""></p>
+<blockquote>
+<p>AD 域服务安装完成。接着，进入“Active Directory 域服务配置向导”页面，在部署操作中单 击选中“添加新林”单选按钮并输入根域名（必须使用允许的 DNS 域命名约定） 。将根域名设置 为“hacke.testlab”：</p>
+</blockquote>
+<p><img src="/2020/02/15/内网渗透基础/11.png" alt=""></p>
+<blockquote>
+<p>在“域控制器选项”页面，将林功能级别、域功能级别都设置为 Windows Server 2012 R2，如图所示。在创建新林时，在默认情况下选择 DNS 服务器，林中的第一个域控制器必须是全局目录服务器且不能是只读域控制器（RODC） 。输入目录服务还原模式密码，在开机进入安全模式修复 AD 数据库时将使用此密码。 </p>
+</blockquote>
+<p><img src="/2020/02/15/内网渗透基础/12.png" alt=""></p>
+<p>在 DNS 选项页面会出现关于 DNS 的警告。不用理会该警告，保持默认设置。单击“下一步” 按钮，进入“其他选项”页面，在 NetBIOS 域名（不支持DNS 域名的旧系统，如 Windows 98、 NT 系统，需要通过 NetBIOS 域名进行通信）页面保持默认设置。单击“下一步”按钮，进入“路 径”界面，指定数据库、日志、sysvol 的存放位置，其他选项保持默认设置。接着单击“下一步” 按钮，保持页面上的默认设置。当到了先决条件检查时，会检测出当前Administrator用户密码不符合要求，这是因为Administrator用户将成为域Administrator用户了：</p>
+<p><img src="/2020/02/15/内网渗透基础/28.png" alt=""></p>
+<p>此时我们去创建或修改Administrator用户的密码后再点击“重新运行先决条件检测”，这时候发现就OK了，直接单击“安装”即可。</p>
+<p>安装完成后，需要重启服务器。重启完成后，需要使用域管理员账户（HACKE\Administrator）登录。此时在“服 务器管理器”页面就可以看到 AD DS、DNS 服务了，如图所示。 </p>
+<p><img src="/2020/02/15/内网渗透基础/13.png" alt=""></p>
+<h4 id="创建Active-Directory用户"><a href="#创建Active-Directory用户" class="headerlink" title="创建Active Directory用户"></a>创建Active Directory用户</h4><p>为Windows 7创建域控账户，在“Active Directory 用户和计算机”页面转到“Users”目录并单击右键，添加新用户：</p>
+<p><img src="/2020/02/15/内网渗透基础/14.png" alt=""></p>
+<p>创建一个testuser账户：</p>
+<p><img src="/2020/02/15/内网渗透基础/15.png" alt=""></p>
+<h3 id="配置Windows-7加入该域"><a href="#配置Windows-7加入该域" class="headerlink" title="配置Windows 7加入该域"></a>配置Windows 7加入该域</h3><p>将Windows 7系统加入该域，先设置IP地址为192.168.1.2，DNS地址为192.168.1.1， 然后查看设置并运行<code>ping hacker.testlab</code>命令进行测试：</p>
+<p><img src="/2020/02/15/内网渗透基础/16.png" alt=""></p>
+<p>接下来，将主机加入域，更改计算机名为“WIN7-x64”，将域名更改为 “hacker.testlab”。 单击“确定”按钮后，会弹出要求输入拥有权限的域账户名称和密码的对话框。 在这里，输入域管理员用户账号和密码：</p>
+<p><img src="/2020/02/15/内网渗透基础/17.png" alt=""></p>
+<p>操作成功后，会出现重启计算机的提示。用创建的testuser用户登录域即可。</p>
+<p>此时，我们在DC中“Active Directory 用户和计算机”页面的Computers项可以看到Win7加入的计算机名：</p>
+<p><img src="/2020/02/15/内网渗透基础/18.png" alt=""></p>
+<p>当我们右键该项选择“所有任务-&gt;管理”时，会报如下错误，这是防火墙拦截的原因：</p>
+<p><img src="/2020/02/15/内网渗透基础/19.png" alt=""></p>
+<p><img src="/2020/02/15/内网渗透基础/20.png" alt=""></p>
+<p>此时，为了方便，就直接将Win7上的防火墙关闭掉就好，当然在当前域环境下，在Win7进行相关操作时需要DC的adminsitrator用户权限才能操作的：</p>
+<p><img src="/2020/02/15/内网渗透基础/21.png" alt=""></p>
+<p>此时回到DC，我们就能成功管理这台Win7了：</p>
+<p><img src="/2020/02/15/内网渗透基础/22.png" alt=""></p>
+<h3 id="配置Windows-Server-2008-R2加入该域"><a href="#配置Windows-Server-2008-R2加入该域" class="headerlink" title="配置Windows Server 2008 R2加入该域"></a>配置Windows Server 2008 R2加入该域</h3><p>同Win7上面的操作一样，看下结果就好：</p>
+<p><img src="/2020/02/15/内网渗透基础/29.png" alt=""></p>
+<p><img src="/2020/02/15/内网渗透基础/30.png" alt=""></p>
+<h3 id="通过防火墙m0n0wall构建二级内网"><a href="#通过防火墙m0n0wall构建二级内网" class="headerlink" title="通过防火墙m0n0wall构建二级内网"></a>通过防火墙m0n0wall构建二级内网</h3><h4 id="m0n0wall简介"><a href="#m0n0wall简介" class="headerlink" title="m0n0wall简介"></a>m0n0wall简介</h4><p>m0n0wall 是一个完整的、嵌入式的防火墙软件包，该软件包可以安装于嵌入式PC里。m0n0wall基于bare-bones version of FreeBSD，包括一个WEB服务器，PHP和另一些工具软件。整个系统的配置保存在一个XML文件当中。m0n0wall可能是第一个启动时通过PHP配置的UNIX系统。m0n0wall编写者认为m0n0wall不包含在第3层 和第4层防火墙的基础服务外的任何功能。因为m0n0wall是嵌入式的防火墙面向嵌入设备有限的CPU资源和记忆体资源。m0n0wall不允许登录： 在控制台没有登录提示符，（它被一个功能菜单代替） ,没有任何Telnet或SSH守护程序。</p>
+<p>官网：<a href="https://m0n0.ch/wall/index.php" target="_blank" rel="noopener">https://m0n0.ch/wall/index.php</a></p>
+<p>含中文版的下载地址：<a href="http://www.cat-home.org/?action=show&amp;id=158" target="_blank" rel="noopener">http://www.cat-home.org/?action=show&amp;id=158</a></p>
+<h4 id="m0n0wall安装"><a href="#m0n0wall安装" class="headerlink" title="m0n0wall安装"></a>m0n0wall安装</h4><p>在VM中新建虚拟机，打开对应的iso文件，选择FreeBSD版本，内存选择10G即可。</p>
+<p>都点击确认好之后，重点在于还需要给该虚拟机添加多一个网卡，即一个为Host-only模式用于内网，另一个为桥接模式连接外网：</p>
+<p><img src="/2020/02/15/内网渗透基础/23.png" alt=""></p>
+<p>之后启动虚拟机即可开启安装。</p>
+<p>首先是需要安装到硬盘中，选择7：</p>
+<p><img src="/2020/02/15/内网渗透基础/24.png" alt=""></p>
+<p>接着选择硬盘，这里只有一块名为ad3的硬盘，选择它并输入确认y：</p>
+<p><img src="/2020/02/15/内网渗透基础/25.png" alt=""></p>
+<p>此时只需等待安装完成。</p>
+<h4 id="网卡接口分配"><a href="#网卡接口分配" class="headerlink" title="网卡接口分配"></a>网卡接口分配</h4><p>重启之后进入如下界面，我们先输入1来进行网卡接口的分配：</p>
+<p><img src="/2020/02/15/内网渗透基础/26.png" alt=""></p>
+<p>如图输入，第一个设置LAN即内网网卡的填em0即通过Mac地址找到的对应Host-only那个网卡，第二个设置WAN即外网网卡的填em1即通过Mac地址找到的对应桥接那个网卡：</p>
+<p><img src="/2020/02/15/内网渗透基础/27.png" alt=""></p>
+<p>之后重启即可。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-参考"><span class="toc-text">0x00 参考</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-内网基本概念"><span class="toc-text">0x01 内网基本概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#工作组"><span class="toc-text">工作组</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#域"><span class="toc-text">域</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#域控制器（DC）"><span class="toc-text">域控制器（DC）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#单域"><span class="toc-text">单域</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#父域和子域"><span class="toc-text">父域和子域</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#域树"><span class="toc-text">域树</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#域林"><span class="toc-text">域林</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#域名服务器"><span class="toc-text">域名服务器</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#域中计算机的分类"><span class="toc-text">域中计算机的分类</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#域控制器"><span class="toc-text">域控制器</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#成员服务器"><span class="toc-text">成员服务器</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#客户机"><span class="toc-text">客户机</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#独立服务器"><span class="toc-text">独立服务器</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#域内权限"><span class="toc-text">域内权限</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#域本地组"><span class="toc-text">域本地组</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#全局组"><span class="toc-text">全局组</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#通用组"><span class="toc-text">通用组</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#小Trick"><span class="toc-text">小Trick</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#A-G-DL-P策略"><span class="toc-text">A-G-DL-P策略</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#内置组"><span class="toc-text">内置组</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#活动目录"><span class="toc-text">活动目录</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#安全域的划分"><span class="toc-text">安全域的划分</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DMZ"><span class="toc-text">DMZ</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#内网"><span class="toc-text">内网</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-内网域环境搭建"><span class="toc-text">0x02 内网域环境搭建</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#搭建域控制器"><span class="toc-text">搭建域控制器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#设置IP"><span class="toc-text">设置IP</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#更改计算机名"><span class="toc-text">更改计算机名</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#安装域控制器和DNS服务"><span class="toc-text">安装域控制器和DNS服务</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#升级服务器"><span class="toc-text">升级服务器</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#创建Active-Directory用户"><span class="toc-text">创建Active Directory用户</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#配置Windows-7加入该域"><span class="toc-text">配置Windows 7加入该域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#配置Windows-Server-2008-R2加入该域"><span class="toc-text">配置Windows Server 2008 R2加入该域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#通过防火墙m0n0wall构建二级内网"><span class="toc-text">通过防火墙m0n0wall构建二级内网</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#m0n0wall简介"><span class="toc-text">m0n0wall简介</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#m0n0wall安装"><span class="toc-text">m0n0wall安装</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#网卡接口分配"><span class="toc-text">网卡接口分配</span></a></li></ol></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/02/12/浅析自动绑定漏洞之Spring-MVC/" rel="next" title="浅析自动绑定漏洞之Spring MVC">
+          浅析自动绑定漏洞之Spring MVC
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/02/18/Windows-PowerShell基础/" rel="prev" title="内网渗透之Windows PowerShell基础">
+            内网渗透之Windows PowerShell基础
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

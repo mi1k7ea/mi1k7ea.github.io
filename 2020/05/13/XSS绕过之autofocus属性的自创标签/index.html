@@ -1,0 +1,345 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,XSS,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>XSS绕过之autofocus属性的自创标签（Chrome） [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        XSS绕过之autofocus属性的自创标签（Chrome）
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-05-13T14:23:42.000Z">
+        2020-05-13
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XSS/">XSS</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>参考自：<a href="https://xz.aliyun.com/t/7702" target="_blank" rel="noopener">autofocus属性的自创标签xss(xss)</a></p>
+<p>仅限于Chrome，因为这是<a href="https://bugs.chromium.org/p/chromium/issues/detail?id=995679" target="_blank" rel="noopener">Chrome的一个bug</a>。</p>
+<p>简单来说，就是在Chrome中autofocus可以与所有HTML标签一起使用。</p>
+<h2 id="0x01-使用已有的标签"><a href="#0x01-使用已有的标签" class="headerlink" title="0x01 使用已有的标签"></a>0x01 使用已有的标签</h2><p>下面两个标签是平时较为常用的，加上autofocus效果更佳。对于无法在没有用户交互的情况下无法转义元素上下文并需要XSS的情况很有用：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">iframe</span> <span class="attr">autofocus</span> <span class="attr">onfocus</span>=<span class="string">alert(0)</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">autofocus</span> <span class="attr">onfocus</span>=<span class="string">alert(1)</span> <span class="attr">href</span>=<span class="string">x</span>&gt;</span>x<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>本地测试x.php：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">error_reporting(<span class="number">0</span>);</span><br><span class="line">$x = $_GET[<span class="string">'x'</span>];</span><br><span class="line"><span class="keyword">echo</span> <span class="string">"Your input: $x"</span>;</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在Chrome上直接注入即可弹框，这里a标签由于是点击链接因此会一直自动点击弹框：</p>
+<p><img src="/2020/05/13/XSS绕过之autofocus属性的自创标签/1.png" alt=""></p>
+<p><img src="/2020/05/13/XSS绕过之autofocus属性的自创标签/2.png" alt=""></p>
+<h2 id="0x02-tabindex与contenteditable"><a href="#0x02-tabindex与contenteditable" class="headerlink" title="0x02 tabindex与contenteditable"></a>0x02 tabindex与contenteditable</h2><p>原文指出因为任何HTML元素都可以通过’tabindex’或’contenteditable’进行聚焦，所以它也会支持’autofocus’：</p>
+<p><img src="/2020/05/13/XSS绕过之autofocus属性的自创标签/3.png" alt=""></p>
+<h3 id="tabindex"><a href="#tabindex" class="headerlink" title="tabindex"></a>tabindex</h3><p>tabindex全局属性指示其元素是否可以聚焦，以及它是否/在何处参与顺序键盘导航（通常使用Tab键，因此得名）。</p>
+<p>它接受一个整数作为值，具有不同的结果，具体取决于整数的值：</p>
+<ul>
+<li>tabindex=负值 (通常是tabindex=“-1”)，表示元素是可聚焦的，但是不能通过键盘导航来访问到该元素，用JS做页面小组件内部键盘导航的时候非常有用。</li>
+<li><code>tabindex=&quot;0&quot;</code> ，表示元素是可聚焦的，并且可以通过键盘导航来聚焦到该元素，它的相对顺序是当前处于的DOM结构来决定的。</li>
+<li>tabindex=正值，表示元素是可聚焦的，并且可以通过键盘导航来访问到该元素；它的相对顺序按照<strong>tabindex</strong> 的数值递增而滞后获焦。如果多个元素拥有相同的 <strong>tabindex</strong>，它们的相对顺序按照他们在当前DOM中的先后顺序决定。</li>
+</ul>
+<p>根据键盘序列导航的顺序，值为 <code>0</code> 、非法值、或者没有 <strong>tabindex</strong> 值的元素应该放置在 <strong>tabindex</strong> 值为正值的元素后面。</p>
+<p>在这里我们使用tabindex必须有个值，无论正负或0都可以，构造如下的自创xss标签触发弹框：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">xss</span> <span class="attr">tabindex</span>=<span class="string">1</span> <span class="attr">onfocus</span>=<span class="string">alert(/tabindex/)</span> <span class="attr">autofocus</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/13/XSS绕过之autofocus属性的自创标签/4.png" alt=""></p>
+<h3 id="contenteditable"><a href="#contenteditable" class="headerlink" title="contenteditable"></a>contenteditable</h3><p>contenteditable全局属性是一个枚举属性，表示元素是否可被用户编辑。 如果可以，浏览器会修改元素的部件以允许编辑。</p>
+<p>该属性必须是下面的值之一：</p>
+<ul>
+<li><code>true</code> 或空字符串，表示元素是可编辑的；</li>
+<li><code>false</code> 表示元素不是可编辑的。</li>
+</ul>
+<p>如果没有设置该属性，其默认值继承自父元素。</p>
+<p>该属性是一个枚举属性，而非布尔属性。这意味着必须显式设置其值为 <code>true</code>、<code>false</code> 或空字符串中的一个，并且不允许简写为 <code>&lt;label contenteditable&gt;Example Label&lt;/label&gt;</code>正确的用法是 <code>&lt;label contenteditable=&quot;true&quot;&gt;Example Label&lt;/label&gt;</code>。</p>
+<p>在这里我们可以构造如下自mi1k7ea标签触发弹框：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">mi1k7ea</span> <span class="attr">onfocus</span>=<span class="string">alert(/contenteditable/)</span> <span class="attr">autofocus</span> <span class="attr">contenteditable</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/13/XSS绕过之autofocus属性的自创标签/5.png" alt=""></p>
+<h2 id="0x03-user-modify"><a href="#0x03-user-modify" class="headerlink" title="0x03 user-modify"></a>0x03 user-modify</h2><p>user-modify属性是非标准的，在最初是用于确定元素的内容是否可以由用户编辑，在Firefox中无效。</p>
+<p>属性值如下：</p>
+<ul>
+<li>read-only：默认值。内容是只读的。</li>
+<li>read-write：用户能够读取和写入内容。</li>
+<li>read-write-plaintext-only：与相同read-write，但富文本格式将丢失。</li>
+<li>write-only：用户可以编辑内容，但不能阅读。</li>
+</ul>
+<p>在这里我们可以利用的属性值为read-write和read-write-plaintext-only，构造如下自mi1k7ea标签触发弹框：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">mi1k7ea</span> <span class="attr">style</span>=<span class="string">"-webkit-user-modify:read-write"</span> <span class="attr">onfocus</span>=<span class="string">alert(/user-modify/)</span> <span class="attr">autofocus</span>&gt;</span></span><br><span class="line">或</span><br><span class="line"><span class="tag">&lt;<span class="name">mi1k7ea</span> <span class="attr">style</span>=<span class="string">"-webkit-user-modify:read-write-plaintext-only"</span> <span class="attr">onfocus</span>=<span class="string">alert(/user-modify/)</span> <span class="attr">autofocus</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/13/XSS绕过之autofocus属性的自创标签/6.png" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-使用已有的标签"><span class="toc-text">0x01 使用已有的标签</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-tabindex与contenteditable"><span class="toc-text">0x02 tabindex与contenteditable</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#tabindex"><span class="toc-text">tabindex</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#contenteditable"><span class="toc-text">contenteditable</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-user-modify"><span class="toc-text">0x03 user-modify</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/" rel="next" title="浅析反序列化利用链自动化挖掘工具GadgetInspector">
+          浅析反序列化利用链自动化挖掘工具GadgetInspector
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/05/18/PhpStorm调试PHP框架/" rel="prev" title="PhpStorm调试PHP框架">
+            PhpStorm调试PHP框架
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

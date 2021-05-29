@@ -1,0 +1,462 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,界面操作劫持,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析界面操作劫持攻击 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析界面操作劫持攻击
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-01-16T06:49:10.000Z">
+        2021-01-16
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/界面操作劫持/">界面操作劫持</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>完善wiki知识库。</p>
+<h2 id="0x01-界面操作劫持"><a href="#0x01-界面操作劫持" class="headerlink" title="0x01 界面操作劫持"></a>0x01 界面操作劫持</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>界面操作劫持是一种基于视觉欺骗的Web会话劫持攻击，通过在网页的可见输入控件上覆盖一个不可见的框（iframe），使得用户误以为在操作可见控件，而实际上用户的操作行为被其不可见的框所劫持，执行不可见框中的恶意劫持代码，从而完成在用户不知情的情况下窃取敏感信息、篡改数据等攻击。</p>
+<p>界面操作劫持实际上是突破了CSRF的防御策略，是一种社工型跨域操作，而这种跨域正是浏览器自身的特性。</p>
+<h3 id="基础技术"><a href="#基础技术" class="headerlink" title="基础技术"></a>基础技术</h3><p>界面劫持技术的基础就是前面提到的”覆盖一个不可见的框”，可以理解为：<strong>透明层 + iframe</strong></p>
+<p>通过页面透明层+iframe实现了对用户的视觉欺骗，即用户看到的操作对象和实际操作对象是不一致的，从而为界面操作劫持攻击提供了技术手段。</p>
+<h4 id="透明层使用CSS样式实现"><a href="#透明层使用CSS样式实现" class="headerlink" title="透明层使用CSS样式实现"></a>透明层使用CSS样式实现</h4><p>对于IE浏览器 &lt;= 8版本，使用的私有CSS透明属性如下，数值从0-100，数值越小透明度越高：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">filter:Alpha(opacity=50);</span><br></pre></td></tr></table></figure>
+<p>对于Chrome、Firefox、Safari、Opera这四款浏览器以及IE浏览器 &gt; 8版本使用的CSS透明属性如下，数值从0-1，数值越小透明度越高：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-tag">opacity</span>: 0<span class="selector-class">.5</span>;</span><br></pre></td></tr></table></figure>
+<p>控件位置之间的层次关系使用z-index，任何浏览器均支持，其数值可以为负数，高数值的控件会处于低数值控件的前面，数值越高、控件越靠近用户：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-tag">z-index</span>: 2;</span><br></pre></td></tr></table></figure>
+<h4 id="使用iframe来嵌入被劫持的页面"><a href="#使用iframe来嵌入被劫持的页面" class="headerlink" title="使用iframe来嵌入被劫持的页面"></a>使用iframe来嵌入被劫持的页面</h4><p>代码如下，其中scrolling属性设置为no即不在iframe中显示滚动条：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">iframe</span> <span class="attr">id</span>=<span class="string">"victim"</span> <span class="attr">src</span>=<span class="string">"http://www.victim.com"</span> <span class="attr">scrolling</span>=<span class="string">"no"</span>&gt;</span><span class="tag">&lt;/<span class="name">iframe</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="攻击前提"><a href="#攻击前提" class="headerlink" title="攻击前提"></a>攻击前提</h3><p>目标页面未设置X-Frame-Options头进行防御。</p>
+<h3 id="分类"><a href="#分类" class="headerlink" title="分类"></a>分类</h3><p>界面操作劫持攻击可分为以下三种：</p>
+<ul>
+<li>点击劫持（ClickJacking）；</li>
+<li>拖放劫持（Drag&amp;Drop Jacking）；</li>
+<li>触屏劫持（TapJacking）；</li>
+</ul>
+<h2 id="0x02-点击劫持（ClickJacking）"><a href="#0x02-点击劫持（ClickJacking）" class="headerlink" title="0x02 点击劫持（ClickJacking）"></a>0x02 点击劫持（ClickJacking）</h2><h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>这种攻击方式首先劫持的是用户的鼠标点击操作，因此才被命名为点击劫持。点击劫持主要的劫持目标是有重要会话交互的页面，比如用户的后台管理页面、银行交易页面或劫持用户的麦克风和摄像头等。</p>
+<p>更简单地说，点击劫持就是利用社工搭配目标站的不安全配置对用户造成危害。</p>
+<h3 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h3><p>点击劫持的原理就是直接利用前面说到的透明层+iframe来实现的。</p>
+<p>一个简单的Demo，clickjacking.html是一个用户可见的伪装页面，在其页面中设置iframe所在层为透明层，并在iframe中嵌套了inner.html页面，其中设计Click me按钮和Login按钮的位置重合，为了方便查看两个页面的嵌套情况就将opacity设置为0.5：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="css"><span class="selector-id">#click</span>&#123;</span></span><br><span class="line"><span class="undefined">	width: 100px;</span></span><br><span class="line"><span class="undefined">	top: 20px;</span></span><br><span class="line"><span class="undefined">	left: 20px;</span></span><br><span class="line"><span class="undefined">	position: absolute;</span></span><br><span class="line"><span class="undefined">	z-index: 1</span></span><br><span class="line"><span class="undefined">&#125;</span></span><br><span class="line"><span class="css"><span class="selector-id">#hidden</span>&#123;</span></span><br><span class="line"><span class="undefined">	height: 50px;</span></span><br><span class="line"><span class="undefined">	width: 120px;</span></span><br><span class="line"><span class="undefined">	position: absolute;</span></span><br><span class="line"><span class="undefined">	filter: alpha(opacity=50);</span></span><br><span class="line"><span class="css">	<span class="selector-tag">opacity</span>: 0<span class="selector-class">.5</span>;</span></span><br><span class="line"><span class="undefined">	z-index: 2</span></span><br><span class="line"><span class="undefined">&#125;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">id</span>=<span class="string">"click"</span> <span class="attr">value</span>=<span class="string">"Click me"</span> <span class="attr">type</span>=<span class="string">"button"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">iframe</span> <span class="attr">id</span>=<span class="string">"hidden"</span> <span class="attr">src</span>=<span class="string">"inner.html"</span> <span class="attr">scrolling</span>=<span class="string">"no"</span>&gt;</span><span class="tag">&lt;/<span class="name">iframe</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>inner.html：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">style</span>=<span class="string">"width: 100px;"</span> <span class="attr">value</span>=<span class="string">"Login"</span> <span class="attr">type</span>=<span class="string">"button"</span> <span class="attr">onClick</span>=<span class="string">"alert('ClickJackingTest')"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>当用户以为在点击clickjacking.html页面的Click me按钮时，实际上点击的是inner.html页面上的Login按钮：</p>
+<p><img src="/2021/01/16/浅析界面操作劫持攻击/1.png" alt=""></p>
+<h2 id="0x03-拖放劫持（Drag-amp-Drop-Jacking）"><a href="#0x03-拖放劫持（Drag-amp-Drop-Jacking）" class="headerlink" title="0x03 拖放劫持（Drag&amp;Drop Jacking）"></a>0x03 拖放劫持（Drag&amp;Drop Jacking）</h2><h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>在2010的Black Hat Europe大会上，Paul Stone提出了点击劫持的技术演进版本：拖放劫持。由于用户需要用鼠标拖放完成的操作越来越多（如复制粘贴、小游戏等等），拖放劫持大大提高了点击劫持的攻击范围，将劫持模式从单纯的鼠标点击拓展到了鼠标拖放行为。</p>
+<p>更重要的是，由于拖放操作不受浏览器“同源策略“影响，用户可以把一个域的内容拖放到另一个不同的域，由此突破SOP限制的拖放劫持可以演化出更广泛的攻击形式、突破很多种防御。比如攻击者可能通过劫持某个页面的拖放操作实现对其他页面链接的窃取，从而获得session key、token、password等敏感信息，甚至能将浏览器中的页面内容拖进文本编辑器，查看源代码。</p>
+<p>2011年出现的CookieJacking攻击就是拖放攻击的代表，此攻击的成因是由于本地Cookie可以用标签嵌入，进而就可以利用拖放劫持来盗取用户的Cookie。在JavaScript或者Java API的支持下，这个攻击过程会变得非常隐蔽。因为它突破了传统ClickJacking一些先天的局限，所以这种新型的”拖拽劫持”能够造成更大的破坏。</p>
+<h3 id="dataTransfer对象"><a href="#dataTransfer对象" class="headerlink" title="dataTransfer对象"></a>dataTransfer对象</h3><p>拖放劫持相比点击劫持的技术演进在于还需要一种数据传递的方法才能真正达到攻击效果。为了能协助拖放操作传递数据，在IE 5.0之后引入了dataTransfer对象，其作为event对象的一个属性出现，用于从被拖动的对象传递字符串到放置对象。</p>
+<p>dataTransfer对象定义了两个主要方法：getData和setData</p>
+<p>语句如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">event.dataTransfer.setData(<span class="string">"text"</span>, <span class="string">"sometext"</span>);</span><br><span class="line">event.dataTransfer.setData(<span class="string">"URL"</span>, <span class="string">"https://www.mi1k7ea.com"</span>);</span><br><span class="line"><span class="keyword">var</span> url = event.dataTransfer.getData(<span class="string">"URL"</span>);</span><br><span class="line"><span class="keyword">var</span> text = event.dataTransfer.getData(<span class="string">"text"</span>);</span><br></pre></td></tr></table></figure>
+<p>setData操作完成向系统剪贴板中存储需要传递的数据，传递数据分为两种类型：文本数据和URL数据。在HTML5扩展中，其允许指定任意的MIME类型。</p>
+<p>getData操作完成获取有setData所存储的数据。</p>
+<p>本地测试例子：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> dataTrans = <span class="keyword">new</span> DataTransfer();</span><br><span class="line">dataTrans.setData(<span class="string">"text"</span>, <span class="string">"This is test."</span>);</span><br><span class="line"><span class="keyword">var</span> text = dataTrans.getData(<span class="string">"text"</span>);</span><br></pre></td></tr></table></figure>
+<p>dataTransfer对象和操作方法为跨域传送数据提供了有效的技术手段。</p>
+<h3 id="拖放函数"><a href="#拖放函数" class="headerlink" title="拖放函数"></a>拖放函数</h3><p>掌握视觉欺骗手段和数据传递方法之后，接下来要做的就是确定需要劫持的操作函数。</p>
+<p>在HTML5中，用户在整个拖放过程中会依次触发相应的操作函数。</p>
+<p>当鼠标拖动了一个控件，源对象将依次触发以下函数：</p>
+<ul>
+<li>ondrag：在从drag动作开始，到drop动作结束的过程中，源对象触发的一个事件；</li>
+<li>ondragstart：源对象开始拖放，开始移动时事件触发；</li>
+<li>ondragend：源对象拖放结束，整个拖放操作结束时触发；</li>
+</ul>
+<p>当拖动对象到一个有效的目标上时，目的对象将依次触发以下函数：</p>
+<ul>
+<li>ondragenter：源对象进入过程对象范围内，被拖拽对象进入过程对象时被触发；</li>
+<li>ondragover：源对象在过程对象范围内移动，被拖拽对象在过程对象内移动时触发；</li>
+<li>ondragleave：源对象离开过程对象的范围，被拖拽对象离开目标对象时触发；</li>
+<li>ondrop：源对象拖放到目标对象中，目标对象完全接受被拖拽对象时触发，可理解为在目标对象内松手时触发；</li>
+</ul>
+<h3 id="Demo-1"><a href="#Demo-1" class="headerlink" title="Demo"></a>Demo</h3><p>参考并稍微修改了下书上的例子。</p>
+<p>drag_jacking.html：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta</span> <span class="attr">http-equiv</span>=<span class="string">"Content-Type"</span> <span class="attr">content</span>=<span class="string">"text/html; charset=utf-8"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">title</span>&gt;</span></span><br><span class="line">        Drag and Drop Attack Demo</span><br><span class="line">    <span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="css">        <span class="selector-class">.IFrame_hidden</span> &#123;</span></span><br><span class="line"><span class="undefined">            height: 50px;</span></span><br><span class="line"><span class="undefined">            width: 50px;</span></span><br><span class="line"><span class="undefined">            top: 360px;</span></span><br><span class="line"><span class="undefined">            left: 365px;</span></span><br><span class="line"><span class="undefined">            overflow: hidden;</span></span><br><span class="line"><span class="undefined">            filter: alpha(opacity=0);</span></span><br><span class="line"><span class="undefined">            opacity: 0;</span></span><br><span class="line"><span class="undefined">            position: absolute;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="css">        <span class="selector-class">.text_area_hidden</span> &#123;</span></span><br><span class="line"><span class="undefined">            height: 200px;</span></span><br><span class="line"><span class="undefined">            width: 200px;</span></span><br><span class="line"><span class="undefined">            top: 130px;</span></span><br><span class="line"><span class="undefined">            left: 580px;</span></span><br><span class="line"><span class="undefined">            border: 1px solid black;</span></span><br><span class="line"><span class="undefined">            overflow: hidden;</span></span><br><span class="line"><span class="undefined">            filter: alpha(opacity=0);</span></span><br><span class="line"><span class="css">            <span class="selector-tag">opacity</span>: <span class="selector-class">.0</span>;</span></span><br><span class="line"><span class="undefined">            position: absolute;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="css">        <span class="selector-class">.ball</span> &#123;</span></span><br><span class="line"><span class="undefined">            top: 350px;</span></span><br><span class="line"><span class="undefined">            left: 350px;</span></span><br><span class="line"><span class="undefined">            position: absolute;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="css">        <span class="selector-class">.ball_1</span> &#123;</span></span><br><span class="line"><span class="undefined">            top: 136px;</span></span><br><span class="line"><span class="undefined">            left: 640px;</span></span><br><span class="line"><span class="undefined">            filter: alpha(opacity=0);</span></span><br><span class="line"><span class="css">            <span class="selector-tag">opacity</span>: <span class="selector-class">.0</span>;</span></span><br><span class="line"><span class="undefined">            position: absolute;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="css">        <span class="selector-class">.Dolphin</span> &#123;</span></span><br><span class="line"><span class="undefined">            top: 150px;</span></span><br><span class="line"><span class="undefined">            left: 600px;</span></span><br><span class="line"><span class="undefined">            position: absolute;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="css">        <span class="selector-class">.center</span> &#123;</span></span><br><span class="line"><span class="undefined">            margin-right: auto;</span></span><br><span class="line"><span class="undefined">            margin-left: auto;</span></span><br><span class="line"><span class="undefined">            vertical-align: middle;</span></span><br><span class="line"><span class="undefined">            text-align: center;</span></span><br><span class="line"><span class="undefined">            margin-top: 350px;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="undefined">    </span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">Init</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="actionscript">            <span class="comment">//添加监听</span></span></span><br><span class="line"><span class="javascript">            <span class="keyword">var</span> source = <span class="built_in">document</span>.getElementById(<span class="string">"source"</span>);</span></span><br><span class="line"><span class="javascript">            <span class="keyword">var</span> target = <span class="built_in">document</span>.getElementById(<span class="string">"target"</span>);</span></span><br><span class="line"><span class="actionscript">            <span class="keyword">if</span> (source.addEventListener) &#123;</span></span><br><span class="line"><span class="actionscript">                target.addEventListener(<span class="string">"drop"</span>, DumpInfo, <span class="literal">false</span>);</span></span><br><span class="line"><span class="undefined">            &#125;</span></span><br><span class="line"><span class="actionscript">            <span class="keyword">else</span> &#123;</span></span><br><span class="line"><span class="actionscript">                target.attachEvent(<span class="string">"ondrop"</span>, DumpInfo);</span></span><br><span class="line"><span class="undefined">            &#125;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">entities</span><span class="params">(s)</span> </span>&#123;</span></span><br><span class="line"><span class="actionscript">            <span class="keyword">var</span> e = &#123;</span></span><br><span class="line"><span class="actionscript">                <span class="string">'"'</span>: <span class="string">'&amp;quot;'</span>,</span></span><br><span class="line"><span class="actionscript">                <span class="string">'&amp;'</span>: <span class="string">'&amp;amp;'</span>,</span></span><br><span class="line"><span class="actionscript">                <span class="string">'&lt;'</span>: <span class="string">'&amp;lt;'</span>,</span></span><br><span class="line"><span class="actionscript">                <span class="string">'&gt;'</span>: <span class="string">'&amp;gt;'</span></span></span><br><span class="line"><span class="undefined">            &#125;;</span></span><br><span class="line"><span class="javascript">            <span class="keyword">return</span> s.replace(<span class="regexp">/["&amp;&lt;&gt;]/g</span>,</span></span><br><span class="line"><span class="actionscript">                <span class="function"><span class="keyword">function</span> <span class="params">(m)</span> </span>&#123;</span></span><br><span class="line"><span class="actionscript">                    <span class="keyword">return</span> e[m];</span></span><br><span class="line"><span class="undefined">                &#125;);</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">DumpInfo</span><span class="params">(event)</span> </span>&#123;</span></span><br><span class="line"><span class="actionscript">            showHide_ball.call(<span class="keyword">this</span>); <span class="comment">//地面上的小球消失</span></span></span><br><span class="line"><span class="actionscript">            showHide_ball_1.call(<span class="keyword">this</span>); <span class="comment">//海豚嘴上的小球出现</span></span></span><br><span class="line"><span class="actionscript">            <span class="keyword">if</span> (event.dataTransfer.types) &#123;</span></span><br><span class="line"><span class="actionscript">                <span class="comment">//Firefox浏览器支持</span></span></span><br><span class="line"><span class="javascript">                <span class="keyword">var</span> info = <span class="built_in">document</span>.getElementById(<span class="string">"info"</span>);</span></span><br><span class="line"><span class="handlebars"><span class="xml">                info.innerHTML += "<span class="tag">&lt;<span class="name">span</span> <span class="attr">style</span>=<span class="string">'color:#3355cc;font-size:12px'</span>&gt;</span>" +</span></span></span><br><span class="line"><span class="actionscript">                    entities(event.dataTransfer.getData(<span class="string">'text/html'</span>)) + <span class="string">"&lt;/span&gt;&lt;br&gt; "</span>;</span></span><br><span class="line"><span class="actionscript">                <span class="comment">//在页面上打印出获取到的数据</span></span></span><br><span class="line"><span class="undefined">            &#125;</span></span><br><span class="line"><span class="actionscript">            <span class="keyword">else</span> &#123;</span></span><br><span class="line"><span class="actionscript">                <span class="comment">//IE浏览器支持</span></span></span><br><span class="line"><span class="actionscript">                setTimeout(<span class="string">"html()"</span>, <span class="number">10</span>);</span></span><br><span class="line"><span class="undefined">            &#125;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">html</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="javascript">            <span class="built_in">document</span>.getElementById(<span class="string">'target'</span>).innerText = <span class="built_in">document</span>.getElementById(<span class="string">'target'</span>).innerHTML;</span></span><br><span class="line"><span class="javascript">            <span class="keyword">var</span> info = <span class="built_in">document</span>.getElementById(<span class="string">"info"</span>);</span></span><br><span class="line"><span class="handlebars"><span class="xml">            info.innerHTML += "<span class="tag">&lt;<span class="name">span</span> <span class="attr">style</span>=<span class="string">'color:#3355cc;font-size:12px'</span>&gt;</span>" +</span></span></span><br><span class="line"><span class="javascript">                (<span class="built_in">document</span>.getElementById(<span class="string">'target'</span>).innerHTML)</span></span><br><span class="line"><span class="handlebars"><span class="xml">                + "<span class="tag">&lt;/<span class="name">span</span>&gt;</span><span class="tag">&lt;<span class="name">br</span>&gt;</span> ";</span></span></span><br><span class="line"><span class="actionscript">            <span class="comment">//在页面上打印出获取到的数据</span></span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">showHide_frame</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="javascript">            <span class="keyword">var</span> IFrame_1 = <span class="built_in">document</span>.getElementById(<span class="string">"IFrame_1"</span>);</span></span><br><span class="line"><span class="actionscript">            IFrame_1.style.opacity = <span class="keyword">this</span>.checked ? <span class="string">"0.5"</span> : <span class="string">"0"</span>;</span></span><br><span class="line"><span class="actionscript">            IFrame_1.style.filter = <span class="string">"progid:DXImageTransform.Microsoft.Alpha(opacity="</span> +</span></span><br><span class="line"><span class="actionscript">                (<span class="keyword">this</span>.checked ? <span class="string">"50"</span> : <span class="string">"0"</span>) + <span class="string">");"</span></span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">showHide_text</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="javascript">            <span class="keyword">var</span> text_1 = <span class="built_in">document</span>.getElementById(<span class="string">"target"</span>);</span></span><br><span class="line"><span class="actionscript">            text_1.style.opacity = <span class="keyword">this</span>.checked ? <span class="string">"0.5"</span> : <span class="string">"0"</span>;</span></span><br><span class="line"><span class="actionscript">            text_1.style.filter = <span class="string">"progid:DXImageTransform.Microsoft.Alpha (opacity="</span> +</span></span><br><span class="line"><span class="actionscript">                (<span class="keyword">this</span>.checked ? <span class="string">"50"</span> : <span class="string">"0"</span>) + <span class="string">");"</span></span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">showHide_ball</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="javascript">            <span class="keyword">var</span> hide_ball = <span class="built_in">document</span>.getElementById(<span class="string">"hide_ball"</span>);</span></span><br><span class="line"><span class="actionscript">            hide_ball.style.opacity = <span class="string">"0"</span>;</span></span><br><span class="line"><span class="actionscript">            hide_ball.style.filter = <span class="string">"alpha(opacity=0)"</span>;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">showHide_ball_1</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="javascript">            <span class="keyword">var</span> hide_ball_1 = <span class="built_in">document</span>.getElementById(<span class="string">"hide_ball_1"</span>);</span></span><br><span class="line"><span class="actionscript">            hide_ball_1.style.opacity = <span class="string">"1"</span>;</span></span><br><span class="line"><span class="actionscript">            hide_ball_1.style.filter = <span class="string">"alpha(opacity=100)"</span>;</span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="actionscript">        <span class="function"><span class="keyword">function</span> <span class="title">reload_text</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="javascript">            <span class="built_in">document</span>.getElementById(<span class="string">"target"</span>).value = <span class="string">''</span></span></span><br><span class="line"><span class="undefined">        &#125;</span></span><br><span class="line"><span class="undefined">    </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span> <span class="attr">onload</span>=<span class="string">"Init();"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">center</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">h1</span>&gt;</span></span><br><span class="line">            Drag and Drop Attack</span><br><span class="line">        <span class="tag">&lt;/<span class="name">h1</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">center</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">img</span> <span class="attr">id</span>=<span class="string">"hide_ball"</span> <span class="attr">src</span>=<span class="string">ball.png</span> <span class="attr">class</span>=<span class="string">"ball"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">"source"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">iframe</span> <span class="attr">id</span>=<span class="string">"IFrame_1"</span> <span class="attr">src</span>=<span class="string">"http://127.0.0.1/token.html"</span> <span class="attr">class</span>=<span class="string">"IFrame_hidden"</span> <span class="attr">scrolling</span>=<span class="string">"no"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">iframe</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">Dolphin.jpg</span> <span class="attr">class</span>=<span class="string">"Dolphin"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">img</span> <span class="attr">id</span>=<span class="string">"hide_ball_1"</span> <span class="attr">src</span>=<span class="string">ball.png</span> <span class="attr">class</span>=<span class="string">"ball_1"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">"target"</span> <span class="attr">class</span>=<span class="string">"text_area_hidden"</span> <span class="attr">contenteditable</span>=<span class="string">"true"</span>&gt;</span></span><br><span class="line">            HiJacking:</span><br><span class="line">        <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">"info"</span> <span class="attr">style</span>=<span class="string">"position:absolute;background-color:#e0e0e0;font-weight:bold;top:600px;"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">center</span>&gt;</span></span><br><span class="line">        游戏规则："Ctrl + A" 或滑动鼠标选中小球，然后把小球拖放到海豚的嘴上。</span><br><span class="line">        <span class="tag">&lt;<span class="name">br</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">center</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">br</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">br</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">"center"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">center</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">center</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">input</span> <span class="attr">id</span>=<span class="string">"showHide_frame"</span> <span class="attr">type</span>=<span class="string">"checkbox"</span> <span class="attr">onclick</span>=<span class="string">"showHide_frame.call (this);"</span> /&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">label</span> <span class="attr">for</span>=<span class="string">"showHide_frame"</span>&gt;</span></span><br><span class="line">                    Show the jacked I--Frame</span><br><span class="line">                <span class="tag">&lt;/<span class="name">label</span>&gt;</span></span><br><span class="line">                |</span><br><span class="line">                <span class="tag">&lt;<span class="name">input</span> <span class="attr">id</span>=<span class="string">"showHide_text"</span> <span class="attr">type</span>=<span class="string">"checkbox"</span> <span class="attr">onclick</span>=<span class="string">"showHide_text.call(this);"</span> /&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">label</span> <span class="attr">for</span>=<span class="string">"showHide_text"</span>&gt;</span></span><br><span class="line">                    Show the jacked Textarea</span><br><span class="line">                <span class="tag">&lt;/<span class="name">label</span>&gt;</span></span><br><span class="line">                |</span><br><span class="line">                <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">button</span> <span class="attr">value</span>=<span class="string">"Replay"</span> <span class="attr">onclick</span>=<span class="string">"location.reload();reload_text();"</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">center</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">br</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">br</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">b</span>&gt;</span></span><br><span class="line">                Design by</span><br><span class="line">                <span class="tag">&lt;<span class="name">a</span> <span class="attr">target</span>=<span class="string">"_blank"</span> <span class="attr">href</span>=<span class="string">"http://hi.baidu.com/xisigr"</span>&gt;</span></span><br><span class="line">                    xisigr</span><br><span class="line">                <span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">b</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">center</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>token.html：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">mi1k7ea's page</span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">method</span>=<span class="string">"POST"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"hidden"</span> <span class="attr">name</span>=<span class="string">"csrf_token"</span> <span class="attr">value</span>=<span class="string">"980f42huj98fu198"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">"https://www.mi1k7ea.com/?logout&amp;token=980f42huj98fu198"</span>&gt;</span>logout<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line">666666666</span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>正常访问，页面中说明了游戏规则，具体地说就是鼠标选中小球、然后按”Ctrl+A”之后，鼠标拖放小球到海豚（其实是海狮）的嘴上即可完成游戏：</p>
+<p><img src="/2021/01/16/浅析界面操作劫持攻击/8.png" alt=""></p>
+<p>看到下面有两个选项，就是用来展示此次拖放劫持隐藏的内容框的，勾选上让其修改opacity为0.5看下效果：</p>
+<p><img src="/2021/01/16/浅析界面操作劫持攻击/9.png" alt=""></p>
+<p>可以看到，小球下面隐藏的就是目标框，而海狮嘴上周围隐藏的是攻击者劫持用的框。当用户鼠标点击小球，即点中了隐藏的目标框，然后Ctrl+A就会选中隐藏的目标框中所有内容，再拖动小球到海狮嘴上的过程中就会把隐藏的目标框中所有的信息拖到攻击者的框中，从而完成拖放劫持攻击：</p>
+<p><img src="/2021/01/16/浅析界面操作劫持攻击/10.png" alt=""></p>
+<p>注意一点是，当前没办法进行跨域拖放劫持。</p>
+<h2 id="0x04-触屏劫持（TapJacking）"><a href="#0x04-触屏劫持（TapJacking）" class="headerlink" title="0x04 触屏劫持（TapJacking）"></a>0x04 触屏劫持（TapJacking）</h2><h3 id="简介-3"><a href="#简介-3" class="headerlink" title="简介"></a>简介</h3><p>触屏劫持是界面操作劫持攻击模型的最新阶段，是针对智能移动设备进行的攻击。</p>
+<p>2010年斯坦福公布触屏劫持攻击。通过将一个不可见的iframe覆盖到当前网页上就可以劫持用户的触屏操作。由于手机屏幕范围有限，手机浏览器为了节省空间会把地址栏隐藏起来，因此在手机上的视觉欺骗更容易实施。</p>
+<p>移动设备的WebApp网页设计，无论是屏幕大小还是浏览器支持的函数上都和传统的Web应用不同。</p>
+<p>下面的介绍均以iPhone的Safari浏览器为例。</p>
+<h3 id="桌面浏览器"><a href="#桌面浏览器" class="headerlink" title="桌面浏览器"></a>桌面浏览器</h3><p>iPhone的Safari浏览器有一个特殊的功能，即可以把网页添加到IOS系统的桌面当做一个程序图片来显示。添加后，主屏幕会出现一个由网页缩略图生成的APP图标。当用户点击这个图标后，就会打开网页，该功能和快捷键类似。在桌面浏览器程序中可以设置桌面图标、启动画面，还可以设置页面全屏和更改状态栏样式。</p>
+<p>添加桌面图标的语句：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">link</span> <span class="attr">rel</span>=<span class="string">"apple-touch-icon"</span> <span class="attr">href</span>=<span class="string">"icon.png"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>添加启动画面的语句：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">link</span> <span class="attr">rel</span>=<span class="string">"apple-touch-startup-image"</span> <span class="attr">href</span>=<span class="string">"startup.png"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>全屏显示的语句：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">meta</span> <span class="attr">name</span>=<span class="string">"apple-mobile-web-app-capable"</span> <span class="attr">content</span>=<span class="string">"yes"</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>改变状态栏样式为书中图片所示的Status bar位置的语句：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">meta</span> <span class="attr">name</span>=<span class="string">"apple-mobile-web-app-status-bar-style"</span> <span class="attr">content</span>=<span class="string">"black"</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>经过上面的设置后，Web页面就和一个原生态的APP应用差不多了，其中全屏模式会隐藏URL地址栏和状态栏。</p>
+<h3 id="可视区域viewport"><a href="#可视区域viewport" class="headerlink" title="可视区域viewport"></a>可视区域viewport</h3><p>viewport就是除去所有的工具栏、状态栏、滚动条等之后网页的可视区域。移动设备的屏幕大小和传统的Web不同，需要我们改变viewport。</p>
+<p>如下：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">meta</span> <span class="attr">name</span>=<span class="string">"viewport"</span> <span class="attr">content</span>=<span class="string">"width=320;initial-scale=1.0;maximun-scale=1.0; user-scaleable=no;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>参数说明：</p>
+<ul>
+<li>width：viewport的宽度；</li>
+<li>initial-scale：初始的缩放比例；</li>
+<li>maximun-scale：允许用户缩放到的最大比例；</li>
+<li>user-scaleable：用户是否可以手动缩放；</li>
+</ul>
+<h3 id="隐藏URL地址栏"><a href="#隐藏URL地址栏" class="headerlink" title="隐藏URL地址栏"></a>隐藏URL地址栏</h3><p>除了用全屏模式隐藏URL地址栏外，还可以使用如下代码实现隐藏：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">body</span> ο<span class="attr">nl</span>ο<span class="attr">ad</span>=<span class="string">"setTimeout(function()</span></span></span><br><span class="line"><span class="tag"><span class="string">&#123; window.scrollTo(0, 1) &#125;, 100);"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="触屏函数"><a href="#触屏函数" class="headerlink" title="触屏函数"></a>触屏函数</h3><p>使用IOS中Safari浏览器自己独特的触屏API函数，可以模拟鼠标点击或者拖放操作。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">函数</th>
+<th style="text-align:center">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">touchstart</td>
+<td style="text-align:center">手指触摸屏幕时发生</td>
+</tr>
+<tr>
+<td style="text-align:center">touchend</td>
+<td style="text-align:center">手指离开屏幕时发生</td>
+</tr>
+<tr>
+<td style="text-align:center">touchmove</td>
+<td style="text-align:center">手指滑动时发生</td>
+</tr>
+<tr>
+<td style="text-align:center">touchcancel</td>
+<td style="text-align:center">系统可取消touch事件</td>
+</tr>
+</tbody>
+</table>
+<p>同样是使用透明层+iframe方法，然后配合移动设备特有的自身的覆盖到当前网页上就可以劫持用户的触屏操作。</p>
+<h3 id="Demo-2"><a href="#Demo-2" class="headerlink" title="Demo"></a>Demo</h3><p>参考GitHub上针对Android系统移动设备的触屏劫持例子：<a href="https://github.com/ggfhgg/Tapjacking_Android" target="_blank" rel="noopener">https://github.com/ggfhgg/Tapjacking_Android</a></p>
+<p>简述：</p>
+<ol>
+<li>页面整体采用相对布局，其中start按钮和premession按钮采用布局方法，将Start按钮覆盖在Premession按钮上，并设置start的透明度alpha为0.这样就使用户以为在点击Premession实际上是在触发Start；</li>
+<li>点击Start，将加载一个image图像，同时触发一个模拟权限获取的提示框，并将提示框的主体背景设为透明，同时将刚刚加载的伪造消息提示的图像覆盖到权限提示框上，仅留下权限提示框的确认按钮，这样用户就误以为自己在点击信息提示的确认，其实是再点权限确认；</li>
+<li>部分核心代码如下：</li>
+</ol>
+<p>布局文件（activity_main.xml）：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">FrameLayout</span></span></span><br><span class="line"><span class="tag">       <span class="attr">android:layout_width</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">       <span class="tag">&lt;<span class="name">Button</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:id</span>=<span class="string">"@+id/button"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:layout_width</span>=<span class="string">"match_parent"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:layout_height</span>=<span class="string">"match_parent"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">style</span>=<span class="string">"@style/btnStyle"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:text</span>=<span class="string">"premession"</span></span></span><br><span class="line"><span class="tag">           /&gt;</span></span><br><span class="line"></span><br><span class="line">       <span class="tag">&lt;<span class="name">Button</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:id</span>=<span class="string">"@+id/btnStart"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">style</span>=<span class="string">"@style/btnStyle"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:layout_width</span>=<span class="string">"137dp"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:layout_height</span>=<span class="string">"wrap_content"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:onClick</span>=<span class="string">"startTJService"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:text</span>=<span class="string">"@string/strStart"</span></span></span><br><span class="line"><span class="tag">           <span class="attr">android:alpha</span>=<span class="string">"0"</span>/&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">   <span class="tag">&lt;/<span class="name">FrameLayout</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>MainActivity.java： </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">this</span>.startService(service);</span><br><span class="line">      AlertDialog.Builder bb = <span class="keyword">new</span> AlertDialog.Builder(<span class="keyword">this</span>);</span><br><span class="line">      bb.setPositiveButton(<span class="string">"confrim"</span>,<span class="keyword">new</span> DialogInterface.OnClickListener()&#123;</span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onClick</span><span class="params">(DialogInterface arg0,<span class="keyword">int</span> arg1)</span></span>&#123;</span><br><span class="line">              Toast t = (Toast) Toast.makeText(getApplicationContext(),<span class="string">"你上当了!!"</span>,Toast.LENGTH_LONG);</span><br><span class="line">              t.show();</span><br><span class="line">              arg0.dismiss();</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;);</span><br><span class="line">      <span class="keyword">final</span> AlertDialog dialog = bb.create();</span><br><span class="line">      WindowManager.LayoutParams lp = dialog.getWindow().getAttributes();</span><br><span class="line">      lp.alpha=<span class="number">1.0f</span>;</span><br><span class="line">      dialog.getWindow().setAttributes(lp);</span><br><span class="line">      bb.setMessage(<span class="string">"应用Tap_jacking正在申请联系人权限"</span>);</span><br><span class="line">      bb.setTitle(<span class="string">"权限获取"</span>);</span><br><span class="line">      dialog.show();</span><br></pre></td></tr></table></figure>
+<p>ToastService.java: </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>.onCreate();</span><br><span class="line">    t = <span class="keyword">new</span> Timer();</span><br><span class="line">    context = getApplicationContext();</span><br><span class="line">    jam = <span class="keyword">new</span> Toast(context);</span><br><span class="line"></span><br><span class="line">    ImageView img = <span class="keyword">new</span> ImageView(context);</span><br><span class="line">    img.setImageResource(R.drawable.ic_terms_message);</span><br><span class="line">    jam.setView(img);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>效果如下。</p>
+<p>当alpha为1时，是显示Start按钮的，如左图；当alpha为0时，完全不显示Start按钮，如右图：</p>
+<p><img src="/2021/01/16/浅析界面操作劫持攻击/2.png" alt=""><img src="/2021/01/16/浅析界面操作劫持攻击/3.png" alt=""></p>
+<p>权限提示框（完整的）<code>lp.alpha = 1.0f</code>，如左图；将权限框主体部分隐藏，只剩下确认按钮<code>lp.alpha = 0.1f</code>，如右图：</p>
+<p><img src="/2021/01/16/浅析界面操作劫持攻击/4.png" alt=""><img src="/2021/01/16/浅析界面操作劫持攻击/5.png" alt=""></p>
+<p>假的信息提示框与权限提示框拼接，误导用户，如左图；当用户被视觉欺骗去点击confrim就触发权限提示框onclick方法，弹出消息，攻击成功，如右图：</p>
+<p><img src="/2021/01/16/浅析界面操作劫持攻击/6.png" alt=""><img src="/2021/01/16/浅析界面操作劫持攻击/7.png" alt=""></p>
+<h2 id="0x05-防御方法"><a href="#0x05-防御方法" class="headerlink" title="0x05 防御方法"></a>0x05 防御方法</h2><p>界面操作劫持的防御比较简单，因为其都是通过视觉欺骗的方法进行Web会话劫持。主要的防御思路就是：使有重要会话的交互页面不允许被iframe嵌入，或者只允许被同源iframe嵌入。</p>
+<h3 id="X-FRAME-OPTIONS"><a href="#X-FRAME-OPTIONS" class="headerlink" title="X-FRAME-OPTIONS"></a>X-FRAME-OPTIONS</h3><p>X-Frame-Options HTTP 响应头是用来给浏览器 指示允许一个页面 可否在 <code>&lt;frame&gt;, &lt;iframe&gt;, &lt;embed&gt; 或者 &lt;object&gt;</code> 中展现的标记。站点可以通过确保网站没有被嵌入到别人的站点里面，从而避免 ClickJacking 攻击。</p>
+<p>其有三个可能的值：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">X-Frame-Options: deny</span><br><span class="line">X-Frame-Options: sameorigin</span><br><span class="line">X-Frame-Options: allow-from https://example.com/</span><br></pre></td></tr></table></figure>
+<ul>
+<li>deny：表示该页面不允许在 frame 中展示，即便是在相同域名的页面中嵌套也不允许。</li>
+<li>sameorigin：表示该页面可以在相同域名页面的 frame 中展示。</li>
+<li>allow-from uri：表示该页面可以在指定来源的 frame 中展示。</li>
+</ul>
+<h3 id="Frame-Busting脚本防御"><a href="#Frame-Busting脚本防御" class="headerlink" title="Frame Busting脚本防御"></a>Frame Busting脚本防御</h3><p>Frame Busting脚本是指使用JavaScript脚本对页面进行控制，达到页面无法被iframe嵌入的目的。</p>
+<p>比如：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">if</span> (top.location != self.location) &#123;</span></span><br><span class="line"><span class="undefined">    top.location = self.location;</span></span><br><span class="line"><span class="undefined">&#125;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>代码中top指代主体窗口对象，self指代当前窗口对象。如果判断出页面的主体窗口地址与当前窗口地址不同，就将主体窗口地址设置为当前窗口地址。这样就能避免了用户的操作实际发生窗口和所见窗口不一致的情况，从而成功防御了通过透明层进行的界面操作劫持攻击。</p>
+<p>然后上述Frame Busting代码存在问题，就是在IE下，如果在主体窗口加入<code>&lt;script&gt;var location=&quot;&quot;&lt;/script&gt;</code>这段代码，那么Frame Busting代码就会被绕过。</p>
+<p>绕过示例如下，<code>security=&quot;restricted&quot;</code>为IE的禁止JS，<code>sandbox=&quot;&quot;</code>为HTML5的禁止JS：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">iframe</span> <span class="attr">src</span>=<span class="string">"xxx"</span> <span class="attr">security</span>=<span class="string">"restricted"</span> <span class="attr">scrolling</span>=<span class="string">"no"</span> <span class="attr">sandbox</span>=<span class="string">""</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>书上给出当时防御性最高的Frame Busting代码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="css">    <span class="selector-tag">html</span> &#123;<span class="attribute">display</span>:none;&#125;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">if</span> (self == top) &#123;</span></span><br><span class="line"><span class="javascript">    <span class="built_in">document</span>.documentElement.style.display = <span class="string">'block'</span>;</span></span><br><span class="line"><span class="actionscript">&#125; <span class="keyword">else</span> &#123;</span></span><br><span class="line"><span class="undefined">    top.location = self.location;</span></span><br><span class="line"><span class="undefined">&#125;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="使用token防御"><a href="#使用token防御" class="headerlink" title="使用token防御"></a>使用token防御</h3><p>CSRF Token其实也可以进行界面操作劫持攻击的防御。</p>
+<p>比如一个登录页面<code>http://url/login?idtoken=9u1wf3</code>，如果攻击者无法猜测到idtoken后面的值，那么这个登录页面就不能被iframe嵌入，进而也无法对这个页面进行界面操作劫持攻击了。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-界面操作劫持"><span class="toc-text">0x01 界面操作劫持</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基础技术"><span class="toc-text">基础技术</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#透明层使用CSS样式实现"><span class="toc-text">透明层使用CSS样式实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#使用iframe来嵌入被劫持的页面"><span class="toc-text">使用iframe来嵌入被劫持的页面</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#攻击前提"><span class="toc-text">攻击前提</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#分类"><span class="toc-text">分类</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-点击劫持（ClickJacking）"><span class="toc-text">0x02 点击劫持（ClickJacking）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-1"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-拖放劫持（Drag-amp-Drop-Jacking）"><span class="toc-text">0x03 拖放劫持（Drag&amp;Drop Jacking）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-2"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#dataTransfer对象"><span class="toc-text">dataTransfer对象</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#拖放函数"><span class="toc-text">拖放函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo-1"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-触屏劫持（TapJacking）"><span class="toc-text">0x04 触屏劫持（TapJacking）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-3"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#桌面浏览器"><span class="toc-text">桌面浏览器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#可视区域viewport"><span class="toc-text">可视区域viewport</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#隐藏URL地址栏"><span class="toc-text">隐藏URL地址栏</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#触屏函数"><span class="toc-text">触屏函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo-2"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-防御方法"><span class="toc-text">0x05 防御方法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#X-FRAME-OPTIONS"><span class="toc-text">X-FRAME-OPTIONS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Frame-Busting脚本防御"><span class="toc-text">Frame Busting脚本防御</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#使用token防御"><span class="toc-text">使用token防御</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/01/16/C-C-代码审计/" rel="next" title="C&amp;C++代码审计">
+          C&amp;C++代码审计
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/" rel="prev" title="杜绝CSRF的方案：SameSite cookies">
+            杜绝CSRF的方案：SameSite cookies
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

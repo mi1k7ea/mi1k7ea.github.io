@@ -1,0 +1,320 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="二进制,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>HITB Binary 100 writeup [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        HITB Binary 100 writeup
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2018-12-31T17:01:01.000Z">
+        2019-01-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/二进制/">二进制</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <p>HITB Binary 100是之前的HITB CTF的一道简单的逆向题，这里简单做一遍。</p>
+<p><a href="https://cedricvb.be/wp-content/files/hitb-bin100.elf" target="_blank" rel="noopener">下载hitb-bin100.elf</a></p>
+<p>将elf文件先跑一下，发现像歌词播放一样、每个一秒钟左右输出一句话，歌词好像没啥用，而且运行很久也还没停下来：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/1.jpg" alt=""></p>
+<p>根据字符串检索法，扔到IDA的String窗口查看是否存在关键字符串，可以看到有“FLAG”相关的字符串：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/2.jpg" alt=""></p>
+<p>点击进去查看，发现这段代码是在main()函数中的：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/3.jpg" alt=""></p>
+<p>接着查看一下该二进制文件的函数等信息：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/4.jpg" alt=""></p>
+<p>在Function Window也可以看到，除了调用一些标准库的函数，整个程序几乎都编译到了main函数中：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/5.jpg" alt=""></p>
+<p>查看main函数的汇编代码，可以看到有两个地址值得研究，即4007e8和400803，因为其中都是会调用printf函数输出内容：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/6.jpg" alt=""></p>
+<p>直接在GDB上运行并jump到相应的地址查看：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/7.jpg" alt=""></p>
+<p>可以看到，KEY是正常的输出出来了，但是FLAG输出的是一堆乱码，然后就出现“stack smashing detected”的错误而终止运行了。跳过去直接输出Flag是不可能的了。</p>
+<p>F5看一下伪代码吧，看到在输出flag前一段主要的代码：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/8.jpg" alt=""></p>
+<p>分析可知，v20变量存放的是该循环执行的次数、无法改变；v21变量调用time函数生成一个时间戳，用于后续与v6变量的相减形成随机种子值；v11变量用于内循环执行的次数，从0-36；v6变量同样调用time函数生成一个时间戳，与v21变量不同在于每次内循环结束后重新生成时间戳时都会先sleep 1s后再生成；在内循环的最后是一个sleep()函数，调用来休眠1s；其余的代码都是用于生成输出的字符串。</p>
+<p>这里如果想直接nop掉sleep()函数是行不通的，因为整段代码的执行依赖于该sleep()函数，v6与v21的差值在每次内循环结束的时候都会通过sleep()函数实现增一，如果不这样正常处理，将得不到正常的flag。</p>
+<p>换个思路，这里关键的两个函数是sleep()和time()，我们可以重新定义该两个函数，通过LD_PRELOAD预先加载这两个函数而不是调用系统自己的从而实现欺骗程序该代码确实是睡眠了1s了，也就是说，自定义的sleep()函数直接对时间变量t自增1而不是真的等待了一秒才运行结束，从而可以将程序的休眠时间去掉：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/9.jpg" alt=""></p>
+<p>gcc编译为so文件（-fpic参数指定为位置无关、即使用相对地址，-shared参数指定为共享库），再通过LD_PRELOAD在该elf程序运行前优先加载生成的动态链接库time.so并管道输出到一个文件中查看，可以看到输出了flag：</p>
+<p><img src="/2019/01/01/HITB_Binary_100_writeup/10.jpg" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/01/01/Linux环境与相关工具/" rel="next" title="Linux环境与相关工具">
+          Linux环境与相关工具
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/01/01/Spring基础篇之事务管理/" rel="prev" title="Spring基础篇之事务管理">
+            Spring基础篇之事务管理
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

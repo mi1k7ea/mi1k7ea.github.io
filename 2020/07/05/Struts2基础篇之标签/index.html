@@ -1,0 +1,717 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Java,Struts2,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Struts2基础篇之标签 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Struts2基础篇之标签
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-07-05T13:41:17.000Z">
+        2020-07-05
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Struts2/">Struts2</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-参考"><a href="#0x00-参考" class="headerlink" title="0x00 参考"></a>0x00 参考</h2><p>本笔记直接参考或引自如下链接文章：</p>
+<p><a href="http://c.biancheng.net/struts2/" target="_blank" rel="noopener">http://c.biancheng.net/struts2/</a></p>
+<p><a href="https://www.w3cschool.cn/struts_2/" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/</a></p>
+<h2 id="0x01-标签的分类和使用"><a href="#0x01-标签的分类和使用" class="headerlink" title="0x01 标签的分类和使用"></a>0x01 标签的分类和使用</h2><p>Struts2 是一个优秀的 MVC 框架，其实现重点主要放在了业务逻辑控制器部分和视图页面部分。控制器部分主要由 Action 提供支持，而视图页面部分则由大量的标签提供支持。</p>
+<p>Struts2 的标签库是一个比较完善且功能强大的标签库，它将所有标签都统一到一个标签库中，从而简化了标签的使用；它提供了对主题和模板的支持，极大地简化了视图页面代码的编写；它还提供了对 Ajax 的支持，极大地丰富了视图页面的展示效果。</p>
+<p>与 JSTL（JSP Standard Tag Library，JSP标准标签库）相比，Struts2 标签库更加易用和强大。</p>
+<h3 id="标签库的分类"><a href="#标签库的分类" class="headerlink" title="标签库的分类"></a>标签库的分类</h3><p>Struts2 框架对整个标签库进行了分类，按其功能大致可分为两类，如图所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/1.png" alt=""></p>
+<p>可以看出，Struts2 的标签库主要分为两大类：普通标签和 UI 标签。普通标签的主要功能是在页面生成时控制页面代码的执行流程；UI 标签的主要功能是以丰富且可复用的 HTML 文件显示数据。</p>
+<p>普通标签又分为控制标签（Control Tags）和数据标签（Data Tags）。控制标签用于完成条件逻辑和循环逻辑的控制，也可用于做集合的操作。数据标签用于输出后台的数据和完成其他数据访问功能。</p>
+<p>UI 标签又分为表单标签（Form Tags）、非表单标签（Non-Form Tags）和 Ajax 标签。表单标签主要用于生成 HTML 页面中的表单元素，非表单标签主要用于生成非表单的可视化元素，如输出 Action 中封装的信息等。Ajax 标签主要用于提供对 Ajax 技术的支持。</p>
+<h3 id="标签的使用"><a href="#标签的使用" class="headerlink" title="标签的使用"></a>标签的使用</h3><p>使用 Struts2 的标签库非常简单，一般只需在 JSP 文件内使用 taglib 指令导入 Struts2 标签库即可，其导入代码如下所示：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;%<span class="meta">@taglib</span> prefix=<span class="string">"s"</span> uri=<span class="string">"/struts-tags"</span> %&gt;</span><br></pre></td></tr></table></figure>
+<p>在上述代码中，taglib 指令的 uri 属性用于指定引入标签库描述符文件的位置，prefix 属性用于指定引入标签库描述符文件的前缀。在 JSP 文件中，所有的 Struts2 标签都建议使用 s 作为前缀。</p>
+<h2 id="0x02-控制标签"><a href="#0x02-控制标签" class="headerlink" title="0x02 控制标签"></a>0x02 控制标签</h2><p>针对页面中经常需要实现的流程控制和循环等操作，Struts2标签库中提供了控制标签。</p>
+<h3 id="if和else标签"><a href="#if和else标签" class="headerlink" title="if和else标签"></a>if和else标签</h3><p>Struts2 标签库中的 <code>&lt;s:if&gt;、&lt;s:elseif&gt;、&lt;s:else&gt;</code> 标签与 Java 中的 if、else if 和 else 语句功能类似，主要用于程序的分支逻辑控制。其中，只有 <code>&lt;s:if&gt;</code> 标签可以单独使用，而 <code>&lt;s:elseif&gt;、&lt;s:else&gt;</code> 都必须与 <code>&lt;s:if&gt;</code> 标签结合才能使用。其使用语法格式如下所示：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:<span class="keyword">if</span> test=<span class="string">"表达式1"</span>&gt;</span><br><span class="line">    标签体</span><br><span class="line">&lt;/s:if&gt;</span><br><span class="line">&lt;s:elseif test=<span class="string">"表达式2"</span>&gt;</span><br><span class="line">    标签体</span><br><span class="line">&lt;/s:elseif&gt;</span><br><span class="line">&lt;s:<span class="keyword">else</span>&gt;</span><br><span class="line">    标签体</span><br><span class="line">&lt;/s:else&gt;</span><br></pre></td></tr></table></figure>
+<p>在上述语法格式中，<code>&lt;s:if&gt; 和 &lt;s:elseif&gt;</code> 标签必须指定 test 属性，该属性用于设置标签的判断条件，其值是一个 boolean 类型的条件表达式。</p>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_if_else_tags.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_if_else_tags.html</a></p>
+<h3 id="iterator标签"><a href="#iterator标签" class="headerlink" title="iterator标签"></a>iterator标签</h3><p><code>&lt;s:iterator&gt;</code> 标签主要用于对集合中的数据进行迭代，它可以根据条件遍历集合中的数据。&lt;s:iterator&gt; 标签的属性及相关说明如表所示。</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>是否必须</th>
+<th>默认值</th>
+<th>类型</th>
+<th>描  述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>begin</td>
+<td>否</td>
+<td>0</td>
+<td>Integer</td>
+<td>迭代数组或集合的起始位置</td>
+</tr>
+<tr>
+<td>end</td>
+<td>否</td>
+<td>数组或集合的长度大小减 1，若 Step 为负，则为 0。</td>
+<td>Integer</td>
+<td>迭代数组或集合的结束位置</td>
+</tr>
+<tr>
+<td>status</td>
+<td>否</td>
+<td>false</td>
+<td>Boolean</td>
+<td>迭代过程中的状态</td>
+</tr>
+<tr>
+<td>step</td>
+<td>否</td>
+<td>1</td>
+<td>Integer</td>
+<td>指定每一次迭代后索引增加的值</td>
+</tr>
+<tr>
+<td>value</td>
+<td>否</td>
+<td>无</td>
+<td>String</td>
+<td>迭代的数组或集合对象</td>
+</tr>
+<tr>
+<td>var</td>
+<td>否</td>
+<td>无</td>
+<td>String</td>
+<td>将生成的 Iterator 设置为 page 范围的属性</td>
+</tr>
+<tr>
+<td>id</td>
+<td>否</td>
+<td>无</td>
+<td>String</td>
+<td>指定了集合元素的 id，现已用 var 代替</td>
+</tr>
+</tbody>
+</table>
+<p>如果在 <code>&lt;s:iterator&gt;</code> 标签中指定 status 属性，就可以通过该属性获取迭代过程中的状态信息，如元素数、当前索引值等。通过 status 属性获取信息的方法如下表所示（假设其属性值为 st）。</p>
+<table>
+<thead>
+<tr>
+<th>方 法</th>
+<th>说 明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>st.count</td>
+<td>返回当前已经遍历的集合元素的个数</td>
+</tr>
+<tr>
+<td>st.first</td>
+<td>返回当前遍历元素是否为集合的第一个元素</td>
+</tr>
+<tr>
+<td>st.last</td>
+<td>返回当前遍历元素是否为集合的最后一个元素</td>
+</tr>
+<tr>
+<td>st.index</td>
+<td>返回遍历元素的当前索引值</td>
+</tr>
+</tbody>
+</table>
+<p>这些iterator将迭代一个值。可迭代值可以是以下任一值：java.util.Collection，java.util.Iterator。在迭代一个iterator时，可以使用<strong>Sort</strong>标签对结果进行排序，或者使用<strong>SubSet</strong>标签来获取列表或数组的子集。</p>
+<p>以下示例是检索值栈上当前对象的getDays()方法的值，并使用它迭代。<code>&lt;s:property/&gt;</code>标签印出迭代器的当前值。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:iterator value=<span class="string">"days"</span>&gt;</span><br><span class="line">  &lt;p&gt;day is: &lt;s:property/&gt;&lt;/p&gt;</span><br><span class="line">&lt;/s:iterator&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_iterator_tags.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_iterator_tags.html</a></p>
+<h3 id="merge标签"><a href="#merge标签" class="headerlink" title="merge标签"></a>merge标签</h3><p>这些<strong>merge</strong>标签采用两个或多个列表作为参数，并将它们合并在一起，如下所示：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:merge <span class="keyword">var</span>=<span class="string">"myMergedIterator"</span>&gt;</span><br><span class="line">     &lt;s:param value=<span class="string">"%&#123;myList1&#125;"</span> /&gt;</span><br><span class="line">     &lt;s:param value=<span class="string">"%&#123;myList2&#125;"</span> /&gt;</span><br><span class="line">     &lt;s:param value=<span class="string">"%&#123;myList3&#125;"</span> /&gt;</span><br><span class="line">&lt;/s:merge&gt;</span><br><span class="line">&lt;s:iterator value=<span class="string">"%&#123;#myMergedIterator&#125;"</span>&gt;</span><br><span class="line">     &lt;s:property /&gt;</span><br><span class="line">&lt;/s:iterator&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_merge_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_merge_tag.html</a></p>
+<h3 id="append标签"><a href="#append标签" class="headerlink" title="append标签"></a>append标签</h3><p>这些<strong>append</strong>标签采用两个或多个列表作为参数，并将它们全部附加在一起，如下所示：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:append <span class="keyword">var</span>=<span class="string">"myAppendIterator"</span>&gt;</span><br><span class="line">     &lt;s:param value=<span class="string">"%&#123;myList1&#125;"</span> /&gt;</span><br><span class="line">     &lt;s:param value=<span class="string">"%&#123;myList2&#125;"</span> /&gt;</span><br><span class="line">     &lt;s:param value=<span class="string">"%&#123;myList3&#125;"</span> /&gt;</span><br><span class="line">&lt;/s:append&gt;</span><br><span class="line">&lt;s:iterator value=<span class="string">"%&#123;#myAppendIterator&#125;"</span>&gt;</span><br><span class="line">     &lt;s:property /&gt;</span><br><span class="line">&lt;/s:iterator&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_append_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_append_tag.html</a></p>
+<h3 id="generator标签"><a href="#generator标签" class="headerlink" title="generator标签"></a>generator标签</h3><p>这些<strong>generator</strong>标签基于提供的val属性生成迭代器。下面的generator标签生成一个迭代器并使用iterator标签打印出来。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:generator val=<span class="string">"%&#123;'aaa,bbb,ccc,ddd,eee'&#125;"</span>&gt;</span><br><span class="line"> &lt;s:iterator&gt;</span><br><span class="line">     &lt;s:property /&gt;&lt;br/&gt;</span><br><span class="line"> &lt;/s:iterator&gt;</span><br><span class="line">&lt;/s:generator&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_generator_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_generator_tag.html</a></p>
+<h2 id="0x03-数据标签"><a href="#0x03-数据标签" class="headerlink" title="0x03 数据标签"></a>0x03 数据标签</h2><p>数据标签主要用于提供各种和数据访问相关的功能，如输出信息和显示调试信息等。</p>
+<h3 id="property标签"><a href="#property标签" class="headerlink" title="property标签"></a>property标签</h3><p><code>&lt;s:property&gt;</code> 标签的作用是输出指定的值，通常输出的是 value 属性指定的值，<code>&lt;s:property&gt;</code> 标签的属性及属性说明如下。</p>
+<ul>
+<li>value：可选属性，指定需要输出的属性值，如果没有指定该属性，则默认输出 ValueStack 栈顶的值（关于值栈内容会在后面教程中进行讲解）。</li>
+<li>id：可选属性，指定该元素的标识。</li>
+<li>default：可选属性，如果要输出的属性值为 null，则显示 default属性的指定值。</li>
+<li>escape：可选属性，指定是否忽略 HTML 代码。默认值是 true，即忽略输出值中的 HTML 代码。</li>
+</ul>
+<p>示例：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:push value=<span class="string">"myBean"</span>&gt;</span><br><span class="line">    &lt;!-- Example <span class="number">1</span>: --&gt;</span><br><span class="line">    &lt;s:property value=<span class="string">"myBeanProperty"</span> /&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!-- Example <span class="number">2</span>: --&gt;TextUtils</span><br><span class="line">    &lt;s:property value=<span class="string">"myBeanProperty"</span> <span class="keyword">default</span>=<span class="string">"a default value"</span> /&gt;</span><br><span class="line">&lt;/s:push&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_property_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_property_tag.html</a></p>
+<h4 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h4><p>propertyTags.jsp，分别对 <code>&lt;s:property&gt;</code> 标签的 value、default 和 escape 属性的使用进行了演示：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page language=<span class="string">"java"</span> contentType=<span class="string">"text/html; charset=utf-8"</span></span><br><span class="line">         pageEncoding=<span class="string">"utf-8"</span>%&gt;</span><br><span class="line">&lt;%<span class="meta">@taglib</span> prefix=<span class="string">"s"</span> uri=<span class="string">"/struts-tags"</span> %&gt;</span><br><span class="line">&lt;!DOCTYPE html PUBLIC <span class="string">"-//W3C//DTD HTML 4.01 Transitional//EN"</span> <span class="string">"http://www.w3.org/TR/html4/loose.dtd"</span>&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">    &lt;meta http-equiv=<span class="string">"Content-Type"</span> content=<span class="string">"text/html; charset=utf-8"</span>&gt;</span><br><span class="line">    &lt;title&gt;property标签&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">输出字符串：</span><br><span class="line">&lt;s:property value=<span class="string">"'this is a string'"</span>/&gt;&lt;br/&gt;</span><br><span class="line">输出默认值：</span><br><span class="line">&lt;s:property value=<span class="string">""</span> <span class="keyword">default</span>=<span class="string">"default_value"</span>/&gt;&lt;br/&gt;</span><br><span class="line">忽略HTML代码：</span><br><span class="line">&lt;s:property value=<span class="string">"'&lt;h2&gt;www.mi1k7ea.com&lt;/h2&gt;'"</span> escape=<span class="string">"true"</span>/&gt;&lt;br/&gt;</span><br><span class="line">不忽略HTML代码：</span><br><span class="line">&lt;s:property value=<span class="string">"'&lt;h2&gt;www.mi1k7ea.com&lt;/h2&gt;'"</span> escape=<span class="string">"false"</span>/&gt;&lt;br/&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>效果：</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/2.png" alt=""></p>
+<h3 id="action标签"><a href="#action标签" class="headerlink" title="action标签"></a>action标签</h3><p>此标签允许开发人员通过指定action名称和可选的命名空间直接从JSP页面调用action。标签的正文内容用于呈现action的结果。在struts.xml中为此action定义的任何结果处理程序将会被忽略，除非指定executeResult参数。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&lt;div&gt;Tag to execute the action&lt;/div&gt;</span><br><span class="line">&lt;br /&gt;</span><br><span class="line">&lt;s:action name=<span class="string">"actionTagAction"</span> executeResult=<span class="string">"true"</span> /&gt;</span><br><span class="line">&lt;br /&gt;</span><br><span class="line">&lt;div&gt;To invokes special method  in action <span class="class"><span class="keyword">class</span>&lt;/<span class="title">div</span>&gt;</span></span><br><span class="line"><span class="class">&lt;<span class="title">br</span> /&gt;</span></span><br><span class="line">&lt;s:action name="actionTagAction!specialMethod" executeResult="true" /&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_action_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_action_tag.html</a></p>
+<h3 id="include标签"><a href="#include标签" class="headerlink" title="include标签"></a>include标签</h3><p>include标签标签用于在当前页面中包含另一个 Web 资源（如 HTML、JSP、Servlet 等）。该标签有两个属性 id 和 value。其中 id 是可选属性，表示该标签的引用；value 是必填属性，用于指定被包含的 Web 资源文件。</p>
+<p>在 <code>&lt;s:include&gt;</code> 标签中还可以指定多个 <code>&lt;s:param/&gt;</code> 子标签给被包含的 Web 资源传递请求参数。</p>
+<h4 id="Demo-1"><a href="#Demo-1" class="headerlink" title="Demo"></a>Demo</h4><p>file.jsp：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page language=<span class="string">"java"</span> contentType=<span class="string">"text/html; charset=utf-8"</span></span><br><span class="line">    pageEncoding=<span class="string">"utf-8"</span>%&gt;</span><br><span class="line">&lt;%<span class="meta">@taglib</span> prefix=<span class="string">"s"</span> uri=<span class="string">"/struts-tags"</span> %&gt;</span><br><span class="line">&lt;!DOCTYPE html PUBLIC <span class="string">"-//W3C//DTD HTML 4.01 Transitional//EN"</span> <span class="string">"http://www.w3.org/TR/html4/loose.dtd"</span>&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">&lt;meta http-equiv=<span class="string">"Content-Type"</span> content=<span class="string">"text/html; charset=utf-8"</span>&gt;</span><br><span class="line">&lt;title&gt;property标签&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">    &lt;h2&gt;这是被包含页面includefile.jsp&lt;/h2&gt;&lt;br/&gt;</span><br><span class="line">    传递的参数为：&lt;%out.print(request.getParameter(<span class="string">"username"</span>)); %&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>includeTags.jsp：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page language=<span class="string">"java"</span> contentType=<span class="string">"text/html; charset=UTF-8"</span></span><br><span class="line">         pageEncoding=<span class="string">"UTF-8"</span>%&gt;</span><br><span class="line">&lt;%<span class="meta">@taglib</span> prefix=<span class="string">"s"</span> uri=<span class="string">"/struts-tags"</span>%&gt;</span><br><span class="line">&lt;!DOCTYPE html PUBLIC <span class="string">"-//W3C//DTD HTML 4.01 Transitional//EN"</span> <span class="string">"http://www.w3.org/TR/html4/loose.dtd"</span>&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">    &lt;meta http-equiv=<span class="string">"Content-Type"</span> content=<span class="string">"text/html; charset=UTF-8"</span>&gt;</span><br><span class="line">    &lt;title&gt;includeTags&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">&lt;h3&gt;这是包含页面includeTags.jsp&lt;/h3&gt;&lt;br/&gt;</span><br><span class="line">&lt;s:include value=<span class="string">"file.jsp"</span>&gt;</span><br><span class="line">    &lt;s:param name=<span class="string">"username"</span> value=<span class="string">"'mi1k7ea'"</span>/&gt;</span><br><span class="line">&lt;/s:include&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>效果：</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/5.png" alt=""></p>
+<h3 id="bean标签"><a href="#bean标签" class="headerlink" title="bean标签"></a>bean标签</h3><p>这些bean标签实例化一个符合JavaBeans规范的类。这个标签有一个主体，可以包含一些Param元素来设置任何mutator方法。如果在BeanTag上设置了var属性，它将把实例化的bean放入值栈的Context中。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:bean name=<span class="string">"org.apache.struts2.util.Counter"</span> <span class="keyword">var</span>=<span class="string">"counter"</span>&gt;</span><br><span class="line">   &lt;s:param name=<span class="string">"first"</span> value=<span class="string">"20"</span>/&gt;</span><br><span class="line">   &lt;s:param name=<span class="string">"last"</span> value=<span class="string">"25"</span> /&gt;</span><br><span class="line">&lt;/s:bean&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_bean_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_bean_tag.html</a></p>
+<h3 id="date标签"><a href="#date标签" class="headerlink" title="date标签"></a>date标签</h3><p>date标签允许以快速简单的方式格式化日期。用户可以指定自定义日期格式（例如“dd/MM/yyyy hh:mm”），可以生成易读的符号（例如“在2小时14分钟内”），或者可以使用属性文件中的key:“struts.date.format”来回退到预定义的格式。</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:date name=<span class="string">"person.birthday"</span> format=<span class="string">"dd/MM/yyyy"</span> /&gt;</span><br><span class="line">&lt;s:date name=<span class="string">"person.birthday"</span> format=<span class="string">"%&#123;getText('some.i18n.key')&#125;"</span> /&gt;</span><br><span class="line">&lt;s:date name=<span class="string">"person.birthday"</span> nice=<span class="string">"true"</span> /&gt;</span><br><span class="line">&lt;s:date name=<span class="string">"person.birthday"</span> /&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_date_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_date_tag.html</a></p>
+<h3 id="param标签"><a href="#param标签" class="headerlink" title="param标签"></a>param标签</h3><p><code>&lt;s:param&gt;</code> 标签主要用于为其他标签提供参数，通常要与其他标签一起使用。在上一部分使用 <code>&lt;s:include&gt;</code> 标签时，就使用了 <code>&lt;s:param&gt;</code> 标签给被包含的页面传递参数。<code>&lt;s:param&gt;</code> 标签有两种用法，具体如下。</p>
+<p>一种用法是通过标签体指定参数值，用法如下所示：  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:param name="color"&gt;red&lt;/s:param&gt;</span><br></pre></td></tr></table></figure>
+<p>另一种用法是使用 value 属性指定参数值，用法如下所示：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:param name=<span class="string">"color"</span> value=<span class="string">"'red'"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<p>上述两种用法的功能一样，不同点在于使用 value 属性设置参数值时，需要添加单引号，而使用标签体设置参数值时，不需要添加单引号。</p>
+<p>注意：在使用 value 属性指定参数时，如果不添加单引号，则表示该值为一个引用对象，如果该对象不存在，则为其属性赋值为 null。  </p>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_param_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_param_tag.html</a></p>
+<h3 id="push标签"><a href="#push标签" class="headerlink" title="push标签"></a>push标签</h3><p>这些push标签用于推送堆栈中的值，以简化使用。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:push value=<span class="string">"user"</span>&gt;</span><br><span class="line">    &lt;s:propery value=<span class="string">"firstName"</span> /&gt;</span><br><span class="line">    &lt;s:propery value=<span class="string">"lastName"</span> /&gt;</span><br><span class="line">&lt;/s:push&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_property_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_property_tag.html</a></p>
+<h3 id="set标签"><a href="#set标签" class="headerlink" title="set标签"></a>set标签</h3><p>这些set标签为指定范围内的变量赋值。当你希望将变量分配给复杂表达式，然后仅仅引用该变量而不是复杂表达式时，它是很有用的。可应用的范围是应用程序，会话，请求，页面和action。</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:set name=<span class="string">"myenv"</span> value=<span class="string">"environment.name"</span>/&gt;</span><br><span class="line">&lt;s:property value=<span class="string">"myenv"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_property_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_property_tag.html</a></p>
+<h3 id="text标签"><a href="#text标签" class="headerlink" title="text标签"></a>text标签</h3><p>这些text标签用于呈现I18n文本消息。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- First Example --&gt;</span><br><span class="line">&lt;s:i18n name=<span class="string">"struts.action.test.i18n.Shop"</span>&gt;</span><br><span class="line">    &lt;s:text name=<span class="string">"main.title"</span>/&gt;</span><br><span class="line">&lt;/s:i18n&gt;</span><br><span class="line"></span><br><span class="line">&lt;!-- Second Example --&gt;</span><br><span class="line">&lt;s:text name=<span class="string">"main.title"</span> /&gt;</span><br><span class="line"></span><br><span class="line">&lt;!-- Third Examlpe --&gt;</span><br><span class="line">&lt;s:text name=<span class="string">"i18n.label.greetings"</span>&gt;</span><br><span class="line">   &lt;s:param &gt;Mr Smith&lt;/s:param&gt;</span><br><span class="line">&lt;/s:text&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_text_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_text_tag.html</a></p>
+<h3 id="url标签"><a href="#url标签" class="headerlink" title="url标签"></a>url标签</h3><p>这些url标签用于创建URL。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;-- Example <span class="number">1</span> --&gt;</span><br><span class="line">&lt;s:url value=<span class="string">"editGadget.action"</span>&gt;</span><br><span class="line">    &lt;s:param name=<span class="string">"id"</span> value=<span class="string">"%&#123;selected&#125;"</span> /&gt;</span><br><span class="line">&lt;/s:url&gt;</span><br><span class="line"></span><br><span class="line">&lt;-- Example <span class="number">2</span> --&gt;</span><br><span class="line">&lt;s:url action=<span class="string">"editGadget"</span>&gt;</span><br><span class="line">    &lt;s:param name=<span class="string">"id"</span> value=<span class="string">"%&#123;selected&#125;"</span> /&gt;</span><br><span class="line">&lt;/s:url&gt;</span><br><span class="line"></span><br><span class="line">&lt;-- Example <span class="number">3</span>--&gt;</span><br><span class="line">&lt;s:url includeParams=<span class="string">"get"</span>&gt;</span><br><span class="line">    &lt;s:param name=<span class="string">"id"</span> value=<span class="string">"%&#123;'22'&#125;"</span> /&gt;</span><br><span class="line">&lt;/s:url&gt;</span><br></pre></td></tr></table></figure>
+<p>Demo参考：<a href="https://www.w3cschool.cn/struts_2/struts_url_tag.html" target="_blank" rel="noopener">https://www.w3cschool.cn/struts_2/struts_url_tag.html</a></p>
+<h3 id="a标签"><a href="#a标签" class="headerlink" title="a标签"></a>a标签</h3><p><code>&lt;s:a&gt;</code> 标签与 HTML 中的 <code>&lt;a&gt;</code> 标签类似，主要用于构造 HTML 页面中的超链接。<code>&lt;s:a&gt;</code> 标签的属性及相关说明如表所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/3.png" alt=""></p>
+<p><code>&lt;s:a&gt;</code> 标签的使用格式如下所示：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:a href="链接地址"&gt;&lt;/s:a&gt;</span><br><span class="line">&lt;s:a namespace="" action=""&gt;www.baidu.com&lt;/s:a&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="debug标签"><a href="#debug标签" class="headerlink" title="debug标签"></a>debug标签</h3><p><code>&lt;s:debug&gt;</code> 标签用于输出服务端对象（如 request、application、ValueStack 等）中的信息，该标签可用于辅助调试 Java Web 程序。</p>
+<p><code>&lt;s:debug&gt;</code> 标签只有一个 id 属性，表示 <code>&lt;s:debug&gt;</code> 标签的一个引用，通常不使用该属性。在使用 <code>&lt;s:debug&gt;</code>标签后，网页中会生成一个 Debug 的链接，单击该链接，网页中将输出各种服务器对象的信息，如图所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/4.png" alt=""></p>
+<h2 id="0x04-表单标签"><a href="#0x04-表单标签" class="headerlink" title="0x04 表单标签"></a>0x04 表单标签</h2><p>表单标签列表是Struts UI标签的子集。Struts2 的表单标签用于向服务器提交用户输入的信息，绝大多数的表单标签都有其对应的 HTML 标签。</p>
+<h3 id="Struts2的模板和主题"><a href="#Struts2的模板和主题" class="headerlink" title="Struts2的模板和主题"></a>Struts2的模板和主题</h3><p>Struts2 的 UI 标签都是基于模板和主题的。模板就是一些代码，Struts2 标签使用这些代码渲染生成相应的 HTML 代码。模板是一个 UI 标签的外在表现形式，并且每个标签都会有自己对应的模板。如果为所有的 UI 标签提供样式和视觉效果相似的模板，那么这一系列的模板就形成了一个主题。</p>
+<p>Struts2 默认提供了四种主题，分别为 simple、xhtml、css_xhtml 和 Ajax，这四种主题的作用如下表所示。</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>simple 主题</td>
+<td>这是最简单的主题，使用该主题时，每个 UI 标签只生成最基本的 HTML 元素，没有任何附加功能。</td>
+</tr>
+<tr>
+<td>xhtml 主题</td>
+<td>这是 Struts2 的默认主题，它对 simple 主题进行了扩展，提供了布局功能、Label 显示名称以及与验证框架和国际化框架的集成。</td>
+</tr>
+<tr>
+<td>css_xhtml</td>
+<td>该主题是对 xhtml 的扩展，在 xhtml 的基础之上添加对 CSS 的支持和控制。</td>
+</tr>
+<tr>
+<td>Ajax</td>
+<td>继承自 xhtml，提供 Ajax 支持。</td>
+</tr>
+</tbody>
+</table>
+<p>在上述四种主题中，xhtml 是默认主题，但它有一定的局限性，因为它使用表格进行布局，并且只支持每一行放一个表单项，一旦遇到复杂的页面布局，xhtml 就不再适用了。此时，就需要改变 Struts2 的默认主题。</p>
+<p>通常情况下，可以通过设置常量 struts.ui.theme 改变默认主题，具体方法是在 struts.xml 文件中增加相应的配置。例如想要使用 simple 的主题，那么只需要在 struts.xml 中增加如下配置即可。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">constant</span> <span class="attr">name</span>=<span class="string">"struts.ui.theme"</span> <span class="attr">value</span>=<span class="string">"simple"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="表单标签的公共属性"><a href="#表单标签的公共属性" class="headerlink" title="表单标签的公共属性"></a>表单标签的公共属性</h3><p>每一个表单标签在 Struts2 核心 JAR 文件的 org.apache.struts2.components 包中都有一个对应的类，这些对应的类都继承自 UIBean 类。</p>
+<p>UIBean 类提供了一组公共属性，这些属性是所有表单标签的通用属性，具体如表所示。</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>主题</th>
+<th>数据类型</th>
+<th>说   明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>title</td>
+<td>simple</td>
+<td>String</td>
+<td>设置表单元素的 title 属性</td>
+</tr>
+<tr>
+<td>disabled</td>
+<td>simple</td>
+<td>String</td>
+<td>设置表单元素是否可用</td>
+</tr>
+<tr>
+<td>label</td>
+<td>xhtml</td>
+<td>String</td>
+<td>设置表单元素的 label 属性</td>
+</tr>
+<tr>
+<td>labelPosition</td>
+<td>xhtml</td>
+<td>String</td>
+<td>设置 label 元素的显示位置，可选值为 top 和 left（默认）</td>
+</tr>
+<tr>
+<td>name</td>
+<td>simple</td>
+<td>String</td>
+<td>设置表单元素的 name 属性，与 Action 中的属性名对应</td>
+</tr>
+<tr>
+<td>value</td>
+<td>simple</td>
+<td>String</td>
+<td>设置表单元素的值</td>
+</tr>
+<tr>
+<td>cssClass</td>
+<td>simple</td>
+<td>String</td>
+<td>设置表单元素的 class</td>
+</tr>
+<tr>
+<td>cssStyle</td>
+<td>simple</td>
+<td>String</td>
+<td>设置表单元素的 style 属性</td>
+</tr>
+<tr>
+<td>required</td>
+<td>xhtml</td>
+<td>Boolean</td>
+<td>设置表单元素为必填项</td>
+</tr>
+<tr>
+<td>requiredposition</td>
+<td>xhtml</td>
+<td>String</td>
+<td>设置必填标记（默认为*）相对于 label 元素的位置，可选值为 left 和 right（默认）</td>
+</tr>
+<tr>
+<td>tabindex</td>
+<td>simple</td>
+<td>String</td>
+<td>设置表单元素的 tabindex 属性</td>
+</tr>
+</tbody>
+</table>
+<p>需要注意的是，表单标签的 name 和 value 属性基本等同于 HTML 组件的 name 和 value，但也有所不同：表单标签在生成 HTML 时，如果标签没有设置 value 属性，则会从值栈中按照 name 获取相应的值，并把这个值设置成 HTML 组件的 value。</p>
+<p>简单而言，就是表单标签的 value 在生成 HTML 时会自动设置值，而这个值是从值栈中获取的。  </p>
+<h3 id="form标签"><a href="#form标签" class="headerlink" title="form标签"></a>form标签</h3><p>form标签用于呈现 HTML 语言中的表单元素，其常用属性如表所示。</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>是否必填</th>
+<th>类  型</th>
+<th>说  明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>action</td>
+<td>否</td>
+<td>String</td>
+<td>指定提交时对应的 action，不需要 action 后缀</td>
+</tr>
+<tr>
+<td>enctype</td>
+<td>否</td>
+<td>String</td>
+<td>HTML 表单 enctype 属性</td>
+</tr>
+<tr>
+<td>method</td>
+<td>否</td>
+<td>String</td>
+<td>HTML 表单 method 属性</td>
+</tr>
+<tr>
+<td>namespace</td>
+<td>否</td>
+<td>String</td>
+<td>所提交 action 的命名空间</td>
+</tr>
+</tbody>
+</table>
+<p>在使用form标签时，一般会包含其他的表单元素，如 textfield和radio等标签。在提交表单时，这些表单元素对应的 name 属性，将其作为参数传入 Struts2 框架进行处理。</p>
+<h3 id="textfield和textarea标签"><a href="#textfield和textarea标签" class="headerlink" title="textfield和textarea标签"></a>textfield和textarea标签</h3><p>textfield和 textarea标签的作用比较相似，都用于创建文本框，其主要区别在于textfield创建的是单行文本框，而textarea创建的是多行文本框。二者的使用也比较简单，一般只需要指定其 label 和 name 属性即可。两个标签的用法如下所示。</p>
+<p>textfield标签的用法：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:textfield label=<span class="string">"用户名"</span> name=<span class="string">"username"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<p>textarea标签的用法：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:textarea label=<span class="string">"描述"</span> name=<span class="string">"description"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<p>在上述两个用法中，name 属性用于指定单行/多行文本框的名称，在 Action 中，通过 name 属性即可获取单行/多行文本框的值。</p>
+<p>此外，textarea标签还可以通过 value 属性指定单行/多行文本框的当前值，通过 cols 和 rows 属性分别指定多行文本框的列数和行数。</p>
+<p>passWord标签</p>
+<p>password标签用于创建一个密码输入框，它可以生成 HTML 中的 <code>&lt;input type=&quot;password&quot;/&gt;</code> 标签。</p>
+<p>password标签的常用属性说明如表所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/7.png" alt=""></p>
+<p>password标签的使用方法如下所示：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:password label=<span class="string">"password"</span> name=<span class="string">"password"</span> maxlength=<span class="string">"20"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<p>需要注意的是，Struts2 的 password 标签与 HTML 的 <code>input type=&quot;password&quot;/&gt;</code> 标签也略有不同：<code>&lt;input type=&quot;password&quot;/&gt;</code> 标签只要设置 value 属性就可以将 value 的属性值作为默认显示值；而 Struts2 的 password 标签除了要设置 value 属性值以外，还要设置 showPassword 属性值为 true。</p>
+<h3 id="radio标签"><a href="#radio标签" class="headerlink" title="radio标签"></a>radio标签</h3><p>radio标签用于创建单选按钮，生成 HTML 中的 <code>&lt;input type=&quot;radio&quot;/&gt;</code> 标签。radio 标签的常用属性说明如表所示。</p>
+<table>
+<thead>
+<tr>
+<th>属性名</th>
+<th>是否必填</th>
+<th>类  型</th>
+<th>说  明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>list</td>
+<td>是</td>
+<td>Collection，Map Enmumeration，Iterator，Array</td>
+<td>用于生成单选框中的集合</td>
+</tr>
+<tr>
+<td>listKey</td>
+<td>否</td>
+<td>String</td>
+<td>指定集合对象中的哪个属性作为选项的 value</td>
+</tr>
+<tr>
+<td>listValue</td>
+<td>否</td>
+<td>String</td>
+<td>指定集合对象中的哪个属性作为选项的内容</td>
+</tr>
+</tbody>
+</table>
+<p>表中的三个属性必须要配合使用，由 list 属性指定从集合中获得元素，由 listKey 属性指定获得元素之后使用元素的哪个属性作为生成 <code>&lt;input type=&quot;radio&quot;/&gt;</code> 的 value 属性，由 listValue 属性指定生成的 <code>&lt;input type=&quot;radio&quot;/&gt;</code> 后展示给用户的内容。</p>
+<h3 id="reset标签"><a href="#reset标签" class="headerlink" title="reset标签"></a>reset标签</h3><p>reset标签用于创建一个重置按钮，会生成 HTML 中的 <code>&lt;input type=&quot;reset&quot;/&gt;</code> 标签，该标签的使用比较简单，其常用属性为 name 和 value。</p>
+<p>其中，name 属性用于指定重置按钮的名称，在 Action 中，可以通过 name 属性获取重置按钮的值，value 属性用于显示按钮的值。该标签的用法如下所示：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:reset value=<span class="string">"reset"</span>/&gt;</span><br><span class="line">&lt;s:reset name=<span class="string">"reset"</span> value=<span class="string">"重置"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="submit标签"><a href="#submit标签" class="headerlink" title="submit标签"></a>submit标签</h3><p>submit标签主要用于产生 HTML 中的提交按钮，该表单元素中，可以指定提交时的 Action 对应的方法。该标签通常与 form 标签一起使用，该标签的常用属性如表所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/8.png" alt=""></p>
+<p>checkboxlist标签</p>
+<p>checkboxlist标签用于一次性创建多个复选框，用户可以选择创建零到多个复选框，它可以产生一组<code>&lt;input type=&quot;checkbox&quot;/&gt;</code>标签。</p>
+<p>checkboxlist标签的常用属性及其说明如表所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/9.png" alt=""></p>
+<p>在表的属性中，listKey 和 listValue 属性主要用于集合中，通常存放的是 JavaBean，可以使用这两个属性从 JavaBean 的众多属性中筛选需要的值。</p>
+<h3 id="select标签"><a href="#select标签" class="headerlink" title="select标签"></a>select标签</h3><p>select标签用于创建一个下拉列表框，它会生成 HTML 中的 <code>&lt;select&gt;</code> 标签。select标签的常用属性及其说明如表所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/10.png" alt=""></p>
+<p>在表的属性中，headerKey 和 headerValue 属性需要同时使用，使用时会在所有的真实选项之前加添一项作为标题项。如选择城市时，可以在所有的具体城市之前添加一项“请选择”，这一项不会作为备选的值。</p>
+<p>size 属性可以让下拉框同时显示多个值，multiple 属性让用户同时选择多个值，只是在后台的 Action 接收下拉框值时，不能使用 String 类型，而是使用 <code>String[]</code> 或者 <code>List&lt;String&gt;</code>。</p>
+<h3 id="optgroup标签"><a href="#optgroup标签" class="headerlink" title="optgroup标签"></a>optgroup标签</h3><p>optgroup标签用于生成选项组，通常作为 select 标签的子标签使用。由于在一个下拉列表框中可以包含多个选项组，所以 select 标签也能够包含多个 optgroup 标签。</p>
+<p>使用 optgroup 标签时，也需要指定该标签的 list、listKey、listValue 等属性，这些属性的含义与 select 标签的相应属性含义相同。此外，optgroup 标签的 label 属性表示选项组的组名，选项组的组名是不能被选中的。</p>
+<h3 id="file标签"><a href="#file标签" class="headerlink" title="file标签"></a>file标签</h3><p>file标签用于创建一个文件选择框，它会生成 HTML 中的 <code>&lt;input type=&quot;file&quot;/&gt;</code> 标签。该标签常用的属性及其说明如表所示。</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/11.png" alt=""></p>
+<p>file标签的一般用法如下所示：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:file name=<span class="string">"uploadFile"</span> accept=<span class="string">"text/*"</span>/&gt;</span><br><span class="line">&lt;s:file name=<span class="string">"otherUploadFile"</span> accept=<span class="string">"text/html,text/plain"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="hidden标签"><a href="#hidden标签" class="headerlink" title="hidden标签"></a>hidden标签</h3><p>hidden标签用于创建隐藏表单元素，它会生成 HTML 中的隐藏域标签 <code>&lt;input type=&quot;hidden&quot;/&gt;</code>。该标签在页面上没有任何显示，可用于保存或交换数据，如需要提交表单时，要传递一个值到请求参数中，就可以使用该标签。</p>
+<p>该标签的使用非常简单，通常只需要设置 name 和 value 属性即可，其使用语法如下所示：</p>
+<figure class="highlight jsp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;s:hidden name=<span class="string">"id"</span> value=<span class="string">"%&#123;id&#125;"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="0x05-非表单标签"><a href="#0x05-非表单标签" class="headerlink" title="0x05 非表单标签"></a>0x05 非表单标签</h2><p>Struts2 的非表单标签主要用于在页面中生成非表单的可视化元素，以及输出在 Action 中封装的信息，如输出错误提示信息等。</p>
+<p>常用的非表单标签有 <code>&lt;s:actionmessage&gt;</code>、<code>&lt;s:actionerror&gt;</code> 和 <code>&lt;s:fielderror&gt;</code> 标签，它们分别用于显示动作信息、动作错误信息和字段错误信息。如果信息为空，则不显示。各标签的具体功能介绍如下。</p>
+<ul>
+<li><code>&lt;s:actionmessage&gt;</code> 标签：如果 Action 实例的 getActionMessage() 方法返回不为 null，则该标签负责输出该方法返回的系列消息。</li>
+<li><code>&lt;s:actionerror&gt;</code> 标签：如果 Action 实例的 getActionError() 方法返回不为 null，则该标签负责输出该方法返回的系列错误。</li>
+<li><code>&lt;s:fielderror&gt;</code> 标签：如果 Action 实例存在表单域的类型转换错误和校验错误，则该标签负责输出这些错误提示。</li>
+</ul>
+<h3 id="Demo-2"><a href="#Demo-2" class="headerlink" title="Demo"></a>Demo</h3><p>新建MsgAction类，分别使用了addActionMessage、addActionError 和 addFieldError 三个方法输出错误信息：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea.action;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.opensymphony.xwork2.ActionSupport;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MsgAction</span> <span class="keyword">extends</span> <span class="title">ActionSupport</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">execute</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.addActionMessage(<span class="string">"&lt;s:actionmessage&gt;标签输出的内容"</span>);</span><br><span class="line">        <span class="keyword">this</span>.addActionError(<span class="string">"&lt;s:actionerror&gt;标签输出的内容"</span>);</span><br><span class="line">        <span class="keyword">this</span>.addFieldError(<span class="string">"msg"</span>, <span class="string">"&lt;s:fielderror&gt;标签输出的内容"</span>);</span><br><span class="line">        <span class="keyword">return</span> SUCCESS;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>新建non_formTags.jsp：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&lt;%@ page language=<span class="string">"java"</span> contentType=<span class="string">"text/html; charset=UTF-8"</span></span><br><span class="line">         pageEncoding=<span class="string">"UTF-8"</span>%&gt;</span><br><span class="line">&lt;%<span class="meta">@taglib</span> prefix=<span class="string">"s"</span> uri=<span class="string">"/struts-tags"</span> %&gt;</span><br><span class="line">&lt;!DOCTYPE html PUBLIC <span class="string">"-//W3C//DTD HTML 4.01 Transitional//EN"</span> <span class="string">"http://www.w3.org/TR/html4/loose.dtd"</span>&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;</span><br><span class="line">    &lt;meta http-equiv=<span class="string">"Content-Type"</span> content=<span class="string">"text/html; charset=UTF-8"</span>&gt;</span><br><span class="line">    &lt;title&gt;errorTags&lt;/title&gt;</span><br><span class="line">&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">&lt;s:actionmessage/&gt;</span><br><span class="line">&lt;s:actionerror/&gt;</span><br><span class="line">&lt;s:fielderror/&gt;</span><br><span class="line">&lt;s:fielderror value=<span class="string">"msg"</span>/&gt;&lt;!-- 有无value效果一样 --&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>修改struts.xml文件：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">&lt;!DOCTYPE struts PUBLIC</span></span><br><span class="line"><span class="meta">        "-//Apache Software Foundation//DTD Struts Configuration 2.3//EN"</span></span><br><span class="line"><span class="meta">        "http://struts.apache.org/dtds/struts-2.3.dtd"&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">struts</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">constant</span> <span class="attr">name</span>=<span class="string">"struts.devMode"</span> <span class="attr">value</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">package</span> <span class="attr">name</span>=<span class="string">"helloworld"</span> <span class="attr">extends</span>=<span class="string">"struts-default"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">action</span> <span class="attr">name</span>=<span class="string">"msg"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.action.MsgAction"</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">result</span>&gt;</span>/non_formTags.jsp<span class="tag">&lt;/<span class="name">result</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">action</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;/<span class="name">package</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">struts</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>效果：</p>
+<p><img src="/2020/07/05/Struts2基础篇之标签/6.png" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-参考"><span class="toc-text">0x00 参考</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-标签的分类和使用"><span class="toc-text">0x01 标签的分类和使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#标签库的分类"><span class="toc-text">标签库的分类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#标签的使用"><span class="toc-text">标签的使用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-控制标签"><span class="toc-text">0x02 控制标签</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#if和else标签"><span class="toc-text">if和else标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#iterator标签"><span class="toc-text">iterator标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#merge标签"><span class="toc-text">merge标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#append标签"><span class="toc-text">append标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#generator标签"><span class="toc-text">generator标签</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-数据标签"><span class="toc-text">0x03 数据标签</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#property标签"><span class="toc-text">property标签</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Demo"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#action标签"><span class="toc-text">action标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#include标签"><span class="toc-text">include标签</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Demo-1"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#bean标签"><span class="toc-text">bean标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#date标签"><span class="toc-text">date标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#param标签"><span class="toc-text">param标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#push标签"><span class="toc-text">push标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#set标签"><span class="toc-text">set标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#text标签"><span class="toc-text">text标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#url标签"><span class="toc-text">url标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#a标签"><span class="toc-text">a标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#debug标签"><span class="toc-text">debug标签</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-表单标签"><span class="toc-text">0x04 表单标签</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Struts2的模板和主题"><span class="toc-text">Struts2的模板和主题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#表单标签的公共属性"><span class="toc-text">表单标签的公共属性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#form标签"><span class="toc-text">form标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#textfield和textarea标签"><span class="toc-text">textfield和textarea标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#radio标签"><span class="toc-text">radio标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#reset标签"><span class="toc-text">reset标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#submit标签"><span class="toc-text">submit标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#select标签"><span class="toc-text">select标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#optgroup标签"><span class="toc-text">optgroup标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#file标签"><span class="toc-text">file标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#hidden标签"><span class="toc-text">hidden标签</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-非表单标签"><span class="toc-text">0x05 非表单标签</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo-2"><span class="toc-text">Demo</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/07/03/Struts2基础篇之ResultType（结果类型）/" rel="next" title="Struts2基础篇之ResultType（结果类型）">
+          Struts2基础篇之ResultType（结果类型）
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/07/09/Struts2基础篇之ValueStack（值栈）/" rel="prev" title="Struts2基础篇之ValueStack（值栈）">
+            Struts2基础篇之ValueStack（值栈）
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

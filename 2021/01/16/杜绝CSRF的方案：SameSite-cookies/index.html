@@ -1,0 +1,421 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,CSRF,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>杜绝CSRF的方案：SameSite cookies [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        杜绝CSRF的方案：SameSite cookies
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-01-16T06:55:29.000Z">
+        2021-01-16
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/CSRF/">CSRF</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>上周和小伙伴讨论了产品线没法快速完成一套Anti-CSRF Token机制来防御CSRF，因为涉及到的改动较大，这里校验Referer头也是存在被绕过的风险的，因此基于此场景给产品线提出SameSite cookies的安全解决方案来杜绝CSRF。</p>
+<h2 id="0x01-SameSite"><a href="#0x01-SameSite" class="headerlink" title="0x01 SameSite"></a>0x01 SameSite</h2><p>众所周知，正是Cookie的滥用，才导致了CSRF漏洞的存在。</p>
+<p>在Cookie出现SameSite属性之前，针对CSRF攻击的防御措施都是基于Anti-CSRF Token机制或者校验Referer头字段。</p>
+<p>从Chrome 51开始，浏览器的Cookie新增加了一个SameSite属性，用来防止CSRF攻击和用户追踪（当然也能防御XSSI）。</p>
+<p>SameSite 是HTTP响应头 Set-Cookie 的属性之一。它允许您声明该Cookie是否仅限于第一方或者同一站点上下文。</p>
+<p>其中可以设置如下三个属性值：</p>
+<ul>
+<li>Strict</li>
+<li>Lax</li>
+<li>None</li>
+</ul>
+<h3 id="Strict"><a href="#Strict" class="headerlink" title="Strict"></a>Strict</h3><p>Strict最为严格，完全禁止第三方 Cookie，跨站点时，任何情况下都不会发送 Cookie。换言之，只有当前网页的 URL 与请求目标一致，才会带上 Cookie。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Set-Cookie: CookieName=CookieValue; SameSite=Strict;</span><br></pre></td></tr></table></figure>
+<p>这个规则过于严格，可能造成非常不好的用户体验。比如，当前网页有一个 GitHub 链接，用户点击跳转就不会带有 GitHub 的 Cookie，跳转过去总是未登陆状态。</p>
+<h3 id="Lax"><a href="#Lax" class="headerlink" title="Lax"></a>Lax</h3><p>Lax规则稍稍放宽，大多数情况也是不发送第三方 Cookie，但是导航到目标网址的 Get 请求除外。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Set-Cookie: CookieName=CookieValue; SameSite=Lax;</span><br></pre></td></tr></table></figure>
+<p>导航到目标网址的 GET 请求，只包括三种情况：链接，预加载请求，GET 表单。详见下表。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">请求类型</th>
+<th style="text-align:left">示例</th>
+<th style="text-align:left">正常情况</th>
+<th style="text-align:left">Lax</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">链接</td>
+<td style="text-align:left"><code>&lt;a href=&quot;...&quot;&gt;&lt;/a&gt;</code></td>
+<td style="text-align:left">发送 Cookie</td>
+<td style="text-align:left">发送 Cookie</td>
+</tr>
+<tr>
+<td style="text-align:left">预加载</td>
+<td style="text-align:left"><code>&lt;link rel=&quot;prerender&quot; href=&quot;...&quot;/&gt;</code></td>
+<td style="text-align:left">发送 Cookie</td>
+<td style="text-align:left">发送 Cookie</td>
+</tr>
+<tr>
+<td style="text-align:left">GET 表单</td>
+<td style="text-align:left"><code>&lt;form method=&quot;GET&quot; action=&quot;...&quot;&gt;</code></td>
+<td style="text-align:left">发送 Cookie</td>
+<td style="text-align:left">发送 Cookie</td>
+</tr>
+<tr>
+<td style="text-align:left">POST 表单</td>
+<td style="text-align:left"><code>&lt;form method=&quot;POST&quot; action=&quot;...&quot;&gt;</code></td>
+<td style="text-align:left">发送 Cookie</td>
+<td style="text-align:left">不发送</td>
+</tr>
+<tr>
+<td style="text-align:left">iframe</td>
+<td style="text-align:left"><code>&lt;iframe src=&quot;...&quot;&gt;&lt;/iframe&gt;</code></td>
+<td style="text-align:left">发送 Cookie</td>
+<td style="text-align:left">不发送</td>
+</tr>
+<tr>
+<td style="text-align:left">AJAX</td>
+<td style="text-align:left"><code>$.get(&quot;...&quot;)</code></td>
+<td style="text-align:left">发送 Cookie</td>
+<td style="text-align:left">不发送</td>
+</tr>
+<tr>
+<td style="text-align:left">Image</td>
+<td style="text-align:left"><code>&lt;img src=&quot;...&quot;&gt;</code></td>
+<td style="text-align:left">发送 Cookie</td>
+<td style="text-align:left">不发送</td>
+</tr>
+</tbody>
+</table>
+<p>设置了Strict或Lax以后，基本就杜绝了 CSRF 攻击。当然，前提是用户浏览器支持 SameSite 属性。</p>
+<h3 id="None"><a href="#None" class="headerlink" title="None"></a>None</h3><p>Chrome 计划将Lax变为默认设置。这时，网站可以选择显式关闭SameSite属性，将其设为None。不过，<strong>前提是必须同时设置Secure属性</strong>（Cookie 只能通过 HTTPS 协议发送），否则无效。</p>
+<p>下面的设置无效。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Set-Cookie: widget_session=abc123; SameSite=None</span><br></pre></td></tr></table></figure>
+<p>下面的设置有效。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Set-Cookie: widget_session=abc123; SameSite=None; Secure</span><br></pre></td></tr></table></figure>
+<h2 id="0x02-各版本浏览器支持情况"><a href="#0x02-各版本浏览器支持情况" class="headerlink" title="0x02 各版本浏览器支持情况"></a>0x02 各版本浏览器支持情况</h2><p>SameSite的由于是后来的产物，因此其不足之处在于不同浏览器支持的情况各异。</p>
+<p>如图：</p>
+<p><img src="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/7.png" alt=""></p>
+<p>具体情况可看：<a href="https://caniuse.com/?search=SameSite" target="_blank" rel="noopener">https://caniuse.com/?search=SameSite</a></p>
+<h2 id="0x03-安全整改建议"><a href="#0x03-安全整改建议" class="headerlink" title="0x03 安全整改建议"></a>0x03 安全整改建议</h2><p>一般而言，对于业务来说是建议设置SameSite属性值为Lax的，因为Strict太影响用户体验。</p>
+<p>Lax对GET请求是放行的，因此整改的重点在于要严格区分GET和POST的职责，即GET只能进行一些查询类或导航类的访问、而不是进行状态更改，要执行一些更改类的表单操作就必须交由POST来处理，在这种场景下Lax的设置才会将风险降到较低。这是因为：</p>
+<ul>
+<li>如果用GET携带参数访问，其中的参数值将会记录在浏览器历史、Web日志以及访问其他页面的Referer头字段中；</li>
+<li>Cookie的SameSite属性设置为Lax的GET请求还是会被攻击者利用进行CSRF攻击，且GET型CSRF攻击难度低；</li>
+</ul>
+<p>除此之外，还需要考虑客户端使用的浏览器版本过低或者非常见浏览器使得SameSite失效的问题。</p>
+<p>当然，结合其他的Cookie头字段设置可以达到更高的安全性，可参考：<a href="https://scotthelme.co.uk/tough-cookies/" target="_blank" rel="noopener">https://scotthelme.co.uk/tough-cookies/</a></p>
+<h2 id="0x04-各语言设置SameSite例子"><a href="#0x04-各语言设置SameSite例子" class="headerlink" title="0x04 各语言设置SameSite例子"></a>0x04 各语言设置SameSite例子</h2><p>设置SameSite其实就是对响应报文Set-Cookie头加上对应的SameSite属性键值对而已，这里只给出几种最常用的Web开发语言的设置示例。</p>
+<p>其他类型语言可以参考：<a href="https://github.com/GoogleChromeLabs/samesite-examples" target="_blank" rel="noopener">https://github.com/GoogleChromeLabs/samesite-examples</a></p>
+<h3 id="Java设置SameSite"><a href="#Java设置SameSite" class="headerlink" title="Java设置SameSite"></a>Java设置SameSite</h3><p>在Java Web中，使用setHeader()直接添加对应的Set-Cookie头的值即可：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">boolean</span> firstHeader = <span class="keyword">true</span>;</span><br><span class="line"><span class="keyword">for</span> (String header : cookiesHeaders) &#123;</span><br><span class="line">    <span class="keyword">if</span> (firstHeader) &#123;</span><br><span class="line">        httpResponse.setHeader(<span class="string">"Set-Cookie"</span>,</span><br><span class="line">                String.format(<span class="string">"%s; %s"</span>, header, <span class="string">"SameSite=Strict"</span>));</span><br><span class="line">        firstHeader = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    httpResponse.addHeader(<span class="string">"Set-Cookie"</span>,</span><br><span class="line">            String.format(<span class="string">"%s; %s"</span>, header, <span class="string">"SameSite=Strict"</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="PHP设置SameSite"><a href="#PHP设置SameSite" class="headerlink" title="PHP设置SameSite"></a>PHP设置SameSite</h3><h4 id="PHP-gt-7-3-版本"><a href="#PHP-gt-7-3-版本" class="headerlink" title="PHP &gt;= 7.3 版本"></a>PHP &gt;= 7.3 版本</h4><p>PHP 7.3及以上版本的setcookie()函数已经支持samesite属性，并且允许None为有效值。</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Set a same-site cookie for first-party contexts</span></span><br><span class="line">setcookie(<span class="string">'cookie1'</span>, <span class="string">'value1'</span>, [<span class="string">'samesite'</span> =&gt; <span class="string">'Lax'</span>]);</span><br><span class="line"><span class="comment">// Set a cross-site cookie for third-party contexts</span></span><br><span class="line">setcookie(<span class="string">'cookie2'</span>, <span class="string">'value2'</span>, [<span class="string">'samesite'</span> =&gt; <span class="string">'None'</span>, <span class="string">'secure'</span> =&gt; <span class="keyword">true</span>]);</span><br></pre></td></tr></table></figure>
+<h4 id="PHP-lt-7-3-版本"><a href="#PHP-lt-7-3-版本" class="headerlink" title="PHP &lt; 7.3 版本"></a>PHP &lt; 7.3 版本</h4><p>在低版本PHP中，可以直接通过header()函数设置<code>Set-Cookie</code>头的值来设置samesite：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Set a same-site cookie for first-party contexts</span></span><br><span class="line">header(<span class="string">'Set-Cookie: cookie1=value1; SameSite=Lax'</span>, <span class="keyword">false</span>);</span><br><span class="line"><span class="comment">// Set a cross-site cookie for third-party contexts</span></span><br><span class="line">header(<span class="string">'Set-Cookie: cookie2=value2; SameSite=None; Secure'</span>, <span class="keyword">false</span>);</span><br></pre></td></tr></table></figure>
+<h3 id="Session-Cookie"><a href="#Session-Cookie" class="headerlink" title="Session Cookie"></a>Session Cookie</h3><p>对于Session Cookie，可以在session_set_cookie_params()方法中设置。PHP 7.3.0为samesite引入了新属性：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (PHP_VERSION_ID &gt;= <span class="number">70300</span>) &#123; </span><br><span class="line">session_set_cookie_params([</span><br><span class="line">    <span class="string">'lifetime'</span> =&gt; $cookie_timeout,</span><br><span class="line">    <span class="string">'path'</span> =&gt; <span class="string">'/'</span>,</span><br><span class="line">    <span class="string">'domain'</span> =&gt; $cookie_domain,</span><br><span class="line">    <span class="string">'secure'</span> =&gt; $session_secure,</span><br><span class="line">    <span class="string">'httponly'</span> =&gt; $cookie_httponly,</span><br><span class="line">    <span class="string">'samesite'</span> =&gt; <span class="string">'Lax'</span></span><br><span class="line">]);</span><br><span class="line">&#125; <span class="keyword">else</span> &#123; </span><br><span class="line">session_set_cookie_params(</span><br><span class="line">    $cookie_timeout,</span><br><span class="line">    <span class="string">'/; samesite=Lax'</span>,</span><br><span class="line">    $cookie_domain,</span><br><span class="line">    $session_secure,</span><br><span class="line">    $cookie_httponly</span><br><span class="line">);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Python设置SameSite"><a href="#Python设置SameSite" class="headerlink" title="Python设置SameSite"></a>Python设置SameSite</h3><h4 id="Python原生"><a href="#Python原生" class="headerlink" title="Python原生"></a>Python原生</h4><p>在Python 3.8中<code>http.cookie</code>已支持SameSite属性。</p>
+<p>低于该版本的需要直接在setcookie中设置。</p>
+<h4 id="Flask框架"><a href="#Flask框架" class="headerlink" title="Flask框架"></a>Flask框架</h4><p>第一种方式：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask, make_response</span><br><span class="line"></span><br><span class="line">app = Flask(__name__)</span><br><span class="line"></span><br><span class="line"><span class="meta">@app.route('/')</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">hello_world</span><span class="params">()</span>:</span></span><br><span class="line">    resp = make_response(<span class="string">'Hello, World!'</span>)</span><br><span class="line">    <span class="comment"># Set a same-site cookie for first-party contexts</span></span><br><span class="line">    resp.set_cookie(<span class="string">'cookie1'</span>, <span class="string">'value1'</span>, samesite=<span class="string">'Lax'</span>)</span><br><span class="line">    <span class="comment"># Set a cross-site cookie for third-party contexts</span></span><br><span class="line">    resp.set_cookie(<span class="string">'cookie2'</span>, <span class="string">'value2'</span>, samesite=<span class="string">'None'</span>, secure=<span class="keyword">True</span>)</span><br><span class="line">    <span class="keyword">return</span> resp</span><br></pre></td></tr></table></figure>
+<p>如果上述报错，可替换如下第二种方式：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask, make_response</span><br><span class="line"></span><br><span class="line">app = Flask(__name__)</span><br><span class="line"></span><br><span class="line"><span class="meta">@app.route('/')</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">hello_world</span><span class="params">()</span>:</span></span><br><span class="line">    resp = make_response(<span class="string">'Hello, World!'</span>)</span><br><span class="line">    <span class="comment"># Set a same-site cookie for first-party contexts</span></span><br><span class="line">    resp.set_cookie(<span class="string">'cookie1'</span>, <span class="string">'value1'</span>, samesite=<span class="string">'Lax'</span>)</span><br><span class="line">    <span class="comment"># Ensure you use "add" to not overwrite existing cookie headers</span></span><br><span class="line">    <span class="comment"># Set a cross-site cookie for third-party contexts</span></span><br><span class="line">    resp.headers.add(<span class="string">'Set-Cookie'</span>,<span class="string">'cookie2=value2; SameSite=None; Secure'</span>)</span><br><span class="line">    <span class="keyword">return</span> resp</span><br></pre></td></tr></table></figure>
+<h2 id="0x05-实践效果测试"><a href="#0x05-实践效果测试" class="headerlink" title="0x05 实践效果测试"></a>0x05 实践效果测试</h2><p>以DVWA的Low级别CSRF靶场为效果测试Demo。</p>
+<p>默认情况下，登录成功之后，在Chrome中看到Cookie中各项值的SameSite是空的：</p>
+<p><img src="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/1.png" alt=""></p>
+<p>在Low级中，CSRF是GET型的，可以用如下PoC打：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">"http://127.0.0.1/dvwa/vulnerabilities/csrf/?password_new=mi1k7ea&amp;password_conf=mi1k7ea&amp;Change=Change"</span>&gt;</span>Click me<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>修改DVWA代码中设置Cookie的地方，以前面PHP Session Cookie的方式只给PHPSESSID部分添加SameSite属性，值为Strict：</p>
+<p><img src="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/2.png" alt=""></p>
+<p>此时再登录就看到对应的Cookie值PHPSESSID被设置了SameSite属性：</p>
+<p><img src="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/3.png" alt=""></p>
+<p>此时再用前面的PoC打，是失败的即重定向到login页面，看到发起CSRF攻击的Cookie只是带了security属性值并没有PHPSESSID的属性值，被SameSite成功防御住了：</p>
+<p><img src="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/4.png" alt=""></p>
+<p>但是，如果这种业务场景下设置SameSite为Lax的话，是不会拦截GET型CSRF的：</p>
+<p><img src="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/5.png" alt=""></p>
+<p><img src="/2021/01/16/杜绝CSRF的方案：SameSite-cookies/6.png" alt=""></p>
+<p>因此，需要根据产品自身的业务场景来决定采用Strict或Lax。</p>
+<h2 id="0x06-参考"><a href="#0x06-参考" class="headerlink" title="0x06 参考"></a>0x06 参考</h2><p><a href="http://www.ruanyifeng.com/blog/2019/09/cookie-samesite.html" target="_blank" rel="noopener">Cookie 的 SameSite 属性</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-SameSite"><span class="toc-text">0x01 SameSite</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Strict"><span class="toc-text">Strict</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Lax"><span class="toc-text">Lax</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#None"><span class="toc-text">None</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-各版本浏览器支持情况"><span class="toc-text">0x02 各版本浏览器支持情况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-安全整改建议"><span class="toc-text">0x03 安全整改建议</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-各语言设置SameSite例子"><span class="toc-text">0x04 各语言设置SameSite例子</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Java设置SameSite"><span class="toc-text">Java设置SameSite</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PHP设置SameSite"><span class="toc-text">PHP设置SameSite</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#PHP-gt-7-3-版本"><span class="toc-text">PHP &gt;= 7.3 版本</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#PHP-lt-7-3-版本"><span class="toc-text">PHP &lt; 7.3 版本</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Session-Cookie"><span class="toc-text">Session Cookie</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Python设置SameSite"><span class="toc-text">Python设置SameSite</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Python原生"><span class="toc-text">Python原生</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Flask框架"><span class="toc-text">Flask框架</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-实践效果测试"><span class="toc-text">0x05 实践效果测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-参考"><span class="toc-text">0x06 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/01/16/浅析界面操作劫持攻击/" rel="next" title="浅析界面操作劫持攻击">
+          浅析界面操作劫持攻击
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/01/16/Web-Service渗透测试/" rel="prev" title="Web Service渗透测试">
+            Web Service渗透测试
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

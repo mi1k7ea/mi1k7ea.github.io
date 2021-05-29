@@ -1,0 +1,418 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Linux,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Linux安全笔记 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Linux安全笔记
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-03-28T13:33:27.000Z">
+        2020-03-28
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Linux/">Linux</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>Linux中一些基础安全问题的排查笔记。</p>
+<h2 id="0x01-已知CVE漏洞"><a href="#0x01-已知CVE漏洞" class="headerlink" title="0x01 已知CVE漏洞"></a>0x01 已知CVE漏洞</h2><p>Linux最大的安全问题就是自带的重要组件及内核存在已知CVE漏洞。</p>
+<ul>
+<li>对于Linux Server，可查询供应商的补丁版本情况，与被测版本进行对比。</li>
+<li>对于嵌入式Linux，可及时跟踪cvedetails网站，关注kernel、glibc、openssl、bash、openssh等重要组件的CVE漏洞情况。</li>
+</ul>
+<h2 id="0x02-进程权限管理"><a href="#0x02-进程权限管理" class="headerlink" title="0x02 进程权限管理"></a>0x02 进程权限管理</h2><h3 id="业务进程以root权限运行"><a href="#业务进程以root权限运行" class="headerlink" title="业务进程以root权限运行"></a>业务进程以root权限运行</h3><p>用<code>ps</code>命令列出Linux中所有进程信息，逐个确认以root权限运行的进程是否为必要的，应尽量满足最小权限原则。</p>
+<h3 id="业务进程以root启动但使用seteuid进行伪装"><a href="#业务进程以root启动但使用seteuid进行伪装" class="headerlink" title="业务进程以root启动但使用seteuid进行伪装"></a>业务进程以root启动但使用seteuid进行伪装</h3><p>在Linux下有4个UID：RUID（real user id，实际用户ID）、EUID（effective user id，有效用户ID）、SUID（saved user id，保存的设置用户ID）、SUID（set user id），其具体区别如下：</p>
+<ol>
+<li>RUID，用于在系统中标识一个用户是谁，当用户使用用户名和密码成功登录后一个Linux系统后就唯一确定了他的RUID；</li>
+<li>EUID，用于系统决定用户对系统资源的访问权限，通常情况下等于RUID；</li>
+<li>SUID（set user id），用于对外权限的开放。跟RUID及EUID是用一个用户绑定不同，它是跟文件而不是跟用户绑定；</li>
+<li>saved uid，这个实际上是一个虚拟概念，其对应的实际上还是RUID和SUID，只是在不同身份之间切换时变成对应的值；</li>
+</ol>
+<p>在Linux中设置uid的几个函数如下。</p>
+<p>int setuid(uid_t uid) ：</p>
+<ul>
+<li>若进程具有超级用户权限，则setuid将实际用户ID、有效用户ID及保存的设置用户ID设置为uid </li>
+<li>若进程没有超级用户权限，但是uid等于实际用户ID或保存的设置用户ID，则setuid只将有效用户ID设置为uid</li>
+</ul>
+<p>int seteuid(uid_t uid) ：</p>
+<ul>
+<li>若进程具有超级用户权限，则setuid只将有效用户ID设置为uid </li>
+<li>若进程没有超级用户权限，则setuid只将有效用户ID设置为uid，但是uid必须等于实际用户ID或保存的设置用户ID</li>
+</ul>
+<p>int setreuid(uid_t ruid, uid_t euid) ：</p>
+<ul>
+<li>针对设置用户ID位的程序: 交换有效用户ID和保存的设置用户ID</li>
+<li>针对没有设置用户ID位的程序: 交换有效用户ID和实际用户ID</li>
+</ul>
+<p><strong>setuid()与seteuid()的区别</strong></p>
+<p>setuid()用来重新设置执行目前进程的用户识别码。不过，要让此函数有作用，其有效的用户识别码必须为0(root)。在Linux下，当root使用setuid()来变换成其他用户识别码时，root权限会被抛弃，完全转换成该用户身份。也就是说，该进程往后将不再具有可setuid()的权利，如果只是向暂时抛弃root 权限，稍后想重新取回权限，则必须使用seteuid()。</p>
+<p><strong>问题场景</strong></p>
+<p>某些场景下，在启动业务进程时，以root用户运行，但在初始化结束后调用seteuid降为普通用户，使用<code>ps</code>命令查看时对应的进程用户显示为普通用户。但是，此时业务进程可以在任何时候调用seteuid切换为root用户。</p>
+<p>这种情况尤为需要警惕，因为业务进程实际上是具备root权限的，只是使用seteuid进行伪装而已。</p>
+<p>排查方法：使用IDA打开业务进程对应的二进制文件（含所依赖的动态库），查看其中是否存在调用seteuid，若有则表示进行在运行中会随时切换用户。</p>
+<h2 id="0x03-文件访问权限"><a href="#0x03-文件访问权限" class="headerlink" title="0x03 文件访问权限"></a>0x03 文件访问权限</h2><h3 id="系统存在未授权的suid权限的程序"><a href="#系统存在未授权的suid权限的程序" class="headerlink" title="系统存在未授权的suid权限的程序"></a>系统存在未授权的suid权限的程序</h3><p>在Linux中，SUID是Set User ID，SGID是Set Group ID。suid意味着如果A用户对属于他自己的shell脚本文件设置了这种权限，那么其他用户在执行这个脚本的时候就拥有了A用户的权限。所以，如果root用户对某一脚本设置了这一权限的话则其他用户执行该脚本的时候则拥有了root用户权限。同理，guid意味着执行相应脚本的用户则拥有了该文件所属用户组中用户的权限。</p>
+<p>系统会自带一些具备suid权限位的程序，特征就是代表execute权限位的”x”为”s”，例子：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ski12@ubuntu:~$ ls -l /usr/bin/passwd </span><br><span class="line">-rwsr-xr-x 1 root root 54256 May 16  2017 /usr/bin/passwd</span><br><span class="line">ski12@ubuntu:~$</span><br></pre></td></tr></table></figure>
+<p>若一个二进制文件本来无可执行权限，却又被增加了suid权限位，对应的execute权限位就是大写的”S”，出现这种情况一般是文件权限设定错误，在文件没有可执行权限时，没有危害，但还是需要去除suid权限位。</p>
+<p>需要关注的是那些无需suid权限位的二进制文件被设置了suid权限，可以使用find命令将系统中属主为root的suid权限的文件找出来，逐个确认：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -type f -user root -perm -4000 -print</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/03/28/Linux安全笔记/1.png" alt=""></p>
+<p>同样的，具备sgid权限的二进制文件，表示在执行过程中会获取二进制文件所属group权限，查找命令如下，对列出的文件逐个确认即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -type f -perm -2000 -print</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/03/28/Linux安全笔记/2.png" alt=""></p>
+<h3 id="属主为普通用户的二进制文件被root执行"><a href="#属主为普通用户的二进制文件被root执行" class="headerlink" title="属主为普通用户的二进制文件被root执行"></a>属主为普通用户的二进制文件被root执行</h3><p>若属主为普通用户的文件或普通用户具有写权限的文件，当root在某些场景下会自发运行该可执行文件时，如果普通用户往文件内容中插入恶意代码，则会造成提权等安全问题。</p>
+<p>另外，Crontab定时任务所执行的脚本或命令同样是需要重点排查的对象。</p>
+<h3 id="普通用户拥有设备文件的读写权限"><a href="#普通用户拥有设备文件的读写权限" class="headerlink" title="普通用户拥有设备文件的读写权限"></a>普通用户拥有设备文件的读写权限</h3><p>除了/dev/zero、/dev/random、/dev/null等一些公用设备，大部分设备普通用户是不能有读写权限的，具体情况具体分析。</p>
+<h2 id="0x04-用户管理"><a href="#0x04-用户管理" class="headerlink" title="0x04 用户管理"></a>0x04 用户管理</h2><h3 id="用户口令安全"><a href="#用户口令安全" class="headerlink" title="用户口令安全"></a>用户口令安全</h3><p>建议系统及相关组件服务的用户口令至少满足如下要求：</p>
+<ul>
+<li>口令长度&gt;=6个字符；</li>
+<li>口令必须至少包含一个大写字母、小写字母和数字；</li>
+<li>口令不能是连续的数字或同样的字母；</li>
+<li>口令不能和账号明显关联；</li>
+</ul>
+<p>排查方法：</p>
+<ol>
+<li>查看系统的密码复杂度设置；</li>
+<li>修改用户密码，检测是否校验旧密码，是否对新密码进行复杂度校验；</li>
+</ol>
+<h3 id="普通用户具有过多权限"><a href="#普通用户具有过多权限" class="headerlink" title="普通用户具有过多权限"></a>普通用户具有过多权限</h3><p>普通用户具备过多权限会引起越权问题，如在管理群组中uid为0等。</p>
+<p>排查方法：</p>
+<ol>
+<li>查看系统/etc/passwd文件中的用户定义，是否存在多个uid为0的用户；</li>
+<li>查看/etc/group文件，root组中是否包含多余用户；</li>
+</ol>
+<h3 id="sudo配置错误导致普通用户可提权执行任意命令"><a href="#sudo配置错误导致普通用户可提权执行任意命令" class="headerlink" title="sudo配置错误导致普通用户可提权执行任意命令"></a>sudo配置错误导致普通用户可提权执行任意命令</h3><p>sudo用于以另一用户的身份执行指定的命令，可执行的命令在sudoer配置文件中指定。由于配置疏忽，提供了一些通用命令，攻击者可以利用这些通用命令进行组合，越权更改系统配置文件。另一个错误点为指定的命令是一个脚本，而普通用户具备该脚本的权限，从而执行任意命令。</p>
+<p>通过查看sudo配置文件是否包含targetpw来排查：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grep targetpw /etc/sudoers</span><br></pre></td></tr></table></figure>
+<p>如果无输出，或者输出的行以<code>#</code>开头，则表示启用了sudo。接着执行visudo命令，查看其中的命令列表是否存在<code>cp</code>、<code>chmod</code>等通用命令。</p>
+<p>对于命令列表中的脚本，进一步排查脚本的属主和读写权限，要求属主是root，并且group和others无写权限。</p>
+<h2 id="0x05-命令逃逸"><a href="#0x05-命令逃逸" class="headerlink" title="0x05 命令逃逸"></a>0x05 命令逃逸</h2><h3 id="shell逃逸"><a href="#shell逃逸" class="headerlink" title="shell逃逸"></a>shell逃逸</h3><p>如果在应用了具备执行外部shell命令的工具，存在通过执行外部命令逃逸处应用的风险。</p>
+<h4 id="more命令逃逸"><a href="#more命令逃逸" class="headerlink" title="more命令逃逸"></a>more命令逃逸</h4><p><code>!whoami</code>能逃逸到shell执行whoami命令。</p>
+<h4 id="less命令逃逸"><a href="#less命令逃逸" class="headerlink" title="less命令逃逸"></a>less命令逃逸</h4><p><code>!whoami</code>能逃逸到shell执行whoami命令。</p>
+<h4 id="vi-vim命令逃逸"><a href="#vi-vim命令逃逸" class="headerlink" title="vi/vim命令逃逸"></a>vi/vim命令逃逸</h4><p><code>!whoami</code>能逃逸到shell执行whoami命令。</p>
+<h4 id="gdb命令逃逸"><a href="#gdb命令逃逸" class="headerlink" title="gdb命令逃逸"></a>gdb命令逃逸</h4><p><code>shell whoami</code>能逃逸到shell执行whoami命令。</p>
+<h3 id="自定义shell界面存在逃逸"><a href="#自定义shell界面存在逃逸" class="headerlink" title="自定义shell界面存在逃逸"></a>自定义shell界面存在逃逸</h3><p>原理：有些自定义的产品在对用户展示信息时，有可能会调用外部的less、more等命令来实现的，若是这种场景则可能存在命令逃逸的风险。</p>
+<p>排查方法：分析自定义的二进制文件所调用的system、exec、popen等函数的调用点，查看是否有执行具备外部逃逸命令行为的调用。</p>
+<h2 id="0x06-本地提权"><a href="#0x06-本地提权" class="headerlink" title="0x06 本地提权"></a>0x06 本地提权</h2><p>当使用root用户访问低权限用户的目录时，低权限用户可以更改此目录为符号链接，指向自己没有权限操作的位置，达到改写任意文件的目的。</p>
+<p>除此之外，当root用户运行属主为低权限用户的脚本或者低权限用户拥有写权限的脚本时，同样存在本地提权问题。</p>
+<p>具体可参考：<a href="https://www.halfdog.net/Security/2015/NtpCronjobUserNtpToRootPrivilegeEscalation/" target="_blank" rel="noopener">https://www.halfdog.net/Security/2015/NtpCronjobUserNtpToRootPrivilegeEscalation/</a></p>
+<h2 id="0x07-sysctl"><a href="#0x07-sysctl" class="headerlink" title="0x07 sysctl"></a>0x07 sysctl</h2><p>sysctl命令用于运行时配置内核参数，这些参数位于/proc/sys目录下。sysctl配置与显示在/proc/sys目录中的内核参数中。可以用sysctl来设置联网功能，如IP转发、源路由检查等。用户只需要编辑/etc/sysctl.conf文件即可手动或自动执行由sysctl控制的功能。</p>
+<p>如下三种配置存在安全问题：</p>
+<ul>
+<li>设置net.ipv4.ip_forward=1，使得Linux不同网卡间报文可以转发，导致三面不隔离；</li>
+<li>设置net.ipv4.conf.all.accept_redirects = 1，使得Linux接收ICMP redirect报文，会被中间人攻击；</li>
+<li>没有设置net.ipv4.tcp_syncookies为1，不能防御TCP SYN Flood攻击；</li>
+</ul>
+<h2 id="0x08-系统配置"><a href="#0x08-系统配置" class="headerlink" title="0x08 系统配置"></a>0x08 系统配置</h2><h3 id="系统未做资源控制，普通用户消耗过多资源导致DoS"><a href="#系统未做资源控制，普通用户消耗过多资源导致DoS" class="headerlink" title="系统未做资源控制，普通用户消耗过多资源导致DoS"></a>系统未做资源控制，普通用户消耗过多资源导致DoS</h3><p>原理：系统资源会因为外部操作而明显消耗，导致DoS。这些资源包括文件句柄、内存、CPU、最大进程数、登录会话数等。</p>
+<p>排查方法：</p>
+<ol>
+<li>分析外部接口，是否存在可被外部触发大量的资源消耗操作；</li>
+<li>使用程序消耗大量系统资源，查看系统是否存在资源过载保护机制，正常业务是否明显受到影响，如用户无法登录、无法运行新进程等；</li>
+</ol>
+<h3 id="iptables规则存在被绕过的错误配置"><a href="#iptables规则存在被绕过的错误配置" class="headerlink" title="iptables规则存在被绕过的错误配置"></a>iptables规则存在被绕过的错误配置</h3><p>由于iptables规则设计不完善，可导致被绕过。</p>
+<p>比如，一个虚拟机br网桥安全组规则片段如下：</p>
+<p>规则1，允许UDP报文通过，源端口是68，目的端口是67：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-A neutron-openvswi-ofa960951-9 -p udp -m udp --sport 68 --dport 67 -j RETURN</span><br></pre></td></tr></table></figure>
+<p>规则2，目的IP是100.64.0.0/10的全部丢弃报文：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-A neutron-openvswi-relay-cidr -d 100.64.0.0/10 -j DROP</span><br></pre></td></tr></table></figure>
+<p>规则3，检测目的MAC与IP是否绑定，没有绑定则直接丢弃报文：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">-A neutron-openvswi-s0bff551f-2 -s 192.168.0.15/32 -m mac --mac-source FA:16:3E:71:F1:DD -j RETURN</span><br><span class="line">-a neutron-openvswi-s0bff551f-2 -j DROP</span><br></pre></td></tr></table></figure>
+<p>上述安全组规则设计存在如下缺陷：由于规则2比规则1优先级低，恶意用户构造特殊报文会绕过目的IP为100.64.0.0某些协议的报文穿越到其他租户的VPC中，对不属于自己的虚拟机进行流量攻击，破坏VPC隔离性。</p>
+<h3 id="系统对外的文件共享（nfs、samba）配置不当"><a href="#系统对外的文件共享（nfs、samba）配置不当" class="headerlink" title="系统对外的文件共享（nfs、samba）配置不当"></a>系统对外的文件共享（nfs、samba）配置不当</h3><p>执行<code>exportfs -av</code>命令，查看系统开启了哪些nfs共享并逐个确认。</p>
+<p>查看/etc/samba/smb.conf，查看系统开启了哪些共享并逐个确认。</p>
+<h3 id="建议禁止用户利用ssh做端口转发"><a href="#建议禁止用户利用ssh做端口转发" class="headerlink" title="建议禁止用户利用ssh做端口转发"></a>建议禁止用户利用ssh做端口转发</h3><p>ssh的端口转发功能会破坏网络隔离性，非必须的情况下建议默认禁止。</p>
+<p>排查方法：查看/etc/ssh/ssh_config配置文件，确认端口转发功能是否已默认禁止，选项为<code>AllowTcpForwarding</code>。</p>
+<h3 id="口令保存在-etc-passwd中"><a href="#口令保存在-etc-passwd中" class="headerlink" title="口令保存在/etc/passwd中"></a>口令保存在/etc/passwd中</h3><p>用户口令密文保存在/etc/passwd文件中，而不是/etc/shadow文件中。</p>
+<p>/etc/passwd是全局可读的文件，若用户口令密文直接保存在该文件中将会导致用户密码可被工具暴力破解。</p>
+<p>排查方法：直接查看/etc/passwd的内容是否存在用户口令密文。</p>
+<h2 id="0x09-日志审计"><a href="#0x09-日志审计" class="headerlink" title="0x09 日志审计"></a>0x09 日志审计</h2><h3 id="日志文件可被普通用户修改"><a href="#日志文件可被普通用户修改" class="headerlink" title="日志文件可被普通用户修改"></a>日志文件可被普通用户修改</h3><p>日志文件用于审计，需要防止被普通用户修改。</p>
+<p>排查方法：查看所有系统日志文件的访问权限，避免出现可被普通用户进行修改的权限。</p>
+<h3 id="日志目录未处于独立分区，日志过多会导致占满整个磁盘"><a href="#日志目录未处于独立分区，日志过多会导致占满整个磁盘" class="headerlink" title="日志目录未处于独立分区，日志过多会导致占满整个磁盘"></a>日志目录未处于独立分区，日志过多会导致占满整个磁盘</h3><p>如题。</p>
+<h3 id="系统是否监听UDP-514端口，能接收网络上发来的日志信息"><a href="#系统是否监听UDP-514端口，能接收网络上发来的日志信息" class="headerlink" title="系统是否监听UDP 514端口，能接收网络上发来的日志信息"></a>系统是否监听UDP 514端口，能接收网络上发来的日志信息</h3><p>对于非嵌入式Linux，开启了syslog服务后，会监听UDP 514端口，此时网络所发过来的日志都会被syslog记录，若日志量非常大时，会极大地消耗磁盘空间。</p>
+<p>排查方法：<code>netstat -an | grep 514</code></p>
+<p>如果有监听，则查看syslog日志是否保存在独立分区中，或者日志是否有做轮转。</p>
+<h3 id="日志是否记录敏感信息"><a href="#日志是否记录敏感信息" class="headerlink" title="日志是否记录敏感信息"></a>日志是否记录敏感信息</h3><p>查看系统日志，使用关键字查找日志文件，是否有session、密码、token、地址、号码等用户敏感信息。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-已知CVE漏洞"><span class="toc-text">0x01 已知CVE漏洞</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-进程权限管理"><span class="toc-text">0x02 进程权限管理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#业务进程以root权限运行"><span class="toc-text">业务进程以root权限运行</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#业务进程以root启动但使用seteuid进行伪装"><span class="toc-text">业务进程以root启动但使用seteuid进行伪装</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-文件访问权限"><span class="toc-text">0x03 文件访问权限</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#系统存在未授权的suid权限的程序"><span class="toc-text">系统存在未授权的suid权限的程序</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#属主为普通用户的二进制文件被root执行"><span class="toc-text">属主为普通用户的二进制文件被root执行</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#普通用户拥有设备文件的读写权限"><span class="toc-text">普通用户拥有设备文件的读写权限</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-用户管理"><span class="toc-text">0x04 用户管理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#用户口令安全"><span class="toc-text">用户口令安全</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#普通用户具有过多权限"><span class="toc-text">普通用户具有过多权限</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#sudo配置错误导致普通用户可提权执行任意命令"><span class="toc-text">sudo配置错误导致普通用户可提权执行任意命令</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-命令逃逸"><span class="toc-text">0x05 命令逃逸</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#shell逃逸"><span class="toc-text">shell逃逸</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#more命令逃逸"><span class="toc-text">more命令逃逸</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#less命令逃逸"><span class="toc-text">less命令逃逸</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#vi-vim命令逃逸"><span class="toc-text">vi/vim命令逃逸</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#gdb命令逃逸"><span class="toc-text">gdb命令逃逸</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#自定义shell界面存在逃逸"><span class="toc-text">自定义shell界面存在逃逸</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-本地提权"><span class="toc-text">0x06 本地提权</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x07-sysctl"><span class="toc-text">0x07 sysctl</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x08-系统配置"><span class="toc-text">0x08 系统配置</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#系统未做资源控制，普通用户消耗过多资源导致DoS"><span class="toc-text">系统未做资源控制，普通用户消耗过多资源导致DoS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#iptables规则存在被绕过的错误配置"><span class="toc-text">iptables规则存在被绕过的错误配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#系统对外的文件共享（nfs、samba）配置不当"><span class="toc-text">系统对外的文件共享（nfs、samba）配置不当</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#建议禁止用户利用ssh做端口转发"><span class="toc-text">建议禁止用户利用ssh做端口转发</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#口令保存在-etc-passwd中"><span class="toc-text">口令保存在/etc/passwd中</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x09-日志审计"><span class="toc-text">0x09 日志审计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#日志文件可被普通用户修改"><span class="toc-text">日志文件可被普通用户修改</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#日志目录未处于独立分区，日志过多会导致占满整个磁盘"><span class="toc-text">日志目录未处于独立分区，日志过多会导致占满整个磁盘</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#系统是否监听UDP-514端口，能接收网络上发来的日志信息"><span class="toc-text">系统是否监听UDP 514端口，能接收网络上发来的日志信息</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#日志是否记录敏感信息"><span class="toc-text">日志是否记录敏感信息</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/03/16/OGNL表达式注入漏洞总结/" rel="next" title="OGNL表达式注入漏洞总结">
+          OGNL表达式注入漏洞总结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/03/29/浅析Node-js安全/" rel="prev" title="浅析Node.js安全">
+            浅析Node.js安全
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

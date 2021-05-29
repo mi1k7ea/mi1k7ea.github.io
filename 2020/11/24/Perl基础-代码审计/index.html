@@ -1,114 +1,96 @@
+
 <!DOCTYPE html>
-<html>
-    <!-- Head -->
-    <head><meta name="generator" content="Hexo 3.9.0">
-    <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="author" content="Mi1k7ea">
-    <meta name="description" itemprop="description" content="已完结.">
-    <meta name="keywords" content=",Web安全,Perl,代码审计">
-    <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+<html lang="zh-CN">
 
-    <!-- Page Title -->
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,代码审计,Perl,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>（信安之路首发）Perl基础&amp;代码审计 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
     
-        <title>（信安之路首发）Perl基础&amp;代码审计 | Mi1k7ea</title>
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
     
-    <link rel="icon" href="/img/kanxi.jpg">
-    <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
-    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+      <link rel="stylesheet" href="/css/xoxo.css">
     
-    <script src="/js/script.js"></script>
-    <link rel="stylesheet" href="/css/style.css">
-    
-    <style>
-        .deactiveColor{
-            color: #37474f;
-        }
-        .activeColor{
-            color: #006064;
-        }
-        a:hover{
-            color: #006064;
-        }
-        .header-btn{
-            color: #37474f;
-        }
-        
-    </style>
+  
 </head>
-    <body>
-        <div class="container">
 
-            <!-- Top Anchor -->
-            <div id="top"></div>
 
-            <!-- Header -->
-            <header class="header-wrapper">
-    <div class="header-title-wrapper">
-        <!-- Page Title -->
-        <p class="header-title">
-             
-                
-                    （信安之路首发）Perl基础&amp;代码审计
-                
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
             
-        </p>  
-    </div>    
-
-    
-    
-    <div class="header-detail">
-        <!-- Header Button -->
-        <div class="header-btn-wrapper">
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
             
-                <span>
-                    <a class="home-btn header-btn" href="/" title="homepage"><i class="fa fa-home"></i></a>
-                </span>
-
-                
+          
+      
+          
             
-        </div>
-    </div>
-</header>
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
 
-            <!-- Main -->
-            <main>
-                <article class="post-wrapper">
-    
+  </div>
 
-    
-        <!-- Article Catalog -->
-        <div class="catalog-dropdown col-xs-12 col-sm-12">
-            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Perl基础"><span class="toc-number">1.</span> <span class="toc-text">0x01 Perl基础</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-number">1.1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#运行方式"><span class="toc-number">1.2.</span> <span class="toc-text">运行方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#数据类型"><span class="toc-number">1.3.</span> <span class="toc-text">数据类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基本语法"><span class="toc-number">1.4.</span> <span class="toc-text">基本语法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#注释符"><span class="toc-number">1.4.1.</span> <span class="toc-text">注释符</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#空白符解析特点"><span class="toc-number">1.4.2.</span> <span class="toc-text">空白符解析特点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#单双引号解析区别"><span class="toc-number">1.4.3.</span> <span class="toc-text">单双引号解析区别</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Here文档"><span class="toc-number">1.4.4.</span> <span class="toc-text">Here文档</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#子程序（函数）及传参"><span class="toc-number">1.5.</span> <span class="toc-text">子程序（函数）及传参</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CGI环境搭建与CGI编程"><span class="toc-number">1.6.</span> <span class="toc-text">CGI环境搭建与CGI编程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Perl代码审计"><span class="toc-number">2.</span> <span class="toc-text">0x02 Perl代码审计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#命令注入"><span class="toc-number">2.1.</span> <span class="toc-text">命令注入</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#system-函数"><span class="toc-number">2.1.1.</span> <span class="toc-text">system()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控"><span class="toc-number">2.1.1.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控"><span class="toc-number">2.1.1.2.</span> <span class="toc-text">参数部分可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数注入"><span class="toc-number">2.1.1.3.</span> <span class="toc-text">参数注入</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#目录遍历"><span class="toc-number">2.1.1.4.</span> <span class="toc-text">目录遍历</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#exec-函数"><span class="toc-number">2.1.2.</span> <span class="toc-text">exec()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-1"><span class="toc-number">2.1.2.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-1"><span class="toc-number">2.1.2.2.</span> <span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#readpipe-函数"><span class="toc-number">2.1.3.</span> <span class="toc-text">readpipe()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-2"><span class="toc-number">2.1.3.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-2"><span class="toc-number">2.1.3.2.</span> <span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#open-函数"><span class="toc-number">2.1.4.</span> <span class="toc-text">open()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-3"><span class="toc-number">2.1.4.1.</span> <span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-3"><span class="toc-number">2.1.4.2.</span> <span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#反引号"><span class="toc-number">2.1.5.</span> <span class="toc-text">反引号</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#代码注入"><span class="toc-number">2.2.</span> <span class="toc-text">代码注入</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#eval"><span class="toc-number">2.2.1.</span> <span class="toc-text">eval</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#eval-EXPR"><span class="toc-number">2.2.1.1.</span> <span class="toc-text">eval EXPR</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#eval-BLOCK"><span class="toc-number">2.2.1.2.</span> <span class="toc-text">eval BLOCK</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL注入"><span class="toc-number">2.3.</span> <span class="toc-text">SQL注入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#XSS"><span class="toc-number">2.4.</span> <span class="toc-text">XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#变量覆盖"><span class="toc-number">2.5.</span> <span class="toc-text">变量覆盖</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#哈希引入数组变量覆盖"><span class="toc-number">2.5.1.</span> <span class="toc-text">哈希引入数组变量覆盖</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#数组传参变量覆盖"><span class="toc-number">2.5.2.</span> <span class="toc-text">数组传参变量覆盖</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#随机数安全"><span class="toc-number">2.6.</span> <span class="toc-text">随机数安全</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#条件竞争"><span class="toc-number">2.7.</span> <span class="toc-text">条件竞争</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#00截断"><span class="toc-number">2.8.</span> <span class="toc-text">00截断</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-Perl漏洞实战"><span class="toc-number">3.</span> <span class="toc-text">0x03 Perl漏洞实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-number">4.</span> <span class="toc-text">0x04 参考</span></a></li></ol>
-        </div>
-    
-
-    
-        <!--For now, Lightbox Only Show in Post Layout -->
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        （信安之路首发）Perl基础&amp;代码审计
+      </h1>
+      <span>
         
+        <time class="time" datetime="2020-11-24T14:12:46.000Z">
+        2020-11-24
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Perl/">Perl</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/代码审计/">代码审计</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
 
-        
-        
-            <!-- Article Img Lightbox -->
-            <div class="gallery">
-    
-    
-    <div class="lightbox">
-        <!-- Close Button -->
-        <span class="close-gallery">&times;</span>
-        
-        <!-- Photo -->
-        <img class="gallery-photo">
-    </div>
-</div>
-        
-    
-
-    
-
-    <!-- Article Content -->
     <div class="post-content">
-        <p>本篇博客首发于信安之路：《perl 代码审计从基础到实战》</p>
+      <p>本篇博客首发于信安之路：《perl 代码审计从基础到实战》</p>
 <h2 id="0x01-Perl基础"><a href="#0x01-Perl基础" class="headerlink" title="0x01 Perl基础"></a>0x01 Perl基础</h2><p>Perl基础部分参考自：<a href="https://www.runoob.com/perl/perl-tutorial.html" target="_blank" rel="noopener">https://www.runoob.com/perl/perl-tutorial.html</a></p>
 <h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>Perl全称Practical Extraction and Report Language，一种功能丰富的计算机程序语言，运行在超过100种计算机平台上，适用广泛，从大型机到便携设备，从快速原型创建到大规模可扩展开发，其最重要的特性是Perl内部集成了正则表达式的功能以及巨大的第三方代码库CPAN。</p>
 <p>Perl语言的应用范围很广，除CGI以外，Perl被用于图形编程、系统管理、网络编程、金融、生物以及其他领域。由于其灵活性，Perl被称为脚本语言中的瑞士军刀。</p>
@@ -417,51 +399,211 @@
 <p>小结：该场景的漏洞点在于open()函数命令注入+%00截断。</p>
 <h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="https://www.cgisecurity.com/lib/sips.html" target="_blank" rel="noopener">Security Issues in Perl Scripts</a></p>
 <p><a href="https://www.shellcodes.org/Perl/Perl%E5%AE%89%E5%85%A8.html" target="_blank" rel="noopener">Perl 安全</a></p>
-  
-    </div> 
 
-    
-
-    <div class="post-info-wrapper">
-            
-                    <!-- Post Info -->
-                    <p class="post-date">2020-11-24</p>
-                    
-                    
-
-                    
-            
     </div>
-</article>
 
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Perl基础"><span class="toc-text">0x01 Perl基础</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#运行方式"><span class="toc-text">运行方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#数据类型"><span class="toc-text">数据类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基本语法"><span class="toc-text">基本语法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#注释符"><span class="toc-text">注释符</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#空白符解析特点"><span class="toc-text">空白符解析特点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#单双引号解析区别"><span class="toc-text">单双引号解析区别</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Here文档"><span class="toc-text">Here文档</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#子程序（函数）及传参"><span class="toc-text">子程序（函数）及传参</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CGI环境搭建与CGI编程"><span class="toc-text">CGI环境搭建与CGI编程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Perl代码审计"><span class="toc-text">0x02 Perl代码审计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#命令注入"><span class="toc-text">命令注入</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#system-函数"><span class="toc-text">system()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控"><span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控"><span class="toc-text">参数部分可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数注入"><span class="toc-text">参数注入</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#目录遍历"><span class="toc-text">目录遍历</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#exec-函数"><span class="toc-text">exec()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-1"><span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-1"><span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#readpipe-函数"><span class="toc-text">readpipe()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-2"><span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-2"><span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#open-函数"><span class="toc-text">open()函数</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#参数全部可控-3"><span class="toc-text">参数全部可控</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#参数部分可控-3"><span class="toc-text">参数部分可控</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#反引号"><span class="toc-text">反引号</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#代码注入"><span class="toc-text">代码注入</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#eval"><span class="toc-text">eval</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#eval-EXPR"><span class="toc-text">eval EXPR</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#eval-BLOCK"><span class="toc-text">eval BLOCK</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL注入"><span class="toc-text">SQL注入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#XSS"><span class="toc-text">XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#变量覆盖"><span class="toc-text">变量覆盖</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#哈希引入数组变量覆盖"><span class="toc-text">哈希引入数组变量覆盖</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#数组传参变量覆盖"><span class="toc-text">数组传参变量覆盖</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#随机数安全"><span class="toc-text">随机数安全</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#条件竞争"><span class="toc-text">条件竞争</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#00截断"><span class="toc-text">00截断</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-Perl漏洞实战"><span class="toc-text">0x03 Perl漏洞实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/10/25/Nginx安全小结/" rel="next" title="Nginx安全小结">
+          Nginx安全小结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/12/06/云存储安全基础/" rel="prev" title="云存储安全基础一">
+            云存储安全基础一
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
 
     
+    
 
-            </main>
-
-            <!-- 'To Top' Btn-->
-            
-                <div id="to-top">
-    <a href="#top" class="toTop">
-        <i class="fa fa-rocket"></i>
-    </a>
-</div>
-            
-
-            <!-- Footer -->
-            
-                <footer class="footer-wrapper col-xs-12 col-sm-12">
-    <div>
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
         <span>Copyright &copy; Mi1k7ea</span>  |  
         <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
         <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
-    </div><br>
+    </div>
 </footer>
-            
-        </div>
 
-        <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.css">
-        <link rel="stylesheet" href="/css/google-prettify-monokai.css" type="text/css">
-        <script src="//cdn.bootcss.com/prettify/r298/prettify.min.js" type="text/javascript"></script>
-    </body>
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
 </html>

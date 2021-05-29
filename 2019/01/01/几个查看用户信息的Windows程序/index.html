@@ -1,0 +1,351 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="工具,Windows,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>几个查看用户信息的Windows程序 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        几个查看用户信息的Windows程序
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-01-01T14:52:11.000Z">
+        2019-01-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Windows/">Windows</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/工具/">工具</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <p>下面列几个Windows上常用的查看用户信息的工具。</p>
+<h2 id="0x01-WCE（Windows-Credential-Editor）"><a href="#0x01-WCE（Windows-Credential-Editor）" class="headerlink" title="0x01 WCE（Windows Credential Editor）"></a>0x01 WCE（Windows Credential Editor）</h2><p>在Kali中有：<code>/usr/share/wce/</code></p>
+<p>其中有几个文件，将wce目录整个复制到Windows XP系统的C盘中，然后先增加两个用户：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/1.png" alt=""></p>
+<p>通过-h参数查看相应的参数信息。</p>
+<p>-l参数显示已经登录的账号，加个v参数更写详细：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/2.png" alt=""></p>
+<p>-w参数查看已经登录的用户及其登陆密码：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/3.png" alt=""></p>
+<p>切换到其他用户也登录之后再执行可看到所有已登录的用户的密码</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/4.png" alt=""></p>
+<p>-d参数实现删除相应lid的用户：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/5.png" alt=""></p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/6.png" alt=""></p>
+<p>防止别的用户查看：</p>
+<p>在系统的注册表中删除默认启动的包wdigest（本地）、tspkg（终端），但同时系统不可以再进行多用户登陆。</p>
+<p>在cmd中输入regedit来启动注册表，该安全包相应的路径为：</p>
+<p>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\Security Packages（注意删除的时候要将空白的行也删掉，否则会报错）</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/7.png" alt=""></p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/8.png" alt=""></p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/9.png" alt=""></p>
+<h2 id="0x02-fgdump"><a href="#0x02-fgdump" class="headerlink" title="0x02 fgdump"></a>0x02 fgdump</h2><p>即使还没登录的用户的信息也能查看得到，在Kali中的<code>/usr/share/windows-binaries/</code></p>
+<p>拷贝进去之后，直接点击fgdump.exe会生成三个文件：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/10.png" alt=""></p>
+<p>其中pwdump文件是调用pwdump程序进行查询所有用户的：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/11.png" alt=""></p>
+<h2 id="0x03-mimikatz"><a href="#0x03-mimikatz" class="headerlink" title="0x03 mimikatz"></a>0x03 mimikatz</h2><p>压轴的牛逼工具，在Kali中的<code>/usr/share/mimikatz/</code></p>
+<p>然后将其放入XP的C盘中。</p>
+<p>在命令行中进入相应的目录，输入mimikatz.exe直接进入其框架内。</p>
+<p>查看使用方法，输入两个冒号（::）而不是help或问号。</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/12.png" alt=""></p>
+<p>提升权限到debug方便后面的命令进行查看：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">privilege::debug</span><br></pre></td></tr></table></figure>
+<p>（可以先输入privilege::来查看有哪些可输入的参数）</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/13.png" alt=""></p>
+<p>查看当前已经登录的账号、密码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sekurlsa::logonPasswords</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/14.png" alt=""></p>
+<p>登录其他用户后再尝试，可看到已经登录的用户的信息都能查看到：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/15.png" alt=""></p>
+<p>如果将参数改为wdigest，可以看到在每个用户的显示中只会显示wdigest那一块。</p>
+<p>Token模块里面有whoami参数，可以直接使用而不用再下载：</p>
+<p><img src="/2019/01/01/几个查看用户信息的Windows程序/16.png" alt=""></p>
+<p>Ts模块允许多用户进行并发登录操作。</p>
+<p>Event模块对事件日志进行相应的操作：</p>
+<ul>
+<li>通过输入eventvwr打开系统日志；</li>
+<li>Clear参数可以清除系统的安全性日志；</li>
+<li>Drop参数可使以后登录的行为都不会记录在eventvwr日志里；</li>
+</ul>
+<p>Misc模块里可以通过参数启动cmd、taskmgr、regedit等。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-WCE（Windows-Credential-Editor）"><span class="toc-text">0x01 WCE（Windows Credential Editor）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-fgdump"><span class="toc-text">0x02 fgdump</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-mimikatz"><span class="toc-text">0x03 mimikatz</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/01/01/将Python脚本转换为exe/" rel="next" title="将Python脚本转换为exe">
+          将Python脚本转换为exe
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/01/01/Spring基础篇之JDBC框架/" rel="prev" title="Spring基础篇之JDBC框架">
+            Spring基础篇之JDBC框架
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,322 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,XSS,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>利用HTML注入劫持标签Bypass CSP [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        利用HTML注入劫持标签Bypass CSP
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-08-18T04:33:42.000Z">
+        2019-08-18
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XSS/">XSS</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-以往劫持方法的局限性"><a href="#0x01-以往劫持方法的局限性" class="headerlink" title="0x01 以往劫持方法的局限性"></a>0x01 以往劫持方法的局限性</h2><p>在之前的一篇博文<a href="https://www.mi1k7ea.com/2019/02/21/一道绕过CSP的XSS题目/">《一道绕过CSP的XSS题目》</a>中提到了一种绕过CSP的方法，就是利用JS的特性，通过劫持指定id的标签来实现注入的JS代码能执行。但是这种方法的局限性是十分明显的——<strong>即进行劫持注入的地方必须在被劫持的标签的前面</strong>，因为浏览器只会从上至下地解析标签，当页面中存在多个相同id的标签的时，浏览器只会解析第一个标签，如果我们注入的位置在后面，那么将无法成功劫持到该标签。</p>
+<p>看之前的图就知道了：</p>
+<p><img src="/2019/08/18/利用HTML注入劫持标签Bypass-CSP/1.png" alt=""></p>
+<p>我们想劫持的是id为yourname的标签，而我们能够注入的点是id为forminput的标签，可以看到能够注入的标签是在被劫持的标签的前面，所以我们能够成功劫持到id为yourname的标签。</p>
+<h2 id="0x02-HTML标签注入"><a href="#0x02-HTML标签注入" class="headerlink" title="0x02 HTML标签注入"></a>0x02 HTML标签注入</h2><p>如果情况变为了，我们可以注入的点在想被劫持的标签后面，那么我们通过之前的办法还能不能劫持成功？</p>
+<p>我们看个例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&lt;?php</span><br><span class="line">$nonce = md5(openssl_random_pseudo_bytes(16));</span><br><span class="line">header(&quot;Content-Security-Policy: script-src &apos;nonce-$nonce&apos; &apos;unsafe−eval&apos;; &quot;);</span><br><span class="line">?&gt;</span><br><span class="line">&lt;!DOCTYPE html&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">&lt;head&gt;&lt;title&gt;CSP Test&lt;/title&gt;&lt;/head&gt;</span><br><span class="line">&lt;body&gt;</span><br><span class="line">&lt;div id=&quot;template_target&quot;&gt;Mi1k7ea&apos;s blog: &lt;/div&gt;</span><br><span class="line">&lt;script type=&quot;application/template&quot; id=&quot;template&quot;&gt;https://www.mi1k7ea.com/&lt;/script&gt;</span><br><span class="line"></span><br><span class="line">Your search is &lt;?php if(isset($_GET[&apos;q&apos;]))&#123;echo $_GET[&apos;q&apos;];&#125; else &#123;echo &apos;empty, but you can input a param called q.&apos;;&#125; ?&gt;</span><br><span class="line"></span><br><span class="line">&lt;script nonce=&lt;?php echo $nonce;?&gt;&gt;</span><br><span class="line">	let template = document.getElementById(&apos;template&apos;);</span><br><span class="line">	template_target.innerHTML = template.innerText.replace(/&#123;&#123;(.*)&#125;&#125;/g,eval)</span><br><span class="line">&lt;/script&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>代码很简单，这里模拟的是模板文件的形式，CSP策略设置为<code>script-src &#39;nonce-xxx&#39; &#39;unsafe−eval&#39;;</code>，正常注入XSS payload是执行不成功的，唯一的可利用点是script标签中的eval、它会执行成功正则匹配到的两对大括号里面的内容，但限定了其执行的位置是id为template的标签。</p>
+<p>显而易见，我们希望能够劫持的是id为template的标签，因为该标签中的内容会被正则匹配到之后调用eval执行JS代码，但是问题也很明显我们输入的注入点就在id为template的script标签的下面，并不能成功劫持到该标签，我们这里可以试试看，我们注入id为template的div标签，其中内容为符合正则匹配的JS弹框代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?q=&lt;div id=&quot;template&quot;&gt;&#123;&#123; alert(&apos;html inject hack&apos;) &#125;&#125;&lt;/div&gt;</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/08/18/利用HTML注入劫持标签Bypass-CSP/2.png" alt=""></p>
+<p>标签是注入了，id也是template，但是是处于id为template的script标签下面，可以看到并没有触发弹框，因为浏览器只解析了排在前面的第一个id为template的标签。</p>
+<p>那么如何去实现劫持呢？——<strong>通过注入HTML标签实现劫持</strong>。</p>
+<p>我们换个标签，将div换成html标签：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?q=&lt;html id=&quot;template&quot;&gt;&#123;&#123; alert(&apos;html inject hack&apos;) &#125;&#125;&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/08/18/利用HTML注入劫持标签Bypass-CSP/3.png" alt=""></p>
+<p>Bingo，成功弹框，我们看下页面元素看下为啥能够成功劫持：</p>
+<p><img src="/2019/08/18/利用HTML注入劫持标签Bypass-CSP/4.png" alt=""></p>
+<p>可以看到，我们注入的id为template的HTML标签，被浏览器解析到当前页面DOM文档的顶部去了，整个页面的HTML标签中的内容都属于id为template的标签内容内，因此其中符合正则匹配的内容都会被匹配到并成功执行。</p>
+<p>通过注入HTML标签的方式，我们就可以由在需劫持的标签下面的位置上升为全局的劫持的位置，从而让我们在全局的层面实现了劫持！</p>
+<p>当然，这段HTML标签注入的payload，我在本地的Chrome、IE和360浏览器这些是能够触发成功的，但Firefox不能弹框，然而查看这些浏览器的页面元素都是一样的，至于触发与否应该就是不同浏览器不同机制的原因了。除此之外，这种劫持方法的利用场景在模板文件中会更容易出现。</p>
+<h2 id="0x03-参考"><a href="#0x03-参考" class="headerlink" title="0x03 参考"></a>0x03 参考</h2><p><a href="https://pagedout.institute/download/PagedOut_001_beta1.pdf" target="_blank" rel="noopener">PagedOut_001_beta1.pdf 第62页</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-以往劫持方法的局限性"><span class="toc-text">0x01 以往劫持方法的局限性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-HTML标签注入"><span class="toc-text">0x02 HTML标签注入</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-参考"><span class="toc-text">0x03 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/08/11/NoSQL注入之MongoDB/" rel="next" title="NoSQL注入之MongoDB">
+          NoSQL注入之MongoDB
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/08/18/CORS跨域漏洞总结/" rel="prev" title="CORS跨域漏洞总结">
+            CORS跨域漏洞总结
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

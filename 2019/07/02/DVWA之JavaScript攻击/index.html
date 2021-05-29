@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,JavaScript,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>DVWA之JavaScript攻击 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        DVWA之JavaScript攻击
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-07-02T12:21:28.000Z">
+        2019-07-02
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JavaScript/">JavaScript</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <p>JavaScript攻击属于Web前端安全，不存在黑盒测试的概念，直接可以对JS进行白盒代码审计。</p>
+<p>DVWA中的JavaScript攻击的场景是基于token由前端JS生成而引起的一系列问题。</p>
+<h2 id="0x01-Low-Level"><a href="#0x01-Low-Level" class="headerlink" title="0x01 Low Level"></a>0x01 Low Level</h2><p>页面如下，要求输入success来达到目的：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/1.png" alt=""></p>
+<p>直接输入success提交，会显示invalid token：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/2.png" alt=""></p>
+<p>查看页面源代码，看到是调用generate_token()函数，其中的token值是由md5(rot13(phrase))得到的，并且表单中存在一项隐藏的表项token：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/3.png" alt=""></p>
+<p>可以看到，token是通过JS在客户端生成。而题目的意思应该就是让token的值和phrase经过某些加密操作后的值相等即可。</p>
+<p>那就简单了，先在Console直接得到正确的token值：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/4.png" alt=""></p>
+<p>在前端直接篡改token的值即可：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/5.png" alt=""></p>
+<p>再输入success，OK：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/6.png" alt=""></p>
+<p>最后，我们看下index.php源码，确认确实是通过比较加密phrase后的值与token的值是否相等来看是否JS攻击成功：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> ($phrase == <span class="string">"success"</span>) &#123;</span><br><span class="line">			<span class="keyword">switch</span>( $_COOKIE[ <span class="string">'security'</span> ] ) &#123;</span><br><span class="line">				<span class="keyword">case</span> <span class="string">'low'</span>:</span><br><span class="line">					<span class="keyword">if</span> ($token == md5(str_rot13(<span class="string">"success"</span>))) &#123;</span><br><span class="line">						$message = <span class="string">"&lt;p style='color:red'&gt;Well done!&lt;/p&gt;"</span>;</span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						$message = <span class="string">"&lt;p&gt;Invalid token.&lt;/p&gt;"</span>;</span><br><span class="line">					&#125;</span><br><span class="line">					<span class="keyword">break</span>;</span><br><span class="line">				<span class="keyword">case</span> <span class="string">'medium'</span>:</span><br><span class="line">					<span class="keyword">if</span> ($token == strrev(<span class="string">"XXsuccessXX"</span>)) &#123;</span><br><span class="line">						$message = <span class="string">"&lt;p style='color:red'&gt;Well done!&lt;/p&gt;"</span>;</span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						$message = <span class="string">"&lt;p&gt;Invalid token.&lt;/p&gt;"</span>;</span><br><span class="line">					&#125;</span><br><span class="line">					<span class="keyword">break</span>;</span><br><span class="line">				<span class="keyword">case</span> <span class="string">'high'</span>:</span><br><span class="line">					<span class="keyword">if</span> ($token == hash(<span class="string">"sha256"</span>, hash(<span class="string">"sha256"</span>, <span class="string">"XX"</span> . strrev(<span class="string">"success"</span>)) . <span class="string">"ZZ"</span>)) &#123;</span><br><span class="line">						$message = <span class="string">"&lt;p style='color:red'&gt;Well done!&lt;/p&gt;"</span>;</span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						$message = <span class="string">"&lt;p&gt;Invalid token.&lt;/p&gt;"</span>;</span><br><span class="line">					&#125;</span><br><span class="line">					<span class="keyword">break</span>;</span><br><span class="line">				<span class="keyword">default</span>:</span><br><span class="line">					$vulnerabilityFile = <span class="string">'impossible.php'</span>;</span><br><span class="line">					<span class="keyword">break</span>;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			$message = <span class="string">"&lt;p&gt;You got the phrase wrong.&lt;/p&gt;"</span>;</span><br><span class="line">		&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="0x02-Medium-Level"><a href="#0x02-Medium-Level" class="headerlink" title="0x02 Medium Level"></a>0x02 Medium Level</h2><p>和前面类似，只是换了JS代码，在表单处单独调用JS文件：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/7.png" alt=""></p>
+<p>访问该JS文件：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">do_something</span>(<span class="params">e</span>)</span>&#123;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">var</span> t=<span class="string">""</span>,n=e.length<span class="number">-1</span>;n&gt;=<span class="number">0</span>;n--)t+=e[n];</span><br><span class="line">    <span class="keyword">return</span> t</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">setTimeout(<span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;do_elsesomething(<span class="string">"XX"</span>)&#125;,<span class="number">300</span>);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">do_elsesomething</span>(<span class="params">e</span>)</span>&#123;</span><br><span class="line">    <span class="built_in">document</span>.getElementById(<span class="string">"token"</span>).value=do_something(e+<span class="built_in">document</span>.getElementById(<span class="string">"phrase"</span>).value+<span class="string">"XX"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>代码逻辑在调用setTimeout()，setTimeout()方法用于在指定的毫秒数后调用函数或计算表达式。这里调用do_elsesomething()函数，而do_elsesomething()函数中有生成token的代码，其中将传入参数e、前端表单输入的phrase值以及”XX”字符串进行拼接再调用do_something()函数进行字符串翻转处理。</p>
+<p>那就这样吧：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/8.png" alt=""></p>
+<p>改下JS即可：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/9.png" alt=""></p>
+<h2 id="0x03-High-Level"><a href="#0x03-High-Level" class="headerlink" title="0x03 High Level"></a>0x03 High Level</h2><p>再看下high的，调用了high.js：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/10.png" alt=""></p>
+<p>查看high.js，发现不是人看的代码：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/11.png" alt=""></p>
+<p>这是因为做了混淆，访问<a href="http://deobfuscatejavascript.com/" target="_blank" rel="noopener">解码网站</a>来转换成人民群众可看懂的形式，下面只列出关键的代码，前面省略的部分是算法部分：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">do_something</span>(<span class="params">e</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> t = <span class="string">""</span>, n = e.length - <span class="number">1</span>; n &gt;= <span class="number">0</span>; n--) t += e[n];</span><br><span class="line">    <span class="keyword">return</span> t</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">token_part_3</span>(<span class="params">t, y = <span class="string">"ZZ"</span></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">document</span>.getElementById(<span class="string">"token"</span>).value = sha256(<span class="built_in">document</span>.getElementById(<span class="string">"token"</span>).value + y)</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">token_part_2</span>(<span class="params">e = <span class="string">"YY"</span></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">document</span>.getElementById(<span class="string">"token"</span>).value = sha256(e + <span class="built_in">document</span>.getElementById(<span class="string">"token"</span>).value)</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">token_part_1</span>(<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="built_in">document</span>.getElementById(<span class="string">"token"</span>).value = do_something(<span class="built_in">document</span>.getElementById(<span class="string">"phrase"</span>).value)</span><br><span class="line">&#125;</span><br><span class="line"><span class="built_in">document</span>.getElementById(<span class="string">"phrase"</span>).value = <span class="string">""</span>;</span><br><span class="line">setTimeout(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    token_part_2(<span class="string">"XX"</span>)</span><br><span class="line">&#125;, <span class="number">300</span>);</span><br><span class="line"><span class="built_in">document</span>.getElementById(<span class="string">"send"</span>).addEventListener(<span class="string">"click"</span>, token_part_3);</span><br><span class="line">token_part_1(<span class="string">"ABCD"</span>, <span class="number">44</span>);</span><br></pre></td></tr></table></figure>
+<p>几个函数调用顺序及生成token的步骤如下：</p>
+<p>1、执行token_part_1()，取phrase值并进行字符串翻转处理；</p>
+<p>2、延迟300ms后执行token_part_2()，传入参数字符串’XX’和token值拼接并调用sha256()加密；</p>
+<p>3、点击按钮时执行token_part_3()，将token值和字符串’ZZ’拼接并调用sha256()加密，从而得到最终的token；</p>
+<p>一波操作如下，先将转换过来的JS前一部分关于sha256算法定义代码输入实现初始化，方便后面直接调用sha256()：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/12.png" alt=""></p>
+<p>然后按照前面的分析得到token值：</p>
+<p><img src="/2019/07/02/DVWA之JavaScript攻击/13.png" alt=""></p>
+<p>最后修改token的值为ec7ef8687050b6fe803867ea696734c67b541dfafb286a0b1239f42ac5b0aa84即可。</p>
+<h2 id="0x04-Impossible-Level"><a href="#0x04-Impossible-Level" class="headerlink" title="0x04 Impossible Level"></a>0x04 Impossible Level</h2><p>页面显示一句话：</p>
+<blockquote>
+<p>You can never trust anything that comes from the user or prevent them from messing with it and so there is no impossible level.</p>
+</blockquote>
+<p>永远不要相信用户输入的内容，哈哈哈。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Low-Level"><span class="toc-text">0x01 Low Level</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Medium-Level"><span class="toc-text">0x02 Medium Level</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-High-Level"><span class="toc-text">0x03 High Level</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-Impossible-Level"><span class="toc-text">0x04 Impossible Level</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/06/30/XSS从弹框到RCE/" rel="next" title="XSS从弹框到RCE（IE）">
+          XSS从弹框到RCE（IE）
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/07/02/浅析preg-replace与preg-match/" rel="prev" title="浅析preg_replace与preg_match">
+            浅析preg_replace与preg_match
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

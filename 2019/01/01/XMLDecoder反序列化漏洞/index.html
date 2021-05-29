@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Java,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Java XMLDecoder反序列化漏洞 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Java XMLDecoder反序列化漏洞
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2018-12-31T17:01:01.000Z">
+        2019-01-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h2><p>XMLDecoder用于将XMLEncoder创建的xml文档内容反序列化为一个Java对象，其位于java.beans包下。</p>
+<h2 id="影响版本"><a href="#影响版本" class="headerlink" title="影响版本"></a>影响版本</h2><p>XMLDecoder在JDK 1.4~JDK 11中都存在反序列化漏洞安全风险。</p>
+<h2 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.sun.beans.decoder.DocumentHandler;</span><br><span class="line"><span class="keyword">import</span> org.xml.sax.helpers.DefaultHandler;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.xml.parsers.SAXParser;</span><br><span class="line"><span class="keyword">import</span> javax.xml.parsers.SAXParserFactory;</span><br><span class="line"><span class="keyword">import</span> java.io.BufferedInputStream;</span><br><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.FileInputStream;</span><br><span class="line"><span class="keyword">import</span> java.beans.XMLDecoder;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">test</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">XMLDecode_Deserialize</span><span class="params">(String path)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        File file = <span class="keyword">new</span> File(path);</span><br><span class="line">        FileInputStream fis = <span class="keyword">new</span> FileInputStream(file);</span><br><span class="line">        BufferedInputStream bis = <span class="keyword">new</span> BufferedInputStream(fis);</span><br><span class="line">        XMLDecoder xd = <span class="keyword">new</span> XMLDecoder(bis);</span><br><span class="line">        xd.readObject();</span><br><span class="line">        xd.close();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        <span class="comment">//XMLDecode Deserialize Test</span></span><br><span class="line">        String path = <span class="string">"poc.xml"</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            XMLDecode_Deserialize(path);</span><br><span class="line"></span><br><span class="line"><span class="comment">//            File f = new File(path);</span></span><br><span class="line"><span class="comment">//            SAXParserFactory sf = SAXParserFactory.newInstance();</span></span><br><span class="line"><span class="comment">//            SAXParser sp = sf.newSAXParser();</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">//            DefaultHandler dh = new DefaultHandler();</span></span><br><span class="line"><span class="comment">//            DocumentHandler dh = new DocumentHandler();</span></span><br><span class="line"><span class="comment">//            sp.parse(f, dh);</span></span><br><span class="line"></span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Payload：</p>
+<p>poc.xml，可以看到java标签的class属性指定XMLDecoder类，对象标签指定ProcessBuilder类、void标签指定方法为start，即可调用ProcessBuilder.start()来执行其中的命令。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">java</span> <span class="attr">version</span>=<span class="string">"1.8.0_131"</span> <span class="attr">class</span>=<span class="string">"java.beans.XMLDecoder"</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">object</span> <span class="attr">class</span>=<span class="string">"java.lang.ProcessBuilder"</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;<span class="name">array</span> <span class="attr">class</span>=<span class="string">"java.lang.String"</span> <span class="attr">length</span>=<span class="string">"1"</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">void</span> <span class="attr">index</span>=<span class="string">"0"</span>&gt;</span></span><br><span class="line">				<span class="tag">&lt;<span class="name">string</span>&gt;</span>calc<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;/<span class="name">void</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;/<span class="name">array</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;<span class="name">void</span> <span class="attr">method</span>=<span class="string">"start"</span> /&gt;</span></span><br><span class="line">	<span class="tag">&lt;/<span class="name">object</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">java</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行后，会弹出计算器：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/1.jpg" alt=""></p>
+<h2 id="调试分析"><a href="#调试分析" class="headerlink" title="调试分析"></a>调试分析</h2><p>在IDEA下设置断点跟踪调试。</p>
+<p>在readObject()处设置断点，可看到XMLDecoder对象xd的input属性包含了输入XML文档的路径：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/2.jpg" alt=""></p>
+<p>继续往里调试，调用到XMLDecoder.parsingComplete()时，发现里面调用了</p>
+<p>XMLDecoder.this.handler.parse()，其中this.handler即为DocumentHandler，换句话说，就是调用了DocumentHandler.parser()来解析输入的XML文档内容：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/3.jpg" alt=""></p>
+<p>跟踪进去，可以看到DocumentHandler.parser()中调用了如下函数来解析XML内容：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SAXParserFactory.newInstance().newSAXParser().parse()</span><br></pre></td></tr></table></figure>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/4.jpg" alt=""></p>
+<p>接着设置xmlReader的相关handler，如处理XML内容、实体、错误、文档类型定义、文件等句柄，最后调用xmlReader.parse()解析XML文件内容：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/5.jpg" alt=""></p>
+<p>继续调试，在XML11Configuration.parse()中发现调用determineDocVersion()：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/6.jpg" alt=""></p>
+<p>跟踪进去发现，determineDocVersion()主要获取XML实体扫描器然后扫描解析\&lt;?xml version=…?&gt;来获取XML文档的版本信息：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/7.jpg" alt=""></p>
+<p>返回版本信息后，继续往下在XML11Configuration.parse()中调用startDocumentParsing()函数，主要是重置扫描器的版本配置并开始文件扫描准备，其中开始文件扫描准备是调用startEntity()函数（跟踪进去可以看到是通知扫描器开始实体扫描，其中文档实体的伪名称为“[xml]”、DTD的伪名称为“[dtd]”、参数实体名称以“%”开头；接着函数内部会调用startDocument()函数开始准备文件扫描）：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/8.jpg" alt=""></p>
+<p>可以看到最后调用到的startDocument()函数会清空当前对象和句柄为文件扫描的开始做准备：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/9.jpg" alt=""></p>
+<p>返回到XML11Configuration.parse()中继续往下调试，调用scanDocument()开始文件扫描：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/10.jpg" alt=""></p>
+<p>进入scanDocument()，可以看到设置实体句柄后，主要是执行do while循环体，其中的包含START_DOCUMENT、START_ELEMENT、CHARACTERS、SPACE、ENTITY_REFERENCE、PROCESSING_INSTRUCTION、COMMENT、DTD、CDATA、NOTATION_DECLARATION、ENTITY_DECLARATION、NAMESPACE、ATTRIBUTE、END_ELEMENT等的扫描识别：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/11.jpg" alt=""></p>
+<p>中间XML节点解析的过程不用过多分析，调试至END_ELEMENT时，可以看到其中提取出“calc”参数值：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/12.jpg" alt=""></p>
+<p>跟踪进去后面的getValueObject()函数，可以看到变量var3和var4，分别为获取到ProcessBuilder类名和start方法名，在调用Expression()：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/13.jpg" alt=""></p>
+<p>继续跟踪到里面，最后会调用MethodUtil.invoke()方法实现反射执行任意类方法：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/14.jpg" alt=""></p>
+<p>再次F7直接执行了代码弹出计算器：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/15.jpg" alt=""></p>
+<p>整体地看一下，整个调用过程大致如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">XMLDecoder.readObject() -&gt; XMLDecoder.parsingCompelete() -&gt; DocumentHandler.parse() -&gt; SAXParserFactory.newInstance().newSAXParser().parse() -&gt; xmlReader.parse()</span><br></pre></td></tr></table></figure>
+<p>可以发现，XMLDecoder类解析XML是调用DocumentHandler类实现的，而DocumentHandler类是基于SAXParser类对XML的解析上的。</p>
+<p>那么可以去分析一下，到底哪个类才是真正的漏洞类。测试一下，可以看出DocumentHandler类才是XMLDecoder反序列化漏洞的根源类：</p>
+<p><img src="/2019/01/01/XMLDecoder反序列化漏洞/16.jpg" alt=""></p>
+<h2 id="检测方法"><a href="#检测方法" class="headerlink" title="检测方法"></a>检测方法</h2><p>全局搜索XMLDecoder关键字，排查是否调用readObject()函数且参数是否可控。</p>
+<h2 id="防御方法"><a href="#防御方法" class="headerlink" title="防御方法"></a>防御方法</h2><p>若可以尽量不使用XMLDecoder反序列化XML内容；若使用则尽量确保参数不可由外界输入，尽量以白名单的方式限定XML文档名且结合严格的过滤机制。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#基本概念"><span class="toc-text">基本概念</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#影响版本"><span class="toc-text">影响版本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Demo"><span class="toc-text">Demo</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#调试分析"><span class="toc-text">调试分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#检测方法"><span class="toc-text">检测方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#防御方法"><span class="toc-text">防御方法</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/01/01/cPickle反序列化漏洞/" rel="next" title="Python cPickle反序列化漏洞">
+          Python cPickle反序列化漏洞
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/01/01/Windows下的一种PHP隐蔽后门姿势/" rel="prev" title="Windows下的一种PHP隐藏后门姿势">
+            Windows下的一种PHP隐藏后门姿势
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

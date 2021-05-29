@@ -1,0 +1,328 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="二进制,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>IA-32（Intel Architecture 32位）寄存器 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        IA-32（Intel Architecture 32位）寄存器
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-01-28T15:51:20.000Z">
+        2019-01-28
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/二进制/">二进制</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="通用寄存器"><a href="#通用寄存器" class="headerlink" title="通用寄存器"></a>通用寄存器</h2><p>用于传送和暂存数据，参与算数逻辑运算并保存运算结果。IA-32每个通用寄存器的大小都是32位，即4个字节，主要用来保存常量和地址等信息。</p>
+<p>以下4个通用寄存器主要用于算术运算如ADD、SUB、XOR、OR等，常用于保存常量与变量的值。</p>
+<p>EAX：（针对操作数和结果数据的）累加器，一般用在函数返回值中，所有Win32 API函数都会把返回值保存到EAX后再返回。EAX寄存器又分为高、低几个独立的寄存器，AX（0-15）为EAX（0-31）的低16位独立寄存器，而AX又分为高8位的AH（8-15）和低8位的AL（0-7）两个独立寄存器，下面的EBX、ECX和EDX同理。</p>
+<p>EBX：（DS段中的数据指针）基址寄存器。</p>
+<p>ECX：（字符串和循环操作的）计数器，如在循环命令LOOP中用来循环计数、每执行完一次循环ECX就自减一。</p>
+<p>EDX：（I/O指针）数据寄存器。</p>
+<p>以下4个通用寄存器主要用于保存内存地址的指针。</p>
+<p>ESI：（字符串操作源指针）源变址寄存器。</p>
+<p>EDI：（字符串操作目标指针）目的变址寄存器，ESI和EDI与特定指令（LODS、STOS、REP、MOVS等）一起使用，主要用于内存复制。</p>
+<p>EBP：（SS段中栈内数据指针）扩展基址指针寄存器，表示栈区域的基地址，即指向栈最上面的一个栈帧的底部，函数被调用时保存ESP的值，函数返回时再把值返回ESP，保证栈不会崩溃（即栈帧技术）。</p>
+<p>ESP：（SS段中栈指针）栈指针寄存器，指向栈区域的栈顶地址。</p>
+<h2 id="段寄存器"><a href="#段寄存器" class="headerlink" title="段寄存器"></a>段寄存器</h2><p>在IA-32的保护模式中，段是一种内存保护技术，将内存划分为多个区段，并为每个区段赋予起始地址、范围、访问权限等以保护内存。段内存记录在SDT中，而段寄存器持有这些SDT的索引。每个段寄存器的大小为16位，即2个字节，且每个段寄存器指向的段描述符与虚拟内存结合，形成一个线性地址，借助分页技术，线性地址最终被转换为实际的物理地址。</p>
+<p>CS：Code Segment，代码段寄存器。</p>
+<p>DS：Data Segment，数据段寄存器。</p>
+<p>SS：Stack Segment，栈段寄存器。</p>
+<p>ES：Extra (Data) Segment，附加（数据）段寄存器。</p>
+<p>FS：Data Segment，数据段寄存器，在程序调试中经常用于计算SEH（结构化异常处理机制）、TEB（线程环境块）、PEB（进程环境块）。</p>
+<p>GS：Data Segment，数据段寄存器。</p>
+<p>其中ES、FS、GS寄存器用来存放程序使用的附加数据段的段基址。</p>
+<h2 id="程序状态与控制寄存器"><a href="#程序状态与控制寄存器" class="headerlink" title="程序状态与控制寄存器"></a>程序状态与控制寄存器</h2><p>EFLAGS：Flag Register，标志寄存器，大小为4个字节即32位，每一位都有意义，有些位由系统直接设定，有些位则根据程序命令的执行结果设置。</p>
+<p><img src="/2019/01/28/IA-32寄存器/1.png" alt="寄存器"> </p>
+<p>先了解3个常用的与程序调试相关的标志，ZF（Zero Flag零标志）、OF（Overflow Flag溢出标志）、CF（Carry Flag进位标志）。</p>
+<p>ZF：若运算结果为0，则为1（True），否则为0（False）。</p>
+<p>OF：有符号整数溢出时，则为1。此外，MSB（最高有效位）改变时，也为1。</p>
+<p>CF：无符号整数溢出时，则为1。</p>
+<h2 id="指令指针寄存器"><a href="#指令指针寄存器" class="headerlink" title="指令指针寄存器"></a>指令指针寄存器</h2><p>EIP：Instruction Pointer，指令指针寄存器，保存着CPU要执行的指令地址，大小为32位即4个字节。</p>
+<p>程序运行时，CPU会读取EIP中的一条指令地址，传送指令到指令缓冲区后，EIP寄存器的值将自动增加，增加的大小为读取指令的字节大小。CPU每次执行完一条指令，就会通过EIP寄存器读取并执行下一条指令。</p>
+<p>注意的就是，EIP寄存器和通用寄存器不同，不能直接修改EIP的值，只能通过其他指令间接修改，如JMP、Jcc、CALL、RET。也可以通过中断或者异常来修改EIP的值。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#通用寄存器"><span class="toc-text">通用寄存器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#段寄存器"><span class="toc-text">段寄存器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#程序状态与控制寄存器"><span class="toc-text">程序状态与控制寄存器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#指令指针寄存器"><span class="toc-text">指令指针寄存器</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/01/01/关于本地提权的学习笔记（一）：Administrator提权到System/" rel="next" title="Administrator提权到System">
+          Administrator提权到System
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/01/30/常见Web漏洞类型/" rel="prev" title="常见Web漏洞类型总结">
+            常见Web漏洞类型总结
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

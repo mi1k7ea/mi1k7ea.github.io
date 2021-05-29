@@ -1,0 +1,423 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Java,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析反序列化利用链自动化挖掘工具GadgetInspector [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析反序列化利用链自动化挖掘工具GadgetInspector
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-05-11T14:45:22.000Z">
+        2020-05-11
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-工具地址"><a href="#0x00-工具地址" class="headerlink" title="0x00 工具地址"></a>0x00 工具地址</h2><p><a href="https://github.com/JackOfMostTrades/gadgetinspector" target="_blank" rel="noopener">https://github.com/JackOfMostTrades/gadgetinspector</a></p>
+<h2 id="0x01-BlackHat议题解读"><a href="#0x01-BlackHat议题解读" class="headerlink" title="0x01 BlackHat议题解读"></a>0x01 BlackHat议题解读</h2><p>下面按照BlackHat 2018中的演讲PPT展开介绍。</p>
+<h3 id="反序列化漏洞及利用工具概述"><a href="#反序列化漏洞及利用工具概述" class="headerlink" title="反序列化漏洞及利用工具概述"></a>反序列化漏洞及利用工具概述</h3><p>作者先介绍了什么是反序列化漏洞，其中提到了反序列化漏洞之所以危害那么大是因为反序列化器会自动调用魔法函数。</p>
+<p>魔法函数包括主要的readObject()和readResolve()，当然还有finalize()。除此之外，还有那些实现了这些魔法函数并调用了其他方法的可序列化的JDK类，归纳来说如下：</p>
+<ul>
+<li>Object.readObject()</li>
+<li>Object.readResolve()</li>
+<li>Object.finalize()</li>
+<li>HashMap<ul>
+<li>Object.hashCode()</li>
+<li>Object.equals()</li>
+</ul>
+</li>
+<li>PriorityQueue<ul>
+<li>Comparator.compare()</li>
+<li>Comparable.compareTo()</li>
+</ul>
+</li>
+</ul>
+<p>如下图从hashCode()这个魔术方法看整条利用链：</p>
+<p><img src="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/1.png" alt=""></p>
+<p>这里readObject()函数中是调用了hashCode()函数；看到AbstractTableModel$ff19274a类的hashCode()函数实现是由调用IFn接口类的invoke()函数的；再看到实现IFn接口类的FnCompose类，其中自己实现的invoke()函数中分别调用了两个IFn类型的成员变量的invoke()函数，其中包括FnEval类的invoke()函数，这个方法中就是执行系统命令的Runtime.exec()。</p>
+<p>所以直接构造如下Exp即可成功触发反序列化漏洞：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    <span class="attr">"@class"</span>: <span class="string">"java.util.HashMap"</span></span><br><span class="line">    <span class="string">"members"</span>: [</span><br><span class="line">        <span class="number">2</span>,</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="attr">"@class"</span>: <span class="string">"AbstractTableModel$ff19274a"</span></span><br><span class="line">            __clojureFnMap: &#123;</span><br><span class="line">                hashCode: &#123;</span><br><span class="line">                    "@class": "FnCompose"</span><br><span class="line">                    f2: &#123; "@class": "FnConstant", value: "/usr/bin/calc" &#125;,</span><br><span class="line">                    f1: &#123; "@class": "FnEval" &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"val"</span></span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>哪些Java库是有漏洞的？作者列出了以下几种（当然现在就不止了）：</p>
+<ul>
+<li>JDK (ObjectInputStream)</li>
+<li>XStream (XML, JSON)</li>
+<li>Jackson (JSON)</li>
+<li>Genson (JSON)</li>
+<li>JSON-IO (JSON)</li>
+<li>FlexSON (JSON)</li>
+</ul>
+<p>那么如何挖掘这种类型的漏洞呢？其实和挖掘应用安全问题一样：</p>
+<ul>
+<li>外部输入会传进漏洞出发点；</li>
+<li>现有的静态和动态工具可以很好地辅助发现此类问题；</li>
+</ul>
+<p>已知的一些反序列化利用工具：</p>
+<ul>
+<li>ysoserial：通常仅限于特定库中的链，并侧重于JDK ObjectInputStream的攻击利用；</li>
+<li>marshalsec：可供选择的反序列化库的利用范围更广；</li>
+</ul>
+<p>但是，如果我们使用的是非标准反序列化库或者classpath上一些特定组合的库时，上面的工具就无法进行攻击利用了。</p>
+<p>现存的Gadget链工具：</p>
+<ul>
+<li><a href="https://github.com/frohoff/ysoserial" target="_blank" rel="noopener">ysoserial</a>：收集已知的Gadget链和Exp；</li>
+<li><a href="https://github.com/Contrast-Security-OSS/joogle" target="_blank" rel="noopener">joogle</a>：以编程方式查询类路径上的类型/方法；</li>
+<li><a href="https://techblog.mediaservice.net/2017/05/reliable-discovery-and-exploitation-of-java-deserialization-vulnerabilities/" target="_blank" rel="noopener">Java Deserialization Scanner</a>：BurpSuite插件，使用已知payload（ysoserial）来发现和利用漏洞；</li>
+<li><a href="https://github.com/mbechler/marshalsec" target="_blank" rel="noopener">marshalsec</a>：用于许多库和Gadget链的反序列化payload生成器；</li>
+<li><a href="https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/june/finding-deserialisation-issues-has-never-been-easier-freddy-the-serialisation-killer/" target="_blank" rel="noopener">NCC Group Burp Plugin</a>：“主要基于穆尼奥斯和米罗什的《星期五13：JSON攻击》”</li>
+</ul>
+<p>接着作者引出我们实际需要一个新工具，这个工具不需要自己生成payload，而是能够评估安全风险，即给定一个反序列化漏洞能否被攻击利用，有哪些利用方式比如RCE或DoS或SSRF。</p>
+<p>因此，作者对该工具提出如下需求：</p>
+<ul>
+<li><p>不用于寻找漏洞，只在漏洞挖掘阶段使用此工具辅助发现问题；</p>
+</li>
+<li><p>它需要查看应用程序的整个classpath；</p>
+</li>
+<li><p>报错信息应该是误报而不是漏报；</p>
+</li>
+<li><p>它应该在字节码上操作；我们通常将整个classpath打包为一个war，并且可能没有源代码（特别是如果我们包括专有的第三方库）；</p>
+</li>
+<li><p>另外，它可能包括用Groovy、Scala、Clojure编写的库；</p>
+</li>
+</ul>
+<h3 id="Gadget-Inspector"><a href="#Gadget-Inspector" class="headerlink" title="Gadget Inspector"></a>Gadget Inspector</h3><p>Gadget Inspector是一个为辅助挖掘Gadget链而生的Java字节码分析工具。</p>
+<p>具有以下特点：</p>
+<ul>
+<li><p>在任意给定的classpath上操作，即特定的库或整个war包；</p>
+</li>
+<li><p>将发现的Gadget链作为方法调用序列进行报告；</p>
+</li>
+<li><p>执行一些简单的符号执行，以理解从方法参数到后续方法调用的可能数据流；</p>
+</li>
+<li><p>简化了许多假设，使代码分析更容易；</p>
+</li>
+</ul>
+<p><img src="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/2.png" alt=""></p>
+<h4 id="原理步骤"><a href="#原理步骤" class="headerlink" title="原理步骤"></a>原理步骤</h4><h5 id="Step1-枚举类-方法的层次结构"><a href="#Step1-枚举类-方法的层次结构" class="headerlink" title="Step1.枚举类/方法的层次结构"></a>Step1.枚举类/方法的层次结构</h5><p><img src="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/3.png" alt=""></p>
+<h5 id="Step2-发现“透传”数据流"><a href="#Step2-发现“透传”数据流" class="headerlink" title="Step2.发现“透传”数据流"></a>Step2.发现“透传”数据流</h5><p><img src="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/4.png" alt=""></p>
+<h5 id="Step3-枚举“透传”调用图"><a href="#Step3-枚举“透传”调用图" class="headerlink" title="Step3.枚举“透传”调用图"></a>Step3.枚举“透传”调用图</h5><p><img src="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/5.png" alt=""></p>
+<h5 id="Step4-枚举使用已知Tricks的Sources"><a href="#Step4-枚举使用已知Tricks的Sources" class="headerlink" title="Step4.枚举使用已知Tricks的Sources"></a>Step4.枚举使用已知Tricks的Sources</h5><p><img src="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/6.png" alt=""></p>
+<h5 id="Step5-在调用图上应用BFS算法关联链"><a href="#Step5-在调用图上应用BFS算法关联链" class="headerlink" title="Step5.在调用图上应用BFS算法关联链"></a>Step5.在调用图上应用BFS算法关联链</h5><p><img src="/2020/05/11/浅析反序列化利用链自动化挖掘工具GadgetInspector/7.png" alt=""></p>
+<h4 id="反序列化库的灵活性"><a href="#反序列化库的灵活性" class="headerlink" title="反序列化库的灵活性"></a>反序列化库的灵活性</h4><p>Gadget Inspector支持自定义分析规则。</p>
+<ul>
+<li>什么被视为“可序列化”？<ul>
+<li>对于JRE反序列化，任何实现java.lang.Serializable接口的类；</li>
+<li>对于XStream，这取决于启用的转换器；当使用定制转换器时，它会变得更巧妙；</li>
+<li>对于Jackson，任何没有参数构造函数的类；</li>
+</ul>
+</li>
+<li>什么是反序列化源（即魔术方法）？<ul>
+<li>对于Jackson，我们只从构造函数开始；</li>
+</ul>
+</li>
+<li>我们应该关注哪些方法实现？<ul>
+<li>对于JRE反序列化，所有实现了可序列化类的类；</li>
+<li>对于Jackson，取决于注释和配置；</li>
+</ul>
+</li>
+</ul>
+<h4 id="提升空间"><a href="#提升空间" class="headerlink" title="提升空间"></a>提升空间</h4><ul>
+<li>反射<ul>
+<li>大多数反射调用被视为有趣的，导致FPs。例如，可以控制类，但不能控制方法名，反之亦然；</li>
+<li>调用图枚举盲点，<code>foo.getClass().getMethod(&quot;bar&quot;).invoke(…)</code>；</li>
+</ul>
+</li>
+<li>假设<ul>
+<li>即使是很小的改进，Gadget Inspector也可以围绕条件可满足性或虚拟方法调用解析做出更好的决策，从而减少FPs；</li>
+</ul>
+</li>
+<li>限制<ul>
+<li>使用“已知的Tricks”来列举入口点，最初的研究仍然可以帮助我们找到许多其他聪明的方法来构建Gadget链；</li>
+<li>带有“有趣行为”的sinks是硬编码的，许多空间可以发现和添加sinks；</li>
+</ul>
+</li>
+</ul>
+<h2 id="0x02-浅析Gadget-Inspector源码"><a href="#0x02-浅析Gadget-Inspector源码" class="headerlink" title="0x02 浅析Gadget Inspector源码"></a>0x02 浅析Gadget Inspector源码</h2><p>待补充…</p>
+<h2 id="0x0n-参考"><a href="#0x0n-参考" class="headerlink" title="0x0n 参考"></a>0x0n 参考</h2><p><a href="https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains.pdf</a></p>
+<p><a href="https://paper.seebug.org/1034/" target="_blank" rel="noopener">Java 反序列化工具 gadgetinspector 初窥</a></p>
+<p><a href="https://xz.aliyun.com/t/7058" target="_blank" rel="noopener">java反序列化利用链自动挖掘工具gadgetinspector源码浅析</a></p>
+<p><a href="http://galaxylab.com.cn/java反序列化漏洞辅助工具之-gadgetinspector/" target="_blank" rel="noopener">Java反序列化漏洞辅助工具之 gadgetinspector</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-工具地址"><span class="toc-text">0x00 工具地址</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-BlackHat议题解读"><span class="toc-text">0x01 BlackHat议题解读</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#反序列化漏洞及利用工具概述"><span class="toc-text">反序列化漏洞及利用工具概述</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Gadget-Inspector"><span class="toc-text">Gadget Inspector</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#原理步骤"><span class="toc-text">原理步骤</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Step1-枚举类-方法的层次结构"><span class="toc-text">Step1.枚举类/方法的层次结构</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Step2-发现“透传”数据流"><span class="toc-text">Step2.发现“透传”数据流</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Step3-枚举“透传”调用图"><span class="toc-text">Step3.枚举“透传”调用图</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Step4-枚举使用已知Tricks的Sources"><span class="toc-text">Step4.枚举使用已知Tricks的Sources</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Step5-在调用图上应用BFS算法关联链"><span class="toc-text">Step5.在调用图上应用BFS算法关联链</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#反序列化库的灵活性"><span class="toc-text">反序列化库的灵活性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#提升空间"><span class="toc-text">提升空间</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-浅析Gadget-Inspector源码"><span class="toc-text">0x02 浅析Gadget Inspector源码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x0n-参考"><span class="toc-text">0x0n 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/05/10/浅析Java-Instrument插桩技术/" rel="next" title="浅析Java Instrument插桩技术">
+          浅析Java Instrument插桩技术
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/05/13/XSS绕过之autofocus属性的自创标签/" rel="prev" title="XSS绕过之autofocus属性的自创标签（Chrome）">
+            XSS绕过之autofocus属性的自创标签（Chrome）
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

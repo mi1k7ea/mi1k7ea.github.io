@@ -1,0 +1,336 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="渗透测试,Metasploit,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>VPS上安装配置MSF [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        VPS上安装配置MSF
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-02-27T05:34:02.000Z">
+        2021-02-27
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Metasploit/">Metasploit</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/渗透测试/">渗透测试</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>参考Micro8系列第三十二课：<a href="https://micro8.gitbook.io/micro8/contents-1/31-40/32-pei-zhi-vps-shang-de-msf" target="_blank" rel="noopener">https://micro8.gitbook.io/micro8/contents-1/31-40/32-pei-zhi-vps-shang-de-msf</a></p>
+<h2 id="0x01-VPS上安装配置MSF"><a href="#0x01-VPS上安装配置MSF" class="headerlink" title="0x01 VPS上安装配置MSF"></a>0x01 VPS上安装配置MSF</h2><p>在实战中，一般都是以VPS为跳板做渗透，而VPS一般又是以Linux居多，因此本次主要以Linux为安装背景。</p>
+<p>参考文章是用的Debian。</p>
+<p>查看系统信息：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">root@john:~<span class="comment"># uname -a</span></span><br><span class="line">Linux john 3.16.0-7-amd64 <span class="comment">#1 SMP Debian 3.16.59-1 (2018-10-03) x86_64 GNU/Linux</span></span><br><span class="line"></span><br><span class="line">root@john:~<span class="comment"># lsb_release -a </span></span><br><span class="line">No LSB modules are available. </span><br><span class="line">Distributor ID: Debian</span><br><span class="line">Description: Debian GNU/Linux 8.11 (jessie)</span><br><span class="line">Release: 8.11 Codename: jessie</span><br><span class="line"></span><br><span class="line">root@john:~<span class="comment"># cat /proc/version</span></span><br><span class="line">Linux version 3.16.0-7-amd64 (debian-kernel@lists.debian.org) (gcc version 4.9.2 (Debian 4.9.2-10+deb8u1) ) <span class="comment">#1 SMP Debian 3.16.59-1 (2018-10-03)</span></span><br></pre></td></tr></table></figure>
+<p>换源：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">root@john:~<span class="comment"># nano /etc/apt/sources.list</span></span><br><span class="line">root@john:~<span class="comment"># cat /etc/apt/sources.list </span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># deb cdrom:[Debian GNU/Linux 8.11.0 _Jessie_ - Official amd64 NETINST Binary-1 20180623-13:06]/ jessie main</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#deb cdrom:[Debian GNU/Linux 8.11.0 _Jessie_ - Official amd64 NETINST Binary-1 20180623-13:06]/ jessie main</span></span><br><span class="line"></span><br><span class="line">deb http://http.us.debian.org/debian/ jessie main </span><br><span class="line">deb-src http://http.us.debian.org/debian/ jessie main</span><br><span class="line">deb http://security.debian.org/ jessie/updates main </span><br><span class="line">deb-src http://security.debian.org/ jessie/updates main</span><br><span class="line"></span><br><span class="line"><span class="comment"># jessie-updates, previously known as 'volatile'</span></span><br><span class="line">deb http://http.us.debian.org/debian/ jessie-updates main </span><br><span class="line">deb-src http://http.us.debian.org/debian/ jessie-updates main </span><br><span class="line"><span class="comment">#deb http://http.kali.org/kali kali-rolling main non-free contrib</span></span><br><span class="line"><span class="comment">#deb-src http://http.kali.org/kali kali-rolling main non-free contrib </span></span><br><span class="line">deb http://http.kali.org/kali kali-rolling main non-free contrib</span><br><span class="line"><span class="comment">#deb http://http.kali.org/kali kali-rolling main non-free contrib</span></span><br></pre></td></tr></table></figure>
+<p>更新缓存：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">apt-get update</span><br><span class="line">apt-get upgrade</span><br></pre></td></tr></table></figure>
+<p>安装MSF：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">apt-get install metasploit-framework</span><br></pre></td></tr></table></figure>
+<p>问题1——配置SSH：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">apt install ssh</span><br><span class="line">nano /etc/ssh/sshd_config <span class="comment">#PasswordAuthentication no //修改yes</span></span><br><span class="line"><span class="comment">#PermitRootLogin yes //修改yes</span></span><br><span class="line">service ssh start //重启</span><br><span class="line">/etc/init.d/ssh status //验证</span><br><span class="line">update-rc.d ssh <span class="built_in">enable</span> //添加开机重启</span><br><span class="line">//运行ssh root登录</span><br><span class="line"><span class="comment">#PermitRootLogin prohibit-password改为PermitRootLogin yes</span></span><br></pre></td></tr></table></figure>
+<p>问题2——更新源安装vmtools、文件头：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@john:~<span class="comment"># apt-get install open-vm-tools-desktop fuse</span></span><br><span class="line">root@john:~<span class="comment">#apt-cache search linux-headers //安装头文件</span></span><br><span class="line">root@john:~<span class="comment">#apt-get install linux-image-4.9.0-kali3-amd64</span></span><br><span class="line">root@john:~<span class="comment">#apt-get install linux-image-4.9.0 // </span></span><br><span class="line">root@john:~<span class="comment">#apt-get install linux-headers-4.9.0-kali4-amd64 //重启</span></span><br><span class="line">root@john:~<span class="comment"># apt-get install linux-headers-$(uname -r) //kali2.0以后vmtools不需要安装</span></span><br></pre></td></tr></table></figure>
+<p>问题3——安装各种VPN，然后重启网卡即可：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">apt-get install -y pptpd network-manager-openvpn network-manager-openvpn-gnome network-manager-pptp network-manager-pptp-gnome network-manager-strongswan network-manager-vpnc network-manager-vpnc-gnome</span><br></pre></td></tr></table></figure>
+<p>问题4——Kali U盘安装不能挂载：</p>
+<ol>
+<li><code>df -m</code>此时会看到挂载信息，最下面的是<code>/dev/XXX /media</code>，这个是U盘设备挂载到了<code>/media</code>，导致cd-rom不能被挂载。</li>
+<li><code>umount /media</code>上面那个国外的解决方案还要继续<code>mount /dev/XXX /cd-rom</code>，但本机测试不用自己挂载，安装程序会自己挂载。自己挂载反而会引起后面出现GRUB安装失败。</li>
+<li><code>exit</code>退出命令窗口后，返回之前的语言选择，继续安装，现在不会再出现cd-rom无法挂载的情况了，安装顺利完成</li>
+</ol>
+<p>在VPS配置并更新好以上源时，按照项目或者任务在安装其他相关工具辅助。当不确定或者对某些工具遗忘时，可如下操作：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">apt-cache search kali-linux</span><br><span class="line">apt-cache show kali-linux-web</span><br></pre></td></tr></table></figure>
+<p>安装配置zsh：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">apt-get install zsh</span><br><span class="line">sh -c <span class="string">"\$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"</span></span><br><span class="line">chsh -s `<span class="built_in">which</span> zsh` //设置默认为zsh</span><br><span class="line">cat /etc/shells //查看当前安装的shell</span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$SHELL</span> //查看当前使用shells</span><br></pre></td></tr></table></figure>
+<p>如果是VPS不建议安装oh-my-zsh，很多国外的VPS延迟较多，这里是配置zsh。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wget https://raw.githubusercontent.com/skywind3000/vim/master/etc/zshrc.zsh</span><br></pre></td></tr></table></figure>
+<p>把下载的文件复制到<code>~/.zshrc</code>文件里保存，运行zsh即可。头一次运行会安装一些依赖包，稍等两分钟，以后再进入就OK了。</p>
+<p>如果不能Tab补全：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vim /root/.bashrc</span><br></pre></td></tr></table></figure>
+<p>到最后一行添加：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">if [ -f /etc/bash_completion ] &amp;&amp; ! shopt -oq posix; then </span><br><span class="line">    ./etc/bash_completion</span><br><span class="line">fi</span><br></pre></td></tr></table></figure>
+<p>为MSF payload安装辅助框架：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">apt-get install veil-evasion</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-VPS上安装配置MSF"><span class="toc-text">0x01 VPS上安装配置MSF</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/02/24/基于zsh扩展实现msfvenom命令自动补全/" rel="next" title="基于zsh扩展实现msfvenom命令自动补全">
+          基于zsh扩展实现msfvenom命令自动补全
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/02/27/MSF攻击MySQL服务/" rel="prev" title="MSF攻击MySQL服务">
+            MSF攻击MySQL服务
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

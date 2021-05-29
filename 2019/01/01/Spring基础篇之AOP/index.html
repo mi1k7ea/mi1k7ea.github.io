@@ -1,0 +1,569 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Java,Spring,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Spring基础篇之AOP [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Spring基础篇之AOP
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-01-01T10:23:52.000Z">
+        2019-01-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Spring/">Spring</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-参考"><a href="#0x00-参考" class="headerlink" title="0x00 参考"></a>0x00 参考</h2><p>本笔记直接参考或引自如下链接文章：</p>
+<p><a href="https://www.w3cschool.cn/wkspring/" target="_blank" rel="noopener">https://www.w3cschool.cn/wkspring/</a></p>
+<p><a href="http://c.biancheng.net/spring/" target="_blank" rel="noopener">http://c.biancheng.net/spring/</a></p>
+<h2 id="0x01-Spring-AOP"><a href="#0x01-Spring-AOP" class="headerlink" title="0x01 Spring AOP"></a>0x01 Spring AOP</h2><p>AOP的全称是“Aspect Oriented Programming”，即面向切面编程，它将业务逻辑的各个部分进行隔离，使开发人员在编写业务逻辑时可以专心于核心业务，从而提高了开发效率。</p>
+<p>AOP采取横向抽取机制，取代了传统纵向继承体系的重复性代码，其应用主要体现在事务处理、日志管理、权限控制、异常处理等方面。</p>
+<p>目前最流行的AOP框架有两个：</p>
+<ul>
+<li><p>Spring AOP:使用纯Java实现，不需要专门的编译过程和类加载器，在运行期间通过代理方式向目标类植入增强的代码；</p>
+</li>
+<li><p>AspectJ:是一个基于Java语言的AOP框架，从Spring 2.0开始，Spring AOP引入了对AspectJ的支持。AspectJ扩展了Java语言，提供了一个专门的编译器，在编译时提供横向代码的植入；</p>
+</li>
+</ul>
+<h2 id="0x02-AOP术语"><a href="#0x02-AOP术语" class="headerlink" title="0x02 AOP术语"></a>0x02 AOP术语</h2><p>AOP相关术语如下：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Joinpoint（连接点）</td>
+<td>指那些被拦截到的点，在Spring中，可以被动态代理拦截目标类的方法。</td>
+</tr>
+<tr>
+<td>Pointcut（切入点）</td>
+<td>指要对哪些Joinpoint进行拦截，即被拦截的连接点。</td>
+</tr>
+<tr>
+<td>Advice（通知）</td>
+<td>指拦截到Joinpoint之后要做的事情，即对切入点增强的内容。</td>
+</tr>
+<tr>
+<td>Target（目标）</td>
+<td>指代理的目标对象。</td>
+</tr>
+<tr>
+<td>Weaving（植入）</td>
+<td>指把增强代码应用到目标上，生成代理对象的过程。</td>
+</tr>
+<tr>
+<td>Proxy（代理）</td>
+<td>指生成的代理对象。</td>
+</tr>
+<tr>
+<td>Aspect（切面）</td>
+<td>切入点和通知的结合。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="0x03-JDK动态代理"><a href="#0x03-JDK动态代理" class="headerlink" title="0x03 JDK动态代理"></a>0x03 JDK动态代理</h2><p>在Java中java.lang.reflect包下提供了一个Proxy类和一个InvocationHandler接口，通过使用这个类和接口就可以生成动态代理对象。在程序运行过程中产生的这个对象，其实就是通过反射机制来生成的一个代理。</p>
+<p>注意，<strong>JDK提供的代理只能针对接口做代理</strong>。</p>
+<p>具体更多的可参考之前的文章：<a href="https://www.mi1k7ea.com/2019/02/01/Java动态代理机制/">Java动态代理机制</a></p>
+<h3 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h3><p>除了前面的参考文章中的例子外，再看个模拟使用JDK动态代理实现AOP的例子。</p>
+<p>CustomerDao.java，接口类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">CustomerDao</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">()</span></span>; <span class="comment">// 添加</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">update</span><span class="params">()</span></span>; <span class="comment">// 修改</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">delete</span><span class="params">()</span></span>; <span class="comment">// 删除</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">find</span><span class="params">()</span></span>; <span class="comment">// 查询</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>CustomerDaoImpl.java，实现CustomerDao接口类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CustomerDaoImpl</span> <span class="keyword">implements</span> <span class="title">CustomerDao</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"CustomerDaoImpl.add()"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">update</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"CustomerDaoImpl.update()"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">delete</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"CustomerDaoImpl.delete()"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">find</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"CustomerDaoImpl.find()"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MyAspect.java，切面类，定义了两个增强的方法，分别为myBefore()和myAfter()方法，用于对目标类CustomerDaoImpl进行增强：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyAspect</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">myBefore</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"方法执行之前"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">myAfter</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"方法执行之后"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MyBeanFactory.java，代理类，使用java.lang.reflect.Proxy实现JDK动态代理，定义了一个静态的getBean()方法，这里模拟Spring框架的IoC思想，通过调用getBean()方法创建CustomerDao实例，其中Proxy.newProxyInstance()方法的第一个参数是当前类的类加载器，第二参数是所创建实例的实现类的接口，第三个参数就是需要增强的方法；在目标类方法执行的前后，分别执行切面类中的myBefore()方法和myAfter()方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.InvocationHandler;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Method;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Proxy;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyBeanFactory</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CustomerDao <span class="title">getBean</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 准备目标类</span></span><br><span class="line">        <span class="keyword">final</span> CustomerDao customerDao = <span class="keyword">new</span> CustomerDaoImpl();</span><br><span class="line">        <span class="comment">// 创建切面类实例</span></span><br><span class="line">        <span class="keyword">final</span> MyAspect myAspect = <span class="keyword">new</span> MyAspect();</span><br><span class="line">        <span class="comment">// 使用代理类，进行增强</span></span><br><span class="line">        <span class="keyword">return</span> (CustomerDao) Proxy.newProxyInstance(</span><br><span class="line">                MyBeanFactory.class.getClassLoader(),</span><br><span class="line">                <span class="keyword">new</span> Class[] &#123; CustomerDao.class &#125;, <span class="keyword">new</span> InvocationHandler() &#123;</span><br><span class="line">                    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object proxy, Method method,</span></span></span><br><span class="line"><span class="function"><span class="params">                                         Object[] args)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">                        myAspect.myBefore(); <span class="comment">// 前增强</span></span><br><span class="line">                        Object obj = method.invoke(customerDao, args);</span><br><span class="line">                        myAspect.myAfter(); <span class="comment">// 后增强</span></span><br><span class="line">                        <span class="keyword">return</span> obj;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainApp.java，在调用代理类的getBean()方法时，获取的是CustomerDao类的代理对象，然后调用了该对象中的方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 从工厂获得指定的内容（相当于spring获得，但此内容时代理对象）</span></span><br><span class="line">        CustomerDao customerDao = MyBeanFactory.getBean();</span><br><span class="line">        <span class="comment">// 执行方法</span></span><br><span class="line">        customerDao.add();</span><br><span class="line">        customerDao.update();</span><br><span class="line">        customerDao.delete();</span><br><span class="line">        customerDao.find();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出如下，说明成功通过JDK动态代理实现AOP：</p>
+<p><img src="/2019/01/01/Spring基础篇之AOP/1.png" alt=""></p>
+<h2 id="0x04-CGLIB动态代理"><a href="#0x04-CGLIB动态代理" class="headerlink" title="0x04 CGLIB动态代理"></a>0x04 CGLIB动态代理</h2><p> JDK动态代理使用起来非常简单，但是存在一定的局限性，即只能对接口进行代理、不能对普通的类进行代理，如果不希望实现接口，则可以使用CGLIB代理。</p>
+<p>CGLIB（Code Generation Library）是一个高性能开源的代码生成包，它被许多AOP框架所使用，其底层是通过使用一个小而快的字节码处理框架ASM（Java字节码操控框架）转换字节码并生成新的类。因此CGLIB要依赖于ASM的包，解压Spring的核心包spring-core的jar包，其中包含asm和cglib目录，也就是说Spring的核心包已经集成了CGLIB所需要的包，所以在开发中不需要另外导入ASM的JAR包了：</p>
+<p><img src="/2019/01/01/Spring基础篇之AOP/2.png" alt=""></p>
+<p>网上找的两者的区别如下：</p>
+<blockquote>
+<p>Java动态代理是利用反射机制生成一个实现代理接口的匿名类，在调用具体方法前调用InvokeHandler来处理。</p>
+<p>而cglib动态代理是利用asm开源包，对代理对象类的class文件加载进来，通过修改其字节码生成子类来处理。</p>
+<p>1、如果目标对象实现了接口，默认情况下会采用JDK的动态代理实现AOP<br>2、如果目标对象实现了接口，可以强制使用CGLIB实现AOP </p>
+<p>3、如果目标对象没有实现了接口，必须采用CGLIB库，spring会自动在JDK动态代理和CGLIB之间转换</p>
+<p>如何强制使用CGLIB实现AOP？<br> （1）添加CGLIB库，SPRING_HOME/cglib/*.jar<br> （2）在spring配置文件中加入&lt;aop:aspectj-autoproxy proxy-target-class=”true”/&gt;</p>
+<p>JDK动态代理和CGLIB字节码生成的区别？<br> （1）JDK动态代理只能对实现了接口的类生成代理，而不能针对类<br> （2）CGLIB是针对类实现代理，主要是对指定的类生成一个子类，覆盖其中的方法</p>
+</blockquote>
+<h3 id="Demo-1"><a href="#Demo-1" class="headerlink" title="Demo"></a>Demo</h3><p>GoodsDao.java，被代理的非接口类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GoodsDao</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"添加商品..."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">update</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"修改商品..."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">delete</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"删除商品..."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">find</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"修改商品..."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MyBeanFactory.java，CGLIB代理类，应用了CGLIB的核心类Enhancer，调用了Enhancer.setSuperclass()方法确定被代理的类GoodsDao；然后调用setCallback()方法添加回调函数，其中intercept()方法相当于JDK动态代理方式中创建的invoke()方法，该方法会在目标方法执行的前后，对切面类中的方法进行增强；最后调用Enhancer.create()方法创建代理类并返回：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.cglib.proxy.Enhancer;</span><br><span class="line"><span class="keyword">import</span> org.springframework.cglib.proxy.MethodInterceptor;</span><br><span class="line"><span class="keyword">import</span> org.springframework.cglib.proxy.MethodProxy;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Method;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyBeanFactory</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> GoodsDao <span class="title">getBean</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 准备目标类</span></span><br><span class="line">        <span class="keyword">final</span> GoodsDao goodsDao = <span class="keyword">new</span> GoodsDao();</span><br><span class="line">        <span class="comment">// 创建切面类实例</span></span><br><span class="line">        <span class="keyword">final</span> MyAspect myAspect = <span class="keyword">new</span> MyAspect();</span><br><span class="line">        <span class="comment">// 生成代理类，CGLIB在运行时，生成指定对象的子类，增强</span></span><br><span class="line">        Enhancer enhancer = <span class="keyword">new</span> Enhancer();</span><br><span class="line">        <span class="comment">// 确定需要增强的类</span></span><br><span class="line">        enhancer.setSuperclass(goodsDao.getClass());</span><br><span class="line">        <span class="comment">// 添加回调函数</span></span><br><span class="line">        enhancer.setCallback(<span class="keyword">new</span> MethodInterceptor() &#123;</span><br><span class="line">            <span class="comment">// intercept 相当于 jdk invoke，前三个参数与 jdk invoke—致</span></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> Object <span class="title">intercept</span><span class="params">(Object proxy, Method method, Object[] args,</span></span></span><br><span class="line"><span class="function"><span class="params">                                    MethodProxy methodProxy)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">                myAspect.myBefore(); <span class="comment">// 前增强</span></span><br><span class="line">                Object obj = method.invoke(goodsDao, args); <span class="comment">// 目标方法执行</span></span><br><span class="line">                myAspect.myAfter(); <span class="comment">// 后增强</span></span><br><span class="line">                <span class="keyword">return</span> obj;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="comment">// 创建代理类</span></span><br><span class="line">        GoodsDao goodsDaoProxy = (GoodsDao) enhancer.create();</span><br><span class="line">        <span class="keyword">return</span> goodsDaoProxy;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainApp.java，调用CGLIB代理类的getBean()方法，实际获取的是GoodsDao的代理对象并调用其方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 从工厂获得指定的内容（相当于spring获得，但此内容时代理对象）</span></span><br><span class="line">        GoodsDao goodsDao = MyBeanFactory.getBean();</span><br><span class="line">        <span class="comment">// 执行方法</span></span><br><span class="line">        goodsDao.add();</span><br><span class="line">        goodsDao.update();</span><br><span class="line">        goodsDao.delete();</span><br><span class="line">        goodsDao.find();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行输出：</p>
+<p><img src="/2019/01/01/Spring基础篇之AOP/3.png" alt=""></p>
+<h2 id="0x05-Spring通知类型"><a href="#0x05-Spring通知类型" class="headerlink" title="0x05 Spring通知类型"></a>0x05 Spring通知类型</h2><p>通知（Advice）其实就是对目标切入点进行增强的内容，Spring AOP为通知（Advice）提供了org.aopalliance.aop.Advice接口。</p>
+<p>Spring通知按照在目标类方法的连接点位置，可以分为以下五种类型：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>org.springframework.aop.MethodBeforeAdvice（前置通知）</td>
+<td>在方法之前自动执行的通知称为前置通知，可以应用于权限管理等功能。</td>
+</tr>
+<tr>
+<td>org.springframework.aop.AfterReturningAdvice（后置通知）</td>
+<td>在方法之后自动执行的通知称为后置通知，可以应用于关闭流、上传文件、删除临时文件等功能。</td>
+</tr>
+<tr>
+<td>org.aopalliance.intercept.MethodInterceptor（环绕通知）</td>
+<td>在方法前后自动执行的通知称为环绕通知，可以应用于日志、事务管理等功能。</td>
+</tr>
+<tr>
+<td>org.springframework.aop.ThrowsAdvice（异常通知）</td>
+<td>在方法抛出异常时自动执行的通知称为异常通知，可以应用于处理异常记录日志等功能。</td>
+</tr>
+<tr>
+<td>org.springframework.aop.IntroductionInterceptor（引介通知）</td>
+<td>在目标类中添加一些新的方法和属性，可以应用于修改旧版本程序（增强类）。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="0x06-创建AOP代理"><a href="#0x06-创建AOP代理" class="headerlink" title="0x06 创建AOP代理"></a>0x06 创建AOP代理</h2><p>Spring创建一个AOP代理的基本方法是使用org.springframework.aop.framework.ProxyFactoryBean，这个类对应的切入点和通知提供了完整的控制能力，并可以生成指定的内容。</p>
+<p>ProxyFactoryBean类中的常用可配置属性如下：</p>
+<table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>描  述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>target</td>
+<td>代理的目标对象</td>
+</tr>
+<tr>
+<td>proxyInterfaces</td>
+<td>代理要实现的接口，如果有多个接口，则可以使用以下格式赋值： <code>&lt;list&gt;     &lt;value &gt;&lt;/value&gt;     ... &lt;/list&gt;</code></td>
+</tr>
+<tr>
+<td>proxyTargetClass</td>
+<td>是否对类代理而不是接口，设置为 true 时，使用 CGLIB 代理</td>
+</tr>
+<tr>
+<td>interceptorNames</td>
+<td>需要植入目标的 Advice</td>
+</tr>
+<tr>
+<td>singleton</td>
+<td>返回的代理是否为单例，默认为 true（返回单实例）</td>
+</tr>
+<tr>
+<td>optimize</td>
+<td>当设置为 true 时，强制使用 CGLIB</td>
+</tr>
+</tbody>
+</table>
+<h3 id="Demo-2"><a href="#Demo-2" class="headerlink" title="Demo"></a>Demo</h3><p>在Spring通知中，环绕通知是一个非常典型的应用。下面通过环绕通知的案例演示Spring创建AOP代理的过程。</p>
+<p>除了SpringFramework的jar包外，还需要com.springsource.org.aopalliance-1.0.0.jar。</p>
+<p>CustomerDao.java和CustomerDaoImpl.java不变。</p>
+<p>MyAspect.java，实现了MethodInterceptor接口，并实现了接口的invoke()方法；MethodInterceptor接口是Spring AOP的JAR包提供的，而invoke()方法用于确定目标方法mi，并告诉Spring要在目标方法前后执行哪些方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.aopalliance.intercept.MethodInterceptor;</span><br><span class="line"><span class="keyword">import</span> org.aopalliance.intercept.MethodInvocation;</span><br><span class="line"></span><br><span class="line"><span class="comment">//需要实现接口，确定哪个通知，及告诉Spring应该执行哪个方法</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyAspect</span> <span class="keyword">implements</span> <span class="title">MethodInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(MethodInvocation mi)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"方法执行之前"</span>);</span><br><span class="line">        <span class="comment">// 执行目标方法</span></span><br><span class="line">        Object obj = mi.proceed();</span><br><span class="line">        System.out.println(<span class="string">"方法执行之后"</span>);</span><br><span class="line">        <span class="keyword">return</span> obj;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainApp.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ApplicationContext applicationContext = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"Beans.xml"</span>);</span><br><span class="line">        CustomerDao customerDao = (CustomerDao) applicationContext.getBean(<span class="string">"customerDaoProxy"</span>);</span><br><span class="line">        customerDao.add();</span><br><span class="line">        customerDao.update();</span><br><span class="line">        customerDao.delete();</span><br><span class="line">        customerDao.find();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Beans.xml，首先配置目标类和通知，然后使用ProxyFactoryBean类生成代理对象；其中配置代理实现的接口、代理的目标对象以及需要植入目标的通知；最后设置value属性值为true时，表示使用CGLIB代理，属性值为false时，表示使用JDK动态代理：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!--目标类 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"customerDao"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.CustomerDaoImpl"</span> /&gt;</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">&lt;!-- 通知 advice --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"myAspect"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.MyAspect"</span> /&gt;</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">&lt;!--生成代理对象 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"customerDaoProxy"</span> <span class="attr">class</span>=<span class="string">"org.springframework.aop.framework.ProxyFactoryBean"</span>&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--代理实现的接口 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"proxyInterfaces"</span> <span class="attr">value</span>=<span class="string">"com.mi1k7ea.CustomerDao"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--代理的目标对象 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"target"</span> <span class="attr">ref</span>=<span class="string">"customerDao"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!--用通知增强目标 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"interceptorNames"</span> <span class="attr">value</span>=<span class="string">"myAspect"</span> /&gt;</span></span><br><span class="line">        <span class="comment">&lt;!-- 如何生成代理，true:使用cglib; false :使用jdk动态代理 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"proxyTargetClass"</span> <span class="attr">value</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行输出：</p>
+<p><img src="/2019/01/01/Spring基础篇之AOP/4.png" alt=""></p>
+<h2 id="0x07-使用AspectJ开发AOP"><a href="#0x07-使用AspectJ开发AOP" class="headerlink" title="0x07 使用AspectJ开发AOP"></a>0x07 使用AspectJ开发AOP</h2><p>AspectJ是一个基于Java语言的AOP框架，它扩展了Java语言。Spring 2.0以后，新增了对AspectJ方式的支持，新版本的Spring框架，建议使用AspectJ方式开发AOP。</p>
+<p>使用AspectJ开发AOP通常有两种方式：</p>
+<ul>
+<li>基于XML的声明式</li>
+<li>基于Annotation的声明式</li>
+</ul>
+<h3 id="基于XML的声明式"><a href="#基于XML的声明式" class="headerlink" title="基于XML的声明式"></a>基于XML的声明式</h3><p>基于XML的声明式是指通过Spring配置文件的方式定义切面、切入点及声明通知，而所有的切面和通知都必须定义在<code>&lt;aop:config&gt;</code>元素中。</p>
+<p>通过XML架构来实现的AOP，为了能使用aop命名空间标签，你需要导入spring-aop j架构，如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span> </span></span><br><span class="line"><span class="tag">    <span class="attr">xmlns:aop</span>=<span class="string">"http://www.springframework.org/schema/aop"</span></span></span><br><span class="line"><span class="tag">    <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd </span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop </span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">   <span class="comment">&lt;!-- bean definition &amp; AOP specific configuration --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此外，还需要在ClassPath中使用以下AspectJ库文件：aspectjrt.jar、aspectjweaver.jar、aspectj.jar、aopalliance.jar。</p>
+<h4 id="声明aspect"><a href="#声明aspect" class="headerlink" title="声明aspect"></a>声明aspect</h4><p>一个<strong>aspect</strong>是使用aop元素声明的，支持的bean是使用<strong>ref</strong>属性引用的，如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">aop:config</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">aop:aspect</span> <span class="attr">id</span>=<span class="string">"myAspect"</span> <span class="attr">ref</span>=<span class="string">"aBean"</span>&gt;</span></span><br><span class="line">   ...</span><br><span class="line">   <span class="tag">&lt;/<span class="name">aop:aspect</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">aop:config</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"aBean"</span> <span class="attr">class</span>=<span class="string">"..."</span>&gt;</span></span><br><span class="line">...</span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这里，“aBean” 将被配置和依赖注入，就像前面的章节中你看到的其他的Spring Bean一样。</p>
+<h4 id="声明切入点"><a href="#声明切入点" class="headerlink" title="声明切入点"></a>声明切入点</h4><p>一个<strong>切入点</strong>有助于确定使用不同建议执行的感兴趣的连接点（即方法）。在处理基于配置的XML架构时，切入点将会按照如下所示定义：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">aop:config</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">aop:aspect</span> <span class="attr">id</span>=<span class="string">"myAspect"</span> <span class="attr">ref</span>=<span class="string">"aBean"</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">aop:pointcut</span> <span class="attr">id</span>=<span class="string">"businessService"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">expression</span>=<span class="string">"execution(* com.xyz.myapp.service.*.*(..))"</span>/&gt;</span></span><br><span class="line">   ...</span><br><span class="line">   <span class="tag">&lt;/<span class="name">aop:aspect</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">aop:config</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"aBean"</span> <span class="attr">class</span>=<span class="string">"..."</span>&gt;</span></span><br><span class="line">...</span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>下面的示例定义了一个名为“businessService”的切入点，该切入点将与com.mi1k7ea包下的Student类中的getName()方法相匹配：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">aop:config</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">aop:aspect</span> <span class="attr">id</span>=<span class="string">"myAspect"</span> <span class="attr">ref</span>=<span class="string">"aBean"</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">aop:pointcut</span> <span class="attr">id</span>=<span class="string">"businessService"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">expression</span>=<span class="string">"execution(* com.mi1k7ea.Student.getName(..))"</span>/&gt;</span></span><br><span class="line">   ...</span><br><span class="line">   <span class="tag">&lt;/<span class="name">aop:aspect</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">aop:config</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"aBean"</span> <span class="attr">class</span>=<span class="string">"..."</span>&gt;</span></span><br><span class="line">...</span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="声明建议"><a href="#声明建议" class="headerlink" title="声明建议"></a>声明建议</h4><p>你可以使用<code>&lt;aop:{ADVICE NAME}&gt;</code>元素在一个aspect中声明五个建议中的任何一个，如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">aop:config</span>&gt;</span></span><br><span class="line">   <span class="tag">&lt;<span class="name">aop:aspect</span> <span class="attr">id</span>=<span class="string">"myAspect"</span> <span class="attr">ref</span>=<span class="string">"aBean"</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">aop:pointcut</span> <span class="attr">id</span>=<span class="string">"businessService"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">expression</span>=<span class="string">"execution(* com.xyz.myapp.service.*.*(..))"</span>/&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- a before advice definition --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">aop:before</span> <span class="attr">pointcut-ref</span>=<span class="string">"businessService"</span> </span></span><br><span class="line"><span class="tag">         <span class="attr">method</span>=<span class="string">"doRequiredTask"</span>/&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- an after advice definition --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">aop:after</span> <span class="attr">pointcut-ref</span>=<span class="string">"businessService"</span> </span></span><br><span class="line"><span class="tag">         <span class="attr">method</span>=<span class="string">"doRequiredTask"</span>/&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- an after-returning advice definition --&gt;</span></span><br><span class="line">      <span class="comment">&lt;!--The doRequiredTask method must have parameter named retVal --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">aop:after-returning</span> <span class="attr">pointcut-ref</span>=<span class="string">"businessService"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">returning</span>=<span class="string">"retVal"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">method</span>=<span class="string">"doRequiredTask"</span>/&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- an after-throwing advice definition --&gt;</span></span><br><span class="line">      <span class="comment">&lt;!--The doRequiredTask method must have parameter named ex --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">aop:after-throwing</span> <span class="attr">pointcut-ref</span>=<span class="string">"businessService"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">throwing</span>=<span class="string">"ex"</span></span></span><br><span class="line"><span class="tag">         <span class="attr">method</span>=<span class="string">"doRequiredTask"</span>/&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- an around advice definition --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">aop:around</span> <span class="attr">pointcut-ref</span>=<span class="string">"businessService"</span> </span></span><br><span class="line"><span class="tag">         <span class="attr">method</span>=<span class="string">"doRequiredTask"</span>/&gt;</span></span><br><span class="line">   ...</span><br><span class="line">   <span class="tag">&lt;/<span class="name">aop:aspect</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">aop:config</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"aBean"</span> <span class="attr">class</span>=<span class="string">"..."</span>&gt;</span></span><br><span class="line">...</span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>你可以对不同的建议使用相同的<strong>doRequiredTask</strong>或者不同的方法。这些方法将会作为aspect模块的一部分来定义。</p>
+<h4 id="Demo-3"><a href="#Demo-3" class="headerlink" title="Demo"></a>Demo</h4><p>除了当前环境已有的jar包外，还需要添加com.springsource.org.aspectj.weaver-1.6.8.RELEASE.jar。</p>
+<p>Student.java，拥有name和age属性及其getter和setter方法，同时还定义了一个打印并抛出错误信息的函数：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Student</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Integer age;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setAge</span><span class="params">(Integer age)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.age = age;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Integer <span class="title">getAge</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Age : "</span> + age );</span><br><span class="line">        <span class="keyword">return</span> age;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Name : "</span> + name );</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">printThrowException</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Exception raised"</span>);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Logging.java，实际上是aspect模块的一个示例，定义了在各个点调用的方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Logging</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * before a selected method execution.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">beforeAdvice</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Going to setup student profile."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * after a selected method execution.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterAdvice</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Student profile has been setup."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * when any method returns.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterReturningAdvice</span><span class="params">(Object retVal)</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Returning:"</span> + retVal.toString() );</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * if there is an exception raised.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">AfterThrowingAdvice</span><span class="params">(IllegalArgumentException ex)</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"There has been an exception: "</span> + ex.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainApp.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ApplicationContext context = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"Beans.xml"</span>);</span><br><span class="line">        Student student = (Student) context.getBean(<span class="string">"student"</span>);</span><br><span class="line">        student.getName();</span><br><span class="line">        student.getAge();</span><br><span class="line">        student.printThrowException();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Beans.xml，注意这里aop:pointcut配置了切入点，通知需要增强哪些方法，：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:aop</span>=<span class="string">"http://www.springframework.org/schema/aop"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd </span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop </span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">aop:config</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">aop:aspect</span> <span class="attr">id</span>=<span class="string">"log"</span> <span class="attr">ref</span>=<span class="string">"logging"</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:pointcut</span> <span class="attr">id</span>=<span class="string">"selectAll"</span> <span class="attr">expression</span>=<span class="string">"execution(* com.mi1k7ea.*.*(..))"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:before</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">method</span>=<span class="string">"beforeAdvice"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:after</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">method</span>=<span class="string">"afterAdvice"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:after-returning</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">returning</span>=<span class="string">"retVal"</span> <span class="attr">method</span>=<span class="string">"afterReturningAdvice"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:after-throwing</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">throwing</span>=<span class="string">"ex"</span> <span class="attr">method</span>=<span class="string">"AfterThrowingAdvice"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">aop:aspect</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">aop:config</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for student bean --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"student"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.Student"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"name"</span>  <span class="attr">value</span>=<span class="string">"mi1k7ea"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"age"</span>  <span class="attr">value</span>=<span class="string">"6"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for logging aspect --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"logging"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.Logging"</span>/&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行输出如下：</p>
+<p><img src="/2019/01/01/Spring基础篇之AOP/5.png" alt=""></p>
+<p>如果只是想声明某个特定的方法为切入点，则可修改*为具体的类方法，如：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:aop</span>=<span class="string">"http://www.springframework.org/schema/aop"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">aop:config</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">aop:aspect</span> <span class="attr">id</span>=<span class="string">"log"</span> <span class="attr">ref</span>=<span class="string">"logging"</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:pointcut</span> <span class="attr">id</span>=<span class="string">"selectAll"</span> <span class="attr">expression</span>=<span class="string">"execution(* com.mi1k7ea.Student.getName(..))"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:before</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">method</span>=<span class="string">"beforeAdvice"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:after</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">method</span>=<span class="string">"afterAdvice"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:after-returning</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">returning</span>=<span class="string">"retVal"</span> <span class="attr">method</span>=<span class="string">"afterReturningAdvice"</span>/&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">aop:after-throwing</span> <span class="attr">pointcut-ref</span>=<span class="string">"selectAll"</span> <span class="attr">throwing</span>=<span class="string">"ex"</span> <span class="attr">method</span>=<span class="string">"AfterThrowingAdvice"</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">aop:aspect</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">aop:config</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for student bean --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"student"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.Student"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"name"</span>  <span class="attr">value</span>=<span class="string">"mi1k7ea"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"age"</span>  <span class="attr">value</span>=<span class="string">"6"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for logging aspect --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"logging"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.Logging"</span>/&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>运行输出，此时只针对特定的类方法实现AOP增强：</p>
+<p><img src="/2019/01/01/Spring基础篇之AOP/6.png" alt=""></p>
+<h3 id="基于Annotation的声明式"><a href="#基于Annotation的声明式" class="headerlink" title="基于Annotation的声明式"></a>基于Annotation的声明式</h3><p>在Spring中，尽管使用XML配置文件可以实现AOP开发，但是如果所有的相关的配置都集中在配置文件中，势必会导致XML配置文件过于臃肿，从而给维护和升级带来一定的困难。</p>
+<p>为此，AspectJ框架为AOP开发提供了另一种开发方式——基于Annotation的声明式。AspectJ允许使用注解定义切面、切入点和增强处理，而Spring框架则可以识别并根据这些注解生成AOP代理。</p>
+<p>Annotation注解的介绍如下：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>@Aspect</td>
+<td>用于定义一个切面。</td>
+</tr>
+<tr>
+<td>@Before</td>
+<td>用于定义前置通知，相当于 BeforeAdvice。</td>
+</tr>
+<tr>
+<td>@AfterReturning</td>
+<td>用于定义后置通知，相当于 AfterReturningAdvice。</td>
+</tr>
+<tr>
+<td>@Around</td>
+<td>用于定义环绕通知，相当于MethodInterceptor。</td>
+</tr>
+<tr>
+<td>@AfterThrowing</td>
+<td>用于定义抛出通知，相当于ThrowAdvice。</td>
+</tr>
+<tr>
+<td>@After</td>
+<td>用于定义最终final通知，不管是否异常，该通知都会执行。</td>
+</tr>
+<tr>
+<td>@DeclareParents</td>
+<td>用于定义引介通知，相当于IntroductionInterceptor（不要求掌握）。</td>
+</tr>
+</tbody>
+</table>
+<p>通过在基于架构的XML配置文件中包含以下元素来支持@AspectJ的使用：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">aop:aspectj-autoproxy</span>/&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此外，还需要在CLASSPATH中使用以下AspectJ库文件：aspectjrt.jar、aspectjweaver.jar、aspectj.jar、aopalliance.jar。</p>
+<h4 id="声明aspect-1"><a href="#声明aspect-1" class="headerlink" title="声明aspect"></a>声明aspect</h4><p>Aspects类和其他任何正常的bean一样，除了它们将会用@AspectJ注释之外，它和其他类一样可能有方法和字段，如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> org.xyz;</span><br><span class="line"><span class="keyword">import</span> org.aspectj.lang.annotation.Aspect;</span><br><span class="line"><span class="meta">@Aspect</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AspectModule</span> </span>&#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>它们将在XML中按照如下进行配置，就和其他任何bean一样：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"myAspect"</span> <span class="attr">class</span>=<span class="string">"org.xyz.AspectModule"</span>&gt;</span></span><br><span class="line">   <span class="comment">&lt;!-- configure properties of aspect here as normal --&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="声明切入点-1"><a href="#声明切入点-1" class="headerlink" title="声明切入点"></a>声明切入点</h4><p>一个<strong>切入点</strong>有助于确定使用不同建议执行的感兴趣的连接点（即方法）。在处理基于配置的XML架构时，切入点的声明有两个部分：</p>
+<ul>
+<li>一个切入点表达式决定了我们感兴趣的哪个方法会真正被执行；</li>
+<li>一个切入点标签包含一个名称和任意数量的参数。方法的真正内容是不相干的，并且实际上它应该是空的；</li>
+</ul>
+<p>下面的示例中定义了一个名为‘businessService’的切入点，该切入点将与com.xyz.myapp.service包下的类中可用的每一个方法相匹配：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.aspectj.lang.annotation.Pointcut;</span><br><span class="line"><span class="meta">@Pointcut</span>(<span class="string">"execution(* com.xyz.myapp.service.*.*(..))"</span>) <span class="comment">// expression </span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">businessService</span><span class="params">()</span> </span>&#123;&#125;  <span class="comment">// signature</span></span><br></pre></td></tr></table></figure>
+<p>下面的示例中定义了一个名为‘getname’的切入点，该切入点将与com.mi1k7ea包下的Student类中的getName()方法相匹配：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.aspectj.lang.annotation.Pointcut;</span><br><span class="line"><span class="meta">@Pointcut</span>(<span class="string">"execution(* com.mi1k7ea.Student.getName(..))"</span>) </span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">getname</span><span class="params">()</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="声明建议-1"><a href="#声明建议-1" class="headerlink" title="声明建议"></a>声明建议</h4><p>你可以使用@{ADVICE-NAME}注释声明五个建议中的任意一个，如下所示。这假设你已经定义了一个切入点标签方法businessService()：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Before</span>(<span class="string">"businessService()"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doBeforeTask</span><span class="params">()</span></span>&#123;</span><br><span class="line"> ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@After</span>(<span class="string">"businessService()"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doAfterTask</span><span class="params">()</span></span>&#123;</span><br><span class="line"> ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@AfterReturning</span>(pointcut = <span class="string">"businessService()"</span>, returning=<span class="string">"retVal"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doAfterReturnningTask</span><span class="params">(Object retVal)</span></span>&#123;</span><br><span class="line">  <span class="comment">// you can intercept retVal here.</span></span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@AfterThrowing</span>(pointcut = <span class="string">"businessService()"</span>, throwing=<span class="string">"ex"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doAfterThrowingTask</span><span class="params">(Exception ex)</span></span>&#123;</span><br><span class="line">  <span class="comment">// you can intercept thrown exception here.</span></span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@Around</span>(<span class="string">"businessService()"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doAroundTask</span><span class="params">()</span></span>&#123;</span><br><span class="line"> ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>你可以为任意一个建议定义你的切入点内联。下面是在建议之前定义内联切入点的一个示例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Before</span>(<span class="string">"execution(* com.xyz.myapp.service.*.*(..))"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">doBeforeTask</span><span class="params">()</span></span>&#123;</span><br><span class="line"> ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Demo-4"><a href="#Demo-4" class="headerlink" title="Demo"></a>Demo</h4><p>在前面例子的基础上，MainApp.java和Student.java不变。</p>
+<p>Logging.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.aspectj.lang.annotation.*;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Aspect</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Logging</span> </span>&#123;</span><br><span class="line">    <span class="comment">/** Following is the definition for a pointcut to select</span></span><br><span class="line"><span class="comment">     *  all the methods available. So advice will be called</span></span><br><span class="line"><span class="comment">     *  for all the methods.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Pointcut</span>(<span class="string">"execution(* com.mi1k7ea.*.*(..))"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">selectAll</span><span class="params">()</span></span>&#123;&#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * before a selected method execution.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Before</span>(<span class="string">"selectAll()"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">beforeAdvice</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Going to setup student profile."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * after a selected method execution.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@After</span>(<span class="string">"selectAll()"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterAdvice</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Student profile has been setup."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * when any method returns.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@AfterReturning</span>(pointcut = <span class="string">"selectAll()"</span>, returning=<span class="string">"retVal"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterReturningAdvice</span><span class="params">(Object retVal)</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Returning:"</span> + retVal.toString() );</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This is the method which I would like to execute</span></span><br><span class="line"><span class="comment">     * if there is an exception raised by any method.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@AfterThrowing</span>(pointcut = <span class="string">"selectAll()"</span>, throwing = <span class="string">"ex"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">AfterThrowingAdvice</span><span class="params">(IllegalArgumentException ex)</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"There has been an exception: "</span> + ex.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Beans.xml：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:aop</span>=<span class="string">"http://www.springframework.org/schema/aop"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd "</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">aop:aspectj-autoproxy</span>/&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for student bean --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"student"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.Student"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"name"</span>  <span class="attr">value</span>=<span class="string">"mi1k7ea"</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"age"</span>  <span class="attr">value</span>=<span class="string">"6"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- Definition for logging aspect --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"logging"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.Logging"</span>/&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>输出如下：</p>
+<p><img src="/2019/01/01/Spring基础篇之AOP/7.png" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-参考"><span class="toc-text">0x00 参考</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Spring-AOP"><span class="toc-text">0x01 Spring AOP</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-AOP术语"><span class="toc-text">0x02 AOP术语</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-JDK动态代理"><span class="toc-text">0x03 JDK动态代理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-CGLIB动态代理"><span class="toc-text">0x04 CGLIB动态代理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo-1"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-Spring通知类型"><span class="toc-text">0x05 Spring通知类型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-创建AOP代理"><span class="toc-text">0x06 创建AOP代理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo-2"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x07-使用AspectJ开发AOP"><span class="toc-text">0x07 使用AspectJ开发AOP</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#基于XML的声明式"><span class="toc-text">基于XML的声明式</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#声明aspect"><span class="toc-text">声明aspect</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#声明切入点"><span class="toc-text">声明切入点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#声明建议"><span class="toc-text">声明建议</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Demo-3"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基于Annotation的声明式"><span class="toc-text">基于Annotation的声明式</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#声明aspect-1"><span class="toc-text">声明aspect</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#声明切入点-1"><span class="toc-text">声明切入点</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#声明建议-1"><span class="toc-text">声明建议</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Demo-4"><span class="toc-text">Demo</span></a></li></ol></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/01/01/Spring基础篇之Bean装配/" rel="next" title="Spring基础篇之Bean装配">
+          Spring基础篇之Bean装配
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/01/01/Spring基础篇之基本概念/" rel="prev" title="Spring基础篇之基本概念">
+            Spring基础篇之基本概念
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

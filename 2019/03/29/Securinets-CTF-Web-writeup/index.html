@@ -1,0 +1,370 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Securinets CTF Web writeup [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Securinets CTF Web writeup
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-03-29T13:41:58.000Z">
+        2019-03-29
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-Feedback"><a href="#0x01-Feedback" class="headerlink" title="0x01 Feedback"></a>0x01 Feedback</h2><p><a href="https://web2.ctfsecurinets.com/" target="_blank" rel="noopener">题目地址</a>，题目描述如下，提示flag保存在flag文件中：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/1.png" alt=""></p>
+<p>访问页面，是一个输入界面：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/2.png" alt=""></p>
+<p>随便填写内容，Send后发现在下方有回显：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/3.png" alt=""></p>
+<p>抓包发现发送的是XML格式的数据：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/4.png" alt=""></p>
+<p>推测考察的是XXE读取文件，换个XXE payload测试是否解析参数实体：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/5.png" alt=""></p>
+<p>没问题，那就读取本地文件/etc/passwd试试：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/6.png" alt=""></p>
+<p>问题来了，读取flag文件，但不知道绝对路径呀，这里file://伪协议只能读取绝对路径的文件。</p>
+<p>那就换个php://filter伪协议吧，它可以读取相对路径，直接尝试读本目录的flag文件吧：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/7.png" alt=""></p>
+<p>读到了flag，解码为Securinets{Xxe<em>xXE</em>@Ll_Th3_W@Y}。</p>
+<p>当然，可以修改payload看看这个feed.php的内容如下：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line">libxml_disable_entity_loader (<span class="keyword">false</span>);</span><br><span class="line"><span class="comment">//$xmlfile = $_POST["ta"];</span></span><br><span class="line">$xmlfile = file_get_contents(<span class="string">'php://input'</span>);</span><br><span class="line">$dom = <span class="keyword">new</span> DOMDocument();</span><br><span class="line">$dom-&gt;loadXML($xmlfile, LIBXML_NOENT | LIBXML_DTDLOAD);</span><br><span class="line">$feedback = simplexml_import_dom($dom);</span><br><span class="line">$author = $feedback-&gt;author;</span><br><span class="line"><span class="keyword">echo</span> <span class="string">"&lt;h4&gt;Thanks For you Feedback $author&lt;/h4&gt;"</span></span><br><span class="line"></span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+<h2 id="0x02-Custom-Location"><a href="#0x02-Custom-Location" class="headerlink" title="0x02 Custom Location"></a>0x02 Custom Location</h2><p><a href="https://web0.ctfsecurinets.com/" target="_blank" rel="noopener">题目地址</a>，题目描述如下，说是找出数据库资格证：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/8.png" alt=""></p>
+<p>访问页面，没啥功能，查看页面源码也没有东西：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/9.png" alt=""></p>
+<p>尝试访问robots.txt来看看是不是有某些提示，出现报错信息，看来是开启了Debug模式，从页面可看出是用了Symfony这个框架来搭建的：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/10.png" alt=""></p>
+<p>随便点击一个php文件即可查看它的源代码。</p>
+<p>那么我们就可以查看index.php了，前提是需要知道这个框架的index.php是在public目录中的：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/11.png" alt=""></p>
+<p>可以看到，里面又包含了一个文件进来，访问该文件，发现里面调用了”secret_ctf_location/env”，再访问该文件在数据库配置的地址找到了flag：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/12.png" alt=""></p>
+<h2 id="0x03-SQL-Injected"><a href="#0x03-SQL-Injected" class="headerlink" title="0x03 SQL Injected"></a>0x03 SQL Injected</h2><p><a href="https://web5.ctfsecurinets.com/" target="_blank" rel="noopener">题目地址</a>，题目描述如下图，标题是SQL注入了，但提示说我不喜欢这名字，而且可以下载代码：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/13.png" alt=""></p>
+<p>访问页面是个登录界面，可注册：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/14.png" alt=""></p>
+<p>随便注册个用户，注册成功后自动登录进界面：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/15.png" alt=""></p>
+<p>点击左上角的Flags界面显示”<strong>Error!</strong> You need to be an admin to access this area”即无权访问。</p>
+<p>在index页面编辑title和内容然后Post，即可在下面更新显示内容：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/16.png" alt=""></p>
+<p>在Find Posts一栏，输入指定用户名会显示该用户发布过的内容：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/17.png" alt=""></p>
+<p>大致功能了解了，现在来源码审计。</p>
+<p>项目目录如下：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/18.png" alt=""></p>
+<p>简单理下，create_db.sql是执行创建数据库表和字段内容的SQL语句；db.php配置数据库连接信息；flags.php即显示Flags页面，其中关键是判断$_SESSION[‘role’]是否为1，是则从包含的secret.php中输出flag；secret.php中保存了flag；logout.php即登出。</p>
+<p>关键的几个文件为login.php、register.php和index.php，因为这几个是程序的主要处理逻辑，涉及到的SQL操作都在这几个文件中。</p>
+<p>先看看register.php关键部分的SQL操作，对用户输入的username和password参数调用了mysqli_real_escape_string()函数进行了转义过滤，然后写入INSERT语句，其中role字段值写死了为0，SQL语句执行成功后即跳转至index.php界面；也就是说，这里没法进行SQL注入了：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="keyword">isset</span>($_POST[<span class="string">'username'</span>]) &amp;&amp; <span class="keyword">isset</span>($_POST[<span class="string">'password'</span>])) &#123;</span><br><span class="line">    <span class="keyword">if</span>(!<span class="keyword">empty</span>($_POST[<span class="string">'username'</span>]) &amp;&amp;  !<span class="keyword">empty</span>($_POST[<span class="string">'password'</span>])) &#123;</span><br><span class="line">        $success = <span class="keyword">true</span>;</span><br><span class="line">        $username = mysqli_real_escape_string($conn, $_POST[<span class="string">'username'</span>]);</span><br><span class="line">        $password = mysqli_real_escape_string($conn, $_POST[<span class="string">'password'</span>]);</span><br><span class="line">        $sql = <span class="string">"INSERT INTO users (login, password, role) VALUES ('"</span>. $username .<span class="string">"', '"</span>. $password .<span class="string">"', 0)"</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            $conn-&gt;query($sql);</span><br><span class="line">        &#125; <span class="keyword">catch</span>(<span class="keyword">Exception</span> $err) &#123;</span><br><span class="line">            <span class="keyword">echo</span> <span class="string">'err: '</span>.$err;</span><br><span class="line">            $success = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        $success = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>($success) &#123;</span><br><span class="line">        $_SESSION[<span class="string">'username'</span>] = $username;</span><br><span class="line">        $_SESSION[<span class="string">'message'</span>] = <span class="string">"&lt;div class=\"alert alert-success\"&gt;</span></span><br><span class="line"><span class="string">            &lt;strong&gt;Success!&lt;/strong&gt; Welcome aboard "</span>.$_SESSION[<span class="string">'username'</span>].<span class="string">" !</span></span><br><span class="line"><span class="string">        &lt;/div&gt;"</span>;</span><br><span class="line">        header(<span class="string">'location: index.php'</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>同样看看login.php中进行SQL操作的代码，都是进行了mysqli_real_escape_string()函数的转义过滤，然后执行SELECT查询语句，这里也无法进行SQL注入；注意到，将查询成功后获取的用户名即login字段值赋给\$_SESSION[‘username’]，将role字段值赋值给​\$_SESSION[‘role’]：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="keyword">isset</span>($_POST[<span class="string">'username'</span>]) &amp;&amp; !<span class="keyword">empty</span>($_POST[<span class="string">'username'</span>]) &amp;&amp; <span class="keyword">isset</span>($_POST[<span class="string">'password'</span>]) &amp;&amp; !<span class="keyword">empty</span>($_POST[<span class="string">'password'</span>])) &#123;</span><br><span class="line">    $username = mysqli_real_escape_string($conn, $_POST[<span class="string">'username'</span>]);</span><br><span class="line">    $password = mysqli_real_escape_string($conn, $_POST[<span class="string">'password'</span>]);</span><br><span class="line">    $sql = <span class="string">"SELECT * FROM users WHERE login='"</span>. $username .<span class="string">"' and password='"</span>. $password .<span class="string">"'"</span>;</span><br><span class="line">    $res = $conn-&gt;query($sql);</span><br><span class="line">    <span class="keyword">if</span>($res-&gt;num_rows &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        $user = $res-&gt;fetch_assoc();</span><br><span class="line">        $_SESSION[<span class="string">'username'</span>] = $user[<span class="string">'login'</span>];</span><br><span class="line">        $_SESSION[<span class="string">'role'</span>] = $user[<span class="string">'role'</span>];</span><br><span class="line">        header(<span class="string">'location: index.php'</span>);</span><br><span class="line">        <span class="keyword">die</span>();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        $success = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最后看看index.php，可以看到界面输入的参数post、title、post_author等都进行了转义过滤，但是注意到在拼接的SQL语句中有的含有参数$_SESSION[‘username’]：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line">&lt;?php</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">if (isset($_POST[&apos;post&apos;]) &amp;&amp; isset($_POST[&apos;title&apos;])) &#123;</span><br><span class="line">    if(!empty($_POST[&apos;post&apos;]) &amp;&amp; !empty($_POST[&apos;title&apos;])) &#123;</span><br><span class="line">        $success = true;</span><br><span class="line">        $post = mysqli_real_escape_string($conn, $_POST[&apos;post&apos;]);</span><br><span class="line">        $title = mysqli_real_escape_string($conn, $_POST[&apos;title&apos;]);</span><br><span class="line">        $sql = &quot;INSERT INTO posts (title, content, date, author) VALUES (&apos;&quot;. $title .&quot;&apos;, &apos;&quot;. $post .&quot;&apos;, CURDATE(), &apos;&quot;. $_SESSION[&apos;username&apos;] .&quot;&apos;)&quot;;</span><br><span class="line">        try &#123;</span><br><span class="line">            $conn-&gt;query($sql);</span><br><span class="line">        &#125; catch(Exception $err) &#123;</span><br><span class="line">            echo &apos;err: &apos;.$err;</span><br><span class="line">            $success = false;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        $success = false;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if($success) &#123;</span><br><span class="line">        $_SESSION[&apos;message&apos;] = &quot;&lt;div class=\&quot;alert alert-success\&quot;&gt;</span><br><span class="line">            &lt;strong&gt;Success!&lt;/strong&gt; Your post has been saved!</span><br><span class="line">        &lt;/div&gt;&quot;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">if (isset($_POST[&apos;post_author&apos;])) &#123;</span><br><span class="line">    $sql = &quot;SELECT * FROM posts WHERE author = &apos;&quot;. mysqli_real_escape_string($conn, $_POST[&apos;post_author&apos;]) .&quot;&apos;&quot;;</span><br><span class="line">    try &#123;</span><br><span class="line">        $posts = $conn-&gt;query($sql);</span><br><span class="line">    &#125; catch(Exception $err) &#123;</span><br><span class="line">        echo &apos;err: &apos;.$err;</span><br><span class="line">    &#125;</span><br><span class="line">&#125; else &#123;</span><br><span class="line">    $sql = &quot;SELECT * FROM posts WHERE author = &apos;&quot;. $_SESSION[&apos;username&apos;] .&quot;&apos;&quot;;</span><br><span class="line">    try &#123;</span><br><span class="line">        $posts = $conn-&gt;query($sql);</span><br><span class="line">    &#125; catch(Exception $err) &#123;</span><br><span class="line">        echo &apos;err: &apos;.$err;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">?&gt;</span><br><span class="line"></span><br><span class="line">&lt;!DOCTYPE html&gt;</span><br><span class="line">&lt;html&gt;</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">&lt;div class=&quot;content&quot;&gt;</span><br><span class="line">&lt;?php</span><br><span class="line">if(isset($_SESSION[&apos;message&apos;]) &amp;&amp; $_SESSION[&apos;message&apos;]) &#123;</span><br><span class="line">    echo $_SESSION[&apos;message&apos;];</span><br><span class="line">    $_SESSION[&apos;message&apos;] = null;</span><br><span class="line">&#125;</span><br><span class="line">?&gt;</span><br><span class="line">&lt;div&gt;</span><br><span class="line">    &lt;form class=&quot;post-form&quot; action=&quot;&quot; method=&quot;post&quot;&gt;</span><br><span class="line">        &lt;input class=&quot;form-control&quot; placeholder=&quot;Title&quot; name=&quot;title&quot; style=&quot;margin-bottom: 10px;&quot; /&gt;</span><br><span class="line">        &lt;textarea class=&quot;form-control&quot; placeholder=&quot;Express yourself ...&quot; name=&quot;post&quot;&gt;&lt;/textarea&gt;</span><br><span class="line">        &lt;input type=&quot;submit&quot; class=&quot;btn btn-primary post-btn&quot; value=&quot;Post&quot;&gt;</span><br><span class="line">    &lt;/form&gt;</span><br><span class="line">&lt;/div&gt;</span><br><span class="line">&lt;h5 style=&quot;color: gray;&quot;&gt;Find Posts&lt;/h5&gt;</span><br><span class="line">&lt;form class=&quot;post-search&quot; action=&quot;&quot; method=&quot;post&quot;&gt;</span><br><span class="line">    &lt;input class=&quot;form-control&quot; placeholder=&quot;username&quot; style=&quot;width: 250px;&quot; name=&quot;post_author&quot; value=&quot;&lt;?php echo $_POST[&apos;post_author&apos;] ?&gt;&quot;/&gt; </span><br><span class="line">    &lt;button class=&quot;btn btn-outline-success&quot; type=&quot;submit&quot;&gt; Find &lt;/button&gt;</span><br><span class="line">&lt;/form&gt;</span><br><span class="line">&lt;?php</span><br><span class="line">echo &quot;&lt;h5 class=\&quot;results-count\&quot;&gt;Results: $posts-&gt;num_rows&lt;/h5&gt;&quot;;</span><br><span class="line">if($posts-&gt;num_rows &gt; 0) &#123;</span><br><span class="line">    while($post = $posts-&gt;fetch_assoc()) &#123;</span><br><span class="line">?&gt;</span><br><span class="line">    &lt;div style=&quot;padding-bottom: 20px&quot;&gt;</span><br><span class="line">        &lt;div&gt;</span><br><span class="line">            &lt;h5 style=&quot;display: inline&quot;&gt; &lt;?php echo $post[&apos;title&apos;] ?&gt;&lt;/h5&gt;</span><br><span class="line">            &lt;h6 class=&quot;float-right&quot;&gt; &lt;?php echo $post[&apos;date&apos;] ?&gt;&lt;/h6&gt;</span><br><span class="line">        &lt;/div&gt;</span><br><span class="line">        &lt;h6&gt; &lt;?php echo $post[&apos;content&apos;] ?&gt;&lt;/h6&gt;</span><br><span class="line">        &lt;div class=&quot;float-right&quot;&gt; By: &lt;?php echo $post[&apos;author&apos;] ?&gt; &lt;/div&gt;</span><br><span class="line">    &lt;/div&gt;</span><br><span class="line">    &lt;hr/&gt;</span><br><span class="line">&lt;?php</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">?&gt;</span><br><span class="line">&lt;/div&gt;</span><br><span class="line">&lt;/body&gt;</span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+<p>因为以上几个文件中外界输入的参数都进行了mysqli_real_escape_string()函数的转义过滤，因此无法从输入的参数进行直接的SQL注入。但是前面注意到index.php中有些SQL语句含有拼接$_SESSION[‘username’]的写法，先列下出现的语句吧：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$sql = <span class="string">"INSERT INTO posts (title, content, date, author) VALUES ('"</span>. $title .<span class="string">"', '"</span>. $post .<span class="string">"', CURDATE(), '"</span>. $_SESSION[<span class="string">'username'</span>] .<span class="string">"')"</span>;</span><br><span class="line"></span><br><span class="line">$sql = <span class="string">"SELECT * FROM posts WHERE author = '"</span>. $_SESSION[<span class="string">'username'</span>] .<span class="string">"'"</span>;</span><br></pre></td></tr></table></figure>
+<p>只有两句，一个为INSERT一个为SELECT语句。前面我们知道$_SESSION[‘username’]是从login.php中查询表的login字段即用户名得来的。</p>
+<p>再回看题目，flag就在Flags界面，但只有role为1的用户才能访问，那就需要SQL注入dump下role为1的用户名/密码登录访问来获取flag了。</p>
+<p>那么就清晰了，在注册时往username进行SQL注入，<strong>虽然注册时调用mysqli_real_escape_string()函数转移过滤了，但是在存储进数据库的时候是你输入时的内容而不包含转义符\，因此在$_SESSION[‘username’]从users表中提取login字段时就是注入时的原格式，在拼接SQL语句时会直接造成SQL注入。</strong></p>
+<p>确认一下，使用M7’作为用户名注册登录，可以看到注册成功后直接跳转过去的index.php界面显示的用户名中的单引号前是有转移符\的，这是因为此时的$_SESSION[‘username’]是由注册时调用mysqli_real_escape_string()函数后直接赋值过来的结果：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/19.png" alt=""></p>
+<p>其实存储在数据库中的内容是没有转移符\的，我们登出再登录，会发现转移符不见了，这是因为此时的$_SESSION[‘username’]是从数据库中查询得来的：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/20.png" alt=""></p>
+<p>OK，那剩下的就是如何进行SQL注入了。</p>
+<p>相比之下INSERT语句作用不大，但SELECT语句可以列出用户名和密码等字段值，因此利用SELECT语句进行SQL注入来dump role为1的用户信息。</p>
+<p>构造payload前先看下create_db.sql中的posts表是存在5个字段，而users表是存在id、login、passwod和role等4个字段：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">database</span> webn;</span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> <span class="keyword">users</span> (<span class="keyword">id</span> <span class="built_in">int</span> auto_increment primary <span class="keyword">key</span>, login <span class="built_in">varchar</span>(<span class="number">100</span>), <span class="keyword">password</span> <span class="built_in">varchar</span>(<span class="number">100</span>), <span class="keyword">role</span> <span class="built_in">boolean</span> <span class="keyword">default</span> <span class="number">0</span>);</span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> posts (<span class="keyword">id</span> <span class="built_in">int</span> auto_increment primary <span class="keyword">key</span>, title <span class="built_in">varchar</span>(<span class="number">50</span>), <span class="keyword">content</span> <span class="built_in">text</span>, <span class="built_in">date</span> <span class="built_in">Date</span>, author <span class="built_in">varchar</span>(<span class="number">100</span>));</span><br></pre></td></tr></table></figure>
+<p>注册输入如下构造的用户名：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">'union <span class="keyword">select</span> <span class="keyword">id</span>,login,<span class="keyword">password</span>,<span class="keyword">role</span>,<span class="number">5</span> <span class="keyword">from</span> <span class="keyword">users</span> <span class="keyword">where</span> <span class="keyword">role</span>=<span class="number">1</span><span class="comment">#</span></span><br></pre></td></tr></table></figure>
+<p>注册完新用户后登出再登录，可以看到输出了role为1、login即用户名为root的5个输出字段信息：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/21.png" alt=""></p>
+<p>用root/jjLLgTGk3uif2rKBVwqH登录再访问Flags界面即可拿到flag：</p>
+<p><img src="/2019/03/29/Securinets-CTF-Web-writeup/22.png" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Feedback"><span class="toc-text">0x01 Feedback</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Custom-Location"><span class="toc-text">0x02 Custom Location</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-SQL-Injected"><span class="toc-text">0x03 SQL Injected</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/03/24/C编写实现Linux反弹shell/" rel="next" title="C编写实现Linux反弹shell">
+          C编写实现Linux反弹shell
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/03/31/0CTF-Web-writeup/" rel="prev" title="0CTF Web writeup">
+            0CTF Web writeup
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

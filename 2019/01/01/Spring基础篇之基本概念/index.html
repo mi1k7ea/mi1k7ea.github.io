@@ -1,0 +1,419 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Java,Spring,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Spring基础篇之基本概念 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Spring基础篇之基本概念
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-01-01T13:25:31.000Z">
+        2019-01-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Spring/">Spring</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-参考"><a href="#0x00-参考" class="headerlink" title="0x00 参考"></a>0x00 参考</h2><p>本笔记直接参考或引自如下链接文章：</p>
+<p><a href="https://www.w3cschool.cn/wkspring/" target="_blank" rel="noopener">https://www.w3cschool.cn/wkspring/</a></p>
+<p><a href="http://c.biancheng.net/spring/" target="_blank" rel="noopener">http://c.biancheng.net/spring/</a></p>
+<h2 id="0x01-Spring简介"><a href="#0x01-Spring简介" class="headerlink" title="0x01 Spring简介"></a>0x01 Spring简介</h2><p>Spring是一个轻量级的Java Web开发框架，是分层的Java SE/EE full-stack轻量级开源框架，以IoC（Inverse of Control，控制反转）和AOP（Aspect Oriented Programming，面向切面编程）为内核，使用基本的JavaBean完成以前只可能由EJB完成的工作，取代了EJB臃肿和低效的开发模式。</p>
+<p>Spring的优点如下：</p>
+<ol>
+<li>方便解耦，简化开发：Spring就是一个大工厂，可以将所有对象的创建和依赖关系的维护交给Spring管理；</li>
+<li>方便集成各种优秀框架：Spring不排斥各种优秀的开源框架，其内部提供了对各种优秀框架（如Struts2、Hibernate、MyBatis等）的直接支持；</li>
+<li>降低Java EE API的使用难度：Spring对Java EE开发中非常难用的一些API（JDBC、JavaMail、远程调用等）都提供了封装，使这些API应用的难度大大降低；</li>
+<li>方便程序的测试：Spring支持JUnit4，可以通过注解方便地测试Spring程序；</li>
+<li>AOP编程的支持：Spring提供面向切面编程，可以方便地实现对程序进行权限拦截和运行监控等功能；</li>
+<li>声明式事务的支持：只需要通过配置就可以完成对事务的管理，而无须手动编程；</li>
+</ol>
+<h2 id="0x02-Spring体系结构"><a href="#0x02-Spring体系结构" class="headerlink" title="0x02 Spring体系结构"></a>0x02 Spring体系结构</h2><p>Spring框架采用分层架构，根据不同的功能被划分成了多个模块，这些模块大体可分为Data Access/Integration、Web、AOP、Aspects、Messaging、Instrumentation、Core Container和Test，如图：</p>
+<p><img src="/2019/01/01/Spring基础篇之基本概念/1.png" alt=""></p>
+<h3 id="Core-Container（核心容器）"><a href="#Core-Container（核心容器）" class="headerlink" title="Core Container（核心容器）"></a>Core Container（核心容器）</h3><p>Spring的核心容器是其他模块建立的基础，由Beans模块、Core核心模块、Context上下文模块和Expression Language表达式语言模块组成，具体介绍如下：</p>
+<ul>
+<li><strong>Core模块</strong>：提供了框架的基本组成部分，包括IoC和依赖注入功能；</li>
+<li><strong>Beans模块</strong> ：提供BeanFactory，是工厂模式的经典实现，Spring将管理对象称为Bean；</li>
+<li><strong>Context模块</strong>：是在Core和Beans模块的基础上建立起来的，以一种类似于JNDI注册的方式访问对象，是访问定义和配置任何对象的媒介。ApplicationContext接口是上下文模块的焦点；</li>
+<li><strong>SpEL模块</strong>：提供了强大的表达式语言，用于在运行时查询和操作对象图；</li>
+</ul>
+<p>它们之间的完整依赖关系如下：</p>
+<p><img src="/2019/01/01/Spring基础篇之基本概念/2.png" alt=""></p>
+<h3 id="Data-Access-Integration（数据访问-集成）"><a href="#Data-Access-Integration（数据访问-集成）" class="headerlink" title="Data Access/Integration（数据访问/集成）"></a>Data Access/Integration（数据访问/集成）</h3><p>数据访问/集成层包括JDBC、ORM、OXM、JMS和Transactions模块（注：JDBC=Java Data Base Connectivity，ORM=Object Relational Mapping，OXM=Object XML Mapping，JMS=Java Message Service），它们的细节如下：</p>
+<ul>
+<li><strong>JDBC模块</strong>：提供了JDBC抽象层，大幅度减少了在开发过程中对数据库操作的编码；</li>
+<li><strong>ORM模块</strong>：提供了对流行的对象关系映射API的集成，包括JPA、JDO和Hibernate等。通过此模块可以让这些ORM框架和spring的其它功能整合，比如前面提及的事务管理；</li>
+<li><strong>OXM模块</strong>：提供了一个支持对象/XML映射的抽象层实现，如JAXB、Castor、XMLBeans、JiBX和XStream；</li>
+<li><strong>JMS模块</strong>：指Java消息服务，包含的功能为生产和消费的信息。从Spring 4.1开始，集成了spring-messaging模块；</li>
+<li><strong>Transactions事务模块</strong>：为实现特殊接口类及所有的POJO支持编程式和声明式事务管理（注：编程式事务需要自己写beginTransaction()、commit()、rollback()等事务管理方法，声明式事务是通过注解或配置由spring自动处理，编程式事务粒度更细）；</li>
+</ul>
+<h3 id="Web模块"><a href="#Web模块" class="headerlink" title="Web模块"></a>Web模块</h3><p>Spring的Web层包括Web、Servlet、Struts和Portlet组件，具体介绍如下：</p>
+<ul>
+<li><strong>Web模块</strong>：提供面向Web的基本功能和面向Web的应用上下文，比如多部分（multipart）文件上传功能、使用Servlet监听器初始化IoC容器等。它还包括HTTP客户端以及Spring远程调用中与web相关的部分；</li>
+<li><strong>Servlet模块</strong>：包括Spring模型—视图—控制器（MVC）实现Web应用程序；</li>
+<li><strong>MVC模块</strong>：为Web应用提供了模型视图控制（MVC）和REST Web服务的实现。Spring的MVC框架可以使领域模型代码和Web表单完全地分离，且可以与Spring框架的其它所有功能进行集成；</li>
+<li><strong>WebSocket模块</strong>：为WebSocket-based提供了支持，而且在Web应用程序中提供了客户端和服务器端之间通信的两种方式；</li>
+<li><strong>Struts模块</strong>：包含支持类内的Spring应用程序，集成了经典的Struts Web层；</li>
+<li><strong>Portlet模块</strong>：提供了在Portlet环境中使用MVC实现，类似Web-Servlet模块的功能，并反映了spring-webmvc模块的功能；</li>
+</ul>
+<h3 id="其他模块"><a href="#其他模块" class="headerlink" title="其他模块"></a>其他模块</h3><p>Spring的其他模块还有 AOP、Aspects、Instrumentation 以及 Test 模块，具体介绍如下：</p>
+<ul>
+<li><strong>AOP模块</strong>：提供了面向切面编程实现，允许定义方法拦截器和切入点，将代码按照功能进行分离，以降低耦合性；</li>
+<li><strong>Aspects模块</strong>：提供与AspectJ的集成，是一个功能强大且成熟的面向切面编程（AOP）框架；</li>
+<li><strong>Instrumentation模块</strong>：提供了类工具的支持和类加载器的实现，可以在特定的应用服务器中使用；</li>
+<li><strong>Test模块</strong>：支持Spring组件使用JUnit或TestNG框架的测试；</li>
+<li><strong>Messaging模块</strong>：为STOMP提供了支持作为在应用程序中WebSocket子协议的使用。它也支持一个注解编程模型，它是为了选路和处理来自WebSocket客户端的STOMP信息；</li>
+</ul>
+<h2 id="0x03-Spring开发环境准备"><a href="#0x03-Spring开发环境准备" class="headerlink" title="0x03 Spring开发环境准备"></a>0x03 Spring开发环境准备</h2><p>使用Spring框架时，只需将Spring的四个基础包和commons-logging包复制到项目的lib目录并发布到类路径中即可。</p>
+<p>Spring相关包下载地址：<a href="http://repo.spring.io/simple/libs-release-local/org/springframework/spring/" target="_blank" rel="noopener">http://repo.spring.io/simple/libs-release-local/org/springframework/spring/</a></p>
+<p>commons-logging包下载地址：<a href="http://commons.apache.org/proper/commons-logging/download_logging.cgi" target="_blank" rel="noopener">http://commons.apache.org/proper/commons-logging/download_logging.cgi</a> </p>
+<p>本地环境用的：spring-framework-4.1.6.RELEASE-dist，commons-logging-1.2。</p>
+<h2 id="0x04-Spring目录结构和基础jar包"><a href="#0x04-Spring目录结构和基础jar包" class="headerlink" title="0x04 Spring目录结构和基础jar包"></a>0x04 Spring目录结构和基础jar包</h2><p>解压并打开我们下载的spring-framework-4.1.6.RELEASE-dist可看到Spring有如下目录：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>docs</td>
+<td>包含 Spring 的 API 文档和开发规范</td>
+</tr>
+<tr>
+<td>libs</td>
+<td>包含开发需要的 JAR 包和源码包</td>
+</tr>
+<tr>
+<td>schema</td>
+<td>包含开发所需要的 schema 文件，在这些文件中定义了 Spring 相关配置文件的约束</td>
+</tr>
+</tbody>
+</table>
+<p>在libs目录中，包含了Spring框架提供的所有JAR文件，其中有四个JAR文件是Spring框架的基础包，分别对应Spring容器的四个模块，具体如下：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>spring-core-4.1.6.RELEASE.jar</td>
+<td>包含 Spring 框架基本的核心工具类，Spring 其他组件都要用到这个包中的类，是其他组件的基本核心。</td>
+</tr>
+<tr>
+<td>spring-beans-4.1.6.RELEASE.jar</td>
+<td>所有应用都要用到的，它包含访问配置文件、创建和管理 bean 以及进行 Inversion of Control（IoC）或者 Dependency Injection（DI）操作相关的所有类。</td>
+</tr>
+<tr>
+<td>spring-context-4.1.6.RELEASE.jar</td>
+<td>Spring 提供在基础 IoC 功能上的扩展服务，此外还提供许多企业级服务的支持，如邮件服务、任务调度、JNDI 定位、EJB 集成、远程访问、缓存以及各种视图层框架的封装等</td>
+</tr>
+<tr>
+<td>spring-expression-4.1.6.RELEASE.jar</td>
+<td>定义了 Spring 的表达式语言。 需要注意的是，在使用 Spring 开发时，除了 Spring 自带的 JAR 包以外，还需要一个第三方 JAR 包 commons.logging 处理日志信息</td>
+</tr>
+</tbody>
+</table>
+<h2 id="0x05-第一个Spring程序——HelloWorld"><a href="#0x05-第一个Spring程序——HelloWorld" class="headerlink" title="0x05 第一个Spring程序——HelloWorld"></a>0x05 第一个Spring程序——HelloWorld</h2><p>在IDEA新建项目，右键项目目录-&gt;Open Module Settings-&gt;Project Settings-&gt;Libraries中添加Springframework的包和commons-logging的包。</p>
+<p>接着在src目录下新建com.mi1k7ea包，在其中新建HelloWorld.java和MainApp.java文件。</p>
+<p>HelloWorld.java，是一个Bean：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HelloWorld</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String message;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setMessage</span><span class="params">(String message)</span></span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.message  = message;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">getMessage</span><span class="params">()</span></span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Your Message : "</span> + message);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MainApp.java，：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ApplicationContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainApp</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ApplicationContext context = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"Beans.xml"</span>);</span><br><span class="line">        HelloWorld obj = (HelloWorld) context.getBean(<span class="string">"helloWorld"</span>);</span><br><span class="line">        obj.getMessage();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关于主要程序有以下两个要点需要注意：</p>
+<ul>
+<li>第一个是我们使用框架的ClassPathXmlApplicationContext()函数来创建应用程序的上下文。这个API加载beans的配置文件并最终基于所提供的API，它处理创建并初始化所有的对象，即在配置文件中提到的beans；</li>
+<li>第二个是使用已创建的上下文的getBean()方法来获得所需的bean。这个方法使用bean的ID返回一个最终可以转换为实际对象的通用对象。一旦有了对象，你就可以使用这个对象调用任何类的方法；</li>
+</ul>
+<p>另外，还需要在src目录下创建一个Bean的XML配置文件，作为粘合Bean的粘合剂即类。Spring的配置文件名称是可以自定义的，一般情况下是命名为applicationContext.xml（或bean.xml），这里我们定义为Beans.xml，其中beans标签中的各个属性是Spring的约束配置：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans</span></span></span><br><span class="line"><span class="tag"><span class="string">    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"helloWorld"</span> <span class="attr">class</span>=<span class="string">"com.mi1k7ea.HelloWorld"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"message"</span> <span class="attr">value</span>=<span class="string">"mi1k7ea"</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>Beans.xml用于给不同的Bean分配唯一的ID，并且控制不同值的对象的创建，而不会影响Spring的任何源文件。这里给com.mi1k7ea.HelloWorld这个Bean分配了值为helloWorld的id，在MainApp主程序中通过传入id参数调用getBean()即可成功获取到指定的Bean。</p>
+<p>运行输出如下，可以看到，在程序执行时对象的创建并不是通过new一个类完成的，而是由Spring容器管理实现的，这就是后面讲到的Spring IoC容器思想的工作机制：</p>
+<p><img src="/2019/01/01/Spring基础篇之基本概念/3.png" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-参考"><span class="toc-text">0x00 参考</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-Spring简介"><span class="toc-text">0x01 Spring简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Spring体系结构"><span class="toc-text">0x02 Spring体系结构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Core-Container（核心容器）"><span class="toc-text">Core Container（核心容器）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Data-Access-Integration（数据访问-集成）"><span class="toc-text">Data Access/Integration（数据访问/集成）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Web模块"><span class="toc-text">Web模块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#其他模块"><span class="toc-text">其他模块</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-Spring开发环境准备"><span class="toc-text">0x03 Spring开发环境准备</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-Spring目录结构和基础jar包"><span class="toc-text">0x04 Spring目录结构和基础jar包</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-第一个Spring程序——HelloWorld"><span class="toc-text">0x05 第一个Spring程序——HelloWorld</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/01/01/Spring基础篇之AOP/" rel="next" title="Spring基础篇之AOP">
+          Spring基础篇之AOP
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/01/01/Spring基础篇之Bean/" rel="prev" title="Spring基础篇之Bean">
+            Spring基础篇之Bean
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

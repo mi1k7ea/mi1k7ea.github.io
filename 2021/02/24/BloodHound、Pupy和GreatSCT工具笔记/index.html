@@ -1,0 +1,319 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="渗透测试,工具,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>BloodHound、Pupy和GreatSCT工具笔记 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        BloodHound、Pupy和GreatSCT工具笔记
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-02-24T13:25:09.000Z">
+        2021-02-24
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/工具/">工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/渗透测试/">渗透测试</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>参考Micro8系列第十六课：<a href="https://micro8.gitbook.io/micro8/contents-1/11-20/16-hong-lan-dui-kang-shen-tou-ce-shi-1" target="_blank" rel="noopener">https://micro8.gitbook.io/micro8/contents-1/11-20/16-hong-lan-dui-kang-shen-tou-ce-shi-1</a></p>
+<p>参考Micro8系列第十七课：<a href="https://micro8.gitbook.io/micro8/contents-1/11-20/17-hong-lan-dui-kang-shen-tou-ce-shi-2" target="_blank" rel="noopener">https://micro8.gitbook.io/micro8/contents-1/11-20/17-hong-lan-dui-kang-shen-tou-ce-shi-2</a></p>
+<p>参考Micro8系列第十八课：<a href="https://micro8.gitbook.io/micro8/contents-1/11-20/18-hong-lan-dui-kang-shen-tou-ce-shi-3" target="_blank" rel="noopener">https://micro8.gitbook.io/micro8/contents-1/11-20/18-hong-lan-dui-kang-shen-tou-ce-shi-3</a></p>
+<h2 id="0x01-BloodHound"><a href="#0x01-BloodHound" class="headerlink" title="0x01 BloodHound"></a>0x01 BloodHound</h2><p>BloodHound是一款免费的域分析工具，其使用可视化图来显示Active Directory环境中隐藏的和相关联的主机内容。攻击者可以使用BloodHound轻松识别高度复杂的攻击路径，否则很难快速识别。防御者可以使用BloodHound来识别和防御那些相同的攻击路径。蓝队和红队都可以使用BloodHound轻松深入了解Active Directory环境中的权限关系。</p>
+<p>工具地址：<a href="https://github.com/BloodHoundAD/BloodHound" target="_blank" rel="noopener">https://github.com/BloodHoundAD/BloodHound</a></p>
+<p>在内网渗透的域分析工具BloodHound小节中有具体说明。</p>
+<h2 id="0x02-Pupy"><a href="#0x02-Pupy" class="headerlink" title="0x02 Pupy"></a>0x02 Pupy</h2><p>Pupy是一个开源、跨平台（Windows、Linux、OSX、Android）、多功能RAT（远程管理工具）和主要用Python编写的后期开发工具。它具有全内存读取操作、进程注入等功能。Pupy可以使用各种传输进行通信，迁移到进程（注入），从内存加载远程Python代码。</p>
+<p>项目地址：<a href="https://github.com/n1nj4sec/pupy" target="_blank" rel="noopener">https://github.com/n1nj4sec/pupy</a></p>
+<p>安装：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/n1nj4sec/pupy.git</span><br><span class="line"><span class="built_in">cd</span> pupy/pupy</span><br><span class="line">pip install rpyc</span><br><span class="line">git submodule update</span><br><span class="line"><span class="built_in">cd</span> ..</span><br><span class="line">pip install -r pupy/requirements.txt</span><br><span class="line">wget https://github.com/n1nj4sec/pupy/releases/download/latest/payload_templates.txz</span><br><span class="line">tar xvf payload_templates.txz &amp;&amp; mv payload_templates/* pupy/payload_templates/ &amp;&amp; rm payload_templates.txz &amp;&amp; rm -r payload_templates</span><br><span class="line"><span class="built_in">cd</span> pupy</span><br><span class="line">apt-get install python-xlib</span><br><span class="line">./pupysh.py</span><br></pre></td></tr></table></figure>
+<p>如果出现如下报错：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Collecting pyautogui</span><br><span class="line">Using cached PyAutoGUI-0.9.36.tar.gz</span><br><span class="line">Complete output from command python setup.py egg_info: </span><br><span class="line">Traceback (most recent call last):</span><br><span class="line">    File &quot;&lt;string&gt;&quot;, line 1, in &lt;module&gt;</span><br><span class="line">    File &quot;/tmp/pip-build-a90ODY/pyautogui/setup.py&quot;, line 6, in &lt;module&gt; version=__import__(&apos;pyautogui&apos;).__version__,</span><br><span class="line">    File &quot;pyautogui/__init__.py&quot;, line 115, in &lt;module&gt;</span><br><span class="line">    from . import \_pyautogui_x11 as platformModule</span><br><span class="line">    File &quot;pyautogui/_pyautogui_x11.py&quot;, line 160, in &lt;module&gt;</span><br><span class="line">    _display = Display(os.environ[&apos;DISPLAY&apos;])</span><br><span class="line">    File &quot;/usr/lib/python2.7/UserDict.py&quot;, line 40, in __getitem__</span><br><span class="line">    raise KeyError(key) </span><br><span class="line">KeyError: &apos;DISPLAY&apos;</span><br></pre></td></tr></table></figure>
+<p><strong>must install on local server with GUI</strong></p>
+<h2 id="0x03-GreatSCT"><a href="#0x03-GreatSCT" class="headerlink" title="0x03 GreatSCT"></a>0x03 GreatSCT</h2><p>GreatSCT是一款生成可绕过常见反病毒检测机制和应用白名单机制的Metasploit payload的工具。</p>
+<p>项目地址：<a href="https://github.com/GreatSCT/GreatSCT" target="_blank" rel="noopener">https://github.com/GreatSCT/GreatSCT</a></p>
+<p>安装：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">apt-get -y install git</span><br><span class="line">git <span class="built_in">clone</span> https://github.com/GreatSCT/GreatSCT.git</span><br><span class="line"><span class="built_in">cd</span> GreatSCT/</span><br><span class="line"><span class="built_in">cd</span> setup</span><br><span class="line">sudo ./setup.sh -c</span><br></pre></td></tr></table></figure>
+<p>运行后：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">===========================================================================</span><br><span class="line">Great Scott!</span><br><span class="line">===========================================================================</span><br><span class="line">===========================================================================</span><br><span class="line"></span><br><span class="line">Payload information: </span><br><span class="line"></span><br><span class="line">Name: Pure MSBuild C# Reverse TCP Stager</span><br><span class="line">Language: msbuild</span><br><span class="line">Rating: Excellent</span><br><span class="line">Description: pure windows/meterpreter/reverse_tcp stager, no</span><br><span class="line">shellcode </span><br><span class="line"></span><br><span class="line">Payload: msbuild/meterpreter/rev_tcp selected </span><br><span class="line"></span><br><span class="line">Required Options: </span><br><span class="line"></span><br><span class="line">Name Value Description</span><br><span class="line">‐‐‐‐ ‐‐‐‐‐ ‐‐‐‐‐‐‐‐‐‐‐</span><br><span class="line">DOMAIN X Optional: Required internal domain</span><br><span class="line">EXPIRE_PAYLOAD X Optional: Payloads expire after &quot;Y&quot; days</span><br><span class="line">HOSTNAME X Optional: Required system hostname</span><br><span class="line">INJECT_METHOD Virtual Virtual or Heap</span><br><span class="line">LHOST IP of the Metasploit handler</span><br><span class="line">LPORT 4444 Port of the Metasploit handler</span><br><span class="line">PROCESSORS X Optional: Minimum number of processors</span><br><span class="line">SLEEP X Optional: Sleep &quot;Y&quot; seconds, check if accelerated</span><br><span class="line">TIMEZONE X Optional: Check to validate not in UTC</span><br><span class="line">USERNAME X Optional: The required user account</span><br><span class="line"></span><br><span class="line">Available Commands: </span><br><span class="line"></span><br><span class="line">back Go back</span><br><span class="line">exit Completely exit GreatSCT</span><br><span class="line">generate Generate the payload</span><br><span class="line">options Show the shellcode&apos;s options</span><br><span class="line">set Set shellcode option </span><br><span class="line"></span><br><span class="line">[msbuild/meterpreter/rev_tcp&gt;&gt;] set LHOST 192.168.1.4 41</span><br><span class="line"></span><br><span class="line">[msbuild/meterpreter/rev_tcp&gt;&gt;] set LPORT 53</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-BloodHound"><span class="toc-text">0x01 BloodHound</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Pupy"><span class="toc-text">0x02 Pupy</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-GreatSCT"><span class="toc-text">0x03 GreatSCT</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/02/24/探测内网存活主机/" rel="next" title="探测内网存活主机">
+          探测内网存活主机
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/02/24/基于MSF的内网存活主机探测/" rel="prev" title="基于MSF的内网存活主机探测">
+            基于MSF的内网存活主机探测
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

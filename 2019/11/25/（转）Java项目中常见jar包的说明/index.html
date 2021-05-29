@@ -1,0 +1,802 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Java,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>（转）Java项目中常见jar包的说明 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        （转）Java项目中常见jar包的说明
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2019-11-25T15:33:03.000Z">
+        2019-11-25
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <p>转自：<a href="https://blog.csdn.net/superdog007/article/details/50697831" target="_blank" rel="noopener">https://blog.csdn.net/superdog007/article/details/50697831</a></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Jar包</th>
+<th style="text-align:left">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">axis.jar</td>
+<td style="text-align:left">SOAP引擎包</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-discovery-0.2.jar</td>
+<td style="text-align:left">用来发现、查找和实现可插入式接口，提供一些一般类实例化、单件的生命周期管理的常用方法.</td>
+</tr>
+<tr>
+<td style="text-align:left">jaxrpc.jar</td>
+<td style="text-align:left">Axis运行所需要的组件包</td>
+</tr>
+<tr>
+<td style="text-align:left">saaj.jar</td>
+<td style="text-align:left">创建到端点的点到点连接的方法、创建并处理SOAP消息和附件的方法，以及接收和处理SOAP错误的方法.</td>
+</tr>
+<tr>
+<td style="text-align:left">wsdl4j-1.5.1.jar</td>
+<td style="text-align:left">Axis运行所需要的组件包</td>
+</tr>
+<tr>
+<td style="text-align:left">activation.jar</td>
+<td style="text-align:left">JAF框架的jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">annotations-api.jar</td>
+<td style="text-align:left">使用注解所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">ant.jar</td>
+<td style="text-align:left">用于自动化调用程序完成项目的编译，打包，测试等</td>
+</tr>
+<tr>
+<td style="text-align:left">aopalliance-1.0.jar</td>
+<td style="text-align:left">支持Spring</td>
+</tr>
+<tr>
+<td style="text-align:left">asm-2.2.3.jar</td>
+<td style="text-align:left">ASM字节码库</td>
+</tr>
+<tr>
+<td style="text-align:left">asm-commons-2.2.3.jar</td>
+<td style="text-align:left">ASM字节码库</td>
+</tr>
+<tr>
+<td style="text-align:left">asm-util-2.2.3.jar</td>
+<td style="text-align:left">Java字节码操纵和分析框架</td>
+</tr>
+<tr>
+<td style="text-align:left">aspectjrt.jar</td>
+<td style="text-align:left">处理事务和AOP所需的包</td>
+</tr>
+<tr>
+<td style="text-align:left">aspectjweaver.jar</td>
+<td style="text-align:left">处理事务和AOP所需的包</td>
+</tr>
+<tr>
+<td style="text-align:left">axiom-api-1.2.7.jar</td>
+<td style="text-align:left">Axis</td>
+</tr>
+<tr>
+<td style="text-align:left">axiom-impl-1.2.7.jar</td>
+<td style="text-align:left">Axis</td>
+</tr>
+<tr>
+<td style="text-align:left">bcprov-jdk15-140.jar</td>
+<td style="text-align:left">基于java1.5</td>
+</tr>
+<tr>
+<td style="text-align:left">bfmclientmodel.jar</td>
+<td style="text-align:left">使用WebSphere所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">bpcclientcore.jar</td>
+<td style="text-align:left">使用WebSphere所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">bpe137650.jar</td>
+<td style="text-align:left">提供远程访问BPE容器的实现。</td>
+</tr>
+<tr>
+<td style="text-align:left">bsh-2.0b4.jar</td>
+<td style="text-align:left">解决负载逻辑运算</td>
+</tr>
+<tr>
+<td style="text-align:left">c3p0-0.9.0.jar</td>
+<td style="text-align:left">开放源代码的JDBC连接池</td>
+</tr>
+<tr>
+<td style="text-align:left">cglib-nodep-2.1_3.jar</td>
+<td style="text-align:left">Spring中自动代理所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">cobertura.jar</td>
+<td style="text-align:left">测量测试覆盖率</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-beanutils-1.7.0.jar</td>
+<td style="text-align:left">动态的获取/设值Java</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-chain-1.1.jar</td>
+<td style="text-align:left">实现责任链设计模式的Java</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-codec-1.3.jar</td>
+<td style="text-align:left">用来处理常用的编码方法的工具类包，例如DES、SHA1、MD5、Base64等等</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-collections-3.1.jar</td>
+<td style="text-align:left">对标准java</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-collections.jar</td>
+<td style="text-align:left">对标准java</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-digester-1.8.jar</td>
+<td style="text-align:left">用于处理struts-config.xml配置文件</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-fileupload-1.1.1.jar</td>
+<td style="text-align:left">struts上传文件</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-httpclient-3.1.jar</td>
+<td style="text-align:left">用来简化HTTP客户端与服务器端进行各种通信编程实现</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-io-1.1.jar</td>
+<td style="text-align:left">针对java.io.InputStream和Reader进行了扩展</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-lang-2.4.jar</td>
+<td style="text-align:left">对java.lang.*的扩展</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-logging-1.1.1.jar</td>
+<td style="text-align:left">日志包</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-pool-1.3.jar</td>
+<td style="text-align:left">实现对象池化框架</td>
+</tr>
+<tr>
+<td style="text-align:left">commons-validator-1.3.1.jar</td>
+<td style="text-align:left">用来把验证规则程序提取出来，以供重复使用</td>
+</tr>
+<tr>
+<td style="text-align:left">db2jcc.jar</td>
+<td style="text-align:left">java连接DB2所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">db2jcc_license_cu.jar</td>
+<td style="text-align:left">java连接DB2所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">dom4j-1.6.1.jar</td>
+<td style="text-align:left">解析XML</td>
+</tr>
+<tr>
+<td style="text-align:left">ehcache-1.2.4.jar</td>
+<td style="text-align:left">hibernate的二级缓存如果用ehcache的时候需要此jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">emf.jar</td>
+<td style="text-align:left">基于Eclipse的模型框架</td>
+</tr>
+<tr>
+<td style="text-align:left">ezmorph-1.0.6.jar</td>
+<td style="text-align:left">使用JSON所需的jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">FastInfoset-1.2.2.jar</td>
+<td style="text-align:left">使用WebService所需的jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">freemarker-2.3.8.jar</td>
+<td style="text-align:left">Strus2支持的一种表现层框架</td>
+</tr>
+<tr>
+<td style="text-align:left">geronimo-activation_1.1_spec-1.0.2.jar</td>
+<td style="text-align:left">Apache</td>
+</tr>
+<tr>
+<td style="text-align:left">geronimo-annotation_1.0_spec-1.1.1.jar</td>
+<td style="text-align:left">Apache</td>
+</tr>
+<tr>
+<td style="text-align:left">geronimo-javamail_1.4_spec-1.3.jar</td>
+<td style="text-align:left">Apache</td>
+</tr>
+<tr>
+<td style="text-align:left">geronimo-jaxws_2.1_spec-1.0.jar</td>
+<td style="text-align:left">Apache</td>
+</tr>
+<tr>
+<td style="text-align:left">geronimo-jms_1.1_spec-1.1.1.jar</td>
+<td style="text-align:left">Apache</td>
+</tr>
+<tr>
+<td style="text-align:left">geronimo-servlet_2.5_spec-1.2.jar</td>
+<td style="text-align:left">Apache</td>
+</tr>
+<tr>
+<td style="text-align:left">geronimo-stax-api_1.0_spec-1.0.1.jar</td>
+<td style="text-align:left">Apache</td>
+</tr>
+<tr>
+<td style="text-align:left">hibernate3.jar</td>
+<td style="text-align:left">Hibernate3的核心jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">htmclientmodel.jar</td>
+<td style="text-align:left">使用WebSphere所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">jakarta-oro.jar</td>
+<td style="text-align:left">一套文本处理工具，提供per15.0兼容的表达式，AWK-like表达式，Glob表达式。</td>
+</tr>
+<tr>
+<td style="text-align:left">javassist.jar</td>
+<td style="text-align:left">Javassist</td>
+</tr>
+<tr>
+<td style="text-align:left">jaxb-api-2.1.jar</td>
+<td style="text-align:left">使用WebService所需的jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">jaxb-impl-2.1.7.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">jaxb-xjc-2.1.7.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">jaxen-1.1.1.jar</td>
+<td style="text-align:left">解析XML</td>
+</tr>
+<tr>
+<td style="text-align:left">jcifs-1.2.22.jar</td>
+<td style="text-align:left">实现单点登陆</td>
+</tr>
+<tr>
+<td style="text-align:left">jdom2-1.0.jar</td>
+<td style="text-align:left">解析XML</td>
+</tr>
+<tr>
+<td style="text-align:left">jdom-1.0.jar</td>
+<td style="text-align:left">解析XML</td>
+</tr>
+<tr>
+<td style="text-align:left">jettison-1.0.1.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">jetty-6.1.9.jar</td>
+<td style="text-align:left">Jetty</td>
+</tr>
+<tr>
+<td style="text-align:left">jetty-util-6.1.9.jar</td>
+<td style="text-align:left">Jetty</td>
+</tr>
+<tr>
+<td style="text-align:left">jra-1.0-alpha-4.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">js-1.6R7.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">json-lib-2.2.3-jdk13.jar</td>
+<td style="text-align:left">使用JSON所需的jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">jsonplugin-0.25.jar</td>
+<td style="text-align:left">strus2的JSON插件</td>
+</tr>
+<tr>
+<td style="text-align:left">jsr311-api-0.8.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">jstl.jar</td>
+<td style="text-align:left">JSTL标签库</td>
+</tr>
+<tr>
+<td style="text-align:left">jta.jar</td>
+<td style="text-align:left">标准的</td>
+</tr>
+<tr>
+<td style="text-align:left">junit.jar</td>
+<td style="text-align:left">用于单元测试</td>
+</tr>
+<tr>
+<td style="text-align:left">jxl.jar</td>
+<td style="text-align:left">通过java操作excel表格的工具类库</td>
+</tr>
+<tr>
+<td style="text-align:left">ldap.jar</td>
+<td style="text-align:left">JNDI目录服务和LDAO服务器所需的jar</td>
+</tr>
+<tr>
+<td style="text-align:left">ldapbp.jar</td>
+<td style="text-align:left">JNDI目录服务和LDAO服务器所需的jar</td>
+</tr>
+<tr>
+<td style="text-align:left">log4j-1.2.15.jar</td>
+<td style="text-align:left">提供日志功能</td>
+</tr>
+<tr>
+<td style="text-align:left">mail.jar</td>
+<td style="text-align:left">java发送邮件jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">neethi-2.0.4.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">odmg-3.0.jar</td>
+<td style="text-align:left">ODMG是一个ORM的规范，Hibernate实现了ODMG规范，这是一个核心的库</td>
+</tr>
+<tr>
+<td style="text-align:left">gnl-2.6.11.jar</td>
+<td style="text-align:left">struts2中OGNL语言</td>
+</tr>
+<tr>
+<td style="text-align:left">ojdbc14.jar</td>
+<td style="text-align:left">Oracle数据库驱动包</td>
+</tr>
+<tr>
+<td style="text-align:left">opensaml-1.1.jar</td>
+<td style="text-align:left">使用CXF所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">oro-2.0.8.jar</td>
+<td style="text-align:left">Validator框架所需的jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">oscache-2.1.jar</td>
+<td style="text-align:left">Java</td>
+</tr>
+<tr>
+<td style="text-align:left">poi-3.1-FINAL-20080629.jar</td>
+<td style="text-align:left">操作exce所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">poi-contrib-3.1-FINAL-20080629.jar</td>
+<td style="text-align:left">操作exce所需jar包</td>
+</tr>
+<tr>
+<td style="text-align:left">poi-ooxml-3.6-20091214.jar</td>
+<td style="text-align:left">提供对office的word、excel、visio及ppt的操作</td>
+</tr>
+<tr>
+<td style="text-align:left">poi-ooxml-schemas-3.6-20091214.jar</td>
+<td style="text-align:left">提供对office的word、excel、visio及ppt的操作</td>
+</tr>
+<tr>
+<td style="text-align:left">poi-scratchpad-3.1-FINAL-20080629.jar</td>
+<td style="text-align:left">提供对office的word、excel、visio及ppt的操作</td>
+</tr>
+<tr>
+<td style="text-align:left">processCommon.jar</td>
+<td style="text-align:left">IBM</td>
+</tr>
+<tr>
+<td style="text-align:left">ProcessCommonLibrary.jar</td>
+<td style="text-align:left">IBM</td>
+</tr>
+<tr>
+<td style="text-align:left">processIdentity.jar</td>
+<td style="text-align:left">IBM</td>
+</tr>
+<tr>
+<td style="text-align:left">ProcessInformation.jar</td>
+<td style="text-align:left">进程监视软件包</td>
+</tr>
+<tr>
+<td style="text-align:left">proxool-0.9.1.jar</td>
+<td style="text-align:left">数据库连接池</td>
+</tr>
+<tr>
+<td style="text-align:left">proxool-cglib.jar</td>
+<td style="text-align:left">数据库连接池</td>
+</tr>
+<tr>
+<td style="text-align:left">quartz-1.6.0.jar</td>
+<td style="text-align:left">开源作业调度框架</td>
+</tr>
+<tr>
+<td style="text-align:left">saaj-api-1.3.jar</td>
+<td style="text-align:left">使用axis所需的jar</td>
+</tr>
+<tr>
+<td style="text-align:left">saaj-impl-1.3.2.jar</td>
+<td style="text-align:left">使用axis所需的jar</td>
+</tr>
+<tr>
+<td style="text-align:left">serializer-2.7.1.jar</td>
+<td style="text-align:left">XML序列化</td>
+</tr>
+<tr>
+<td style="text-align:left">slf4j-jdk14-1.5.6.jar</td>
+<td style="text-align:left">整合各种日志框架的工具</td>
+</tr>
+<tr>
+<td style="text-align:left">spring208.jar</td>
+<td style="text-align:left">spring核心框架</td>
+</tr>
+<tr>
+<td style="text-align:left">spring-ldap-1.2-RC1.jar</td>
+<td style="text-align:left">spring下LDAP</td>
+</tr>
+<tr>
+<td style="text-align:left">spring-mock.jar</td>
+<td style="text-align:left">spring的测试框架</td>
+</tr>
+<tr>
+<td style="text-align:left">standard.jar</td>
+<td style="text-align:left">使用JSTL标签库所需的jar</td>
+</tr>
+<tr>
+<td style="text-align:left">stax-api-1.0.1.jar</td>
+<td style="text-align:left">解析XML</td>
+</tr>
+<tr>
+<td style="text-align:left">struts2-core-2.0.14.jar</td>
+<td style="text-align:left">struts2核心jar</td>
+</tr>
+<tr>
+<td style="text-align:left">struts2-spring-plugin-2.0.6.jar</td>
+<td style="text-align:left">struts2整合Spring所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">taglibs-datetime.jar</td>
+<td style="text-align:left">Apache开源组织提供标签库，用于格式化日期。</td>
+</tr>
+<tr>
+<td style="text-align:left">taglibs-mailer.jar</td>
+<td style="text-align:left">用于发送邮件</td>
+</tr>
+<tr>
+<td style="text-align:left">taglibs-string.jar</td>
+<td style="text-align:left">Apache开源组织提供标签库，用于对String的操作。</td>
+</tr>
+<tr>
+<td style="text-align:left">task137650.jar</td>
+<td style="text-align:left">Portal技术在SOA系统集成应用中实现所需的jar</td>
+</tr>
+<tr>
+<td style="text-align:left">utility.jar</td>
+<td style="text-align:left">Apache开源组织提供标签库</td>
+</tr>
+<tr>
+<td style="text-align:left">velocity-1.5.jar</td>
+<td style="text-align:left">一个免费的开源模板框架</td>
+</tr>
+<tr>
+<td style="text-align:left">wsdl4j-1.6.2.jar</td>
+<td style="text-align:left">用来解析服务的WSDl文件</td>
+</tr>
+<tr>
+<td style="text-align:left">wss4j-1.5.4.jar</td>
+<td style="text-align:left">创建CXF所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">wss4j-1.5.4.jar</td>
+<td style="text-align:left">创建CXF所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">wstx-asl-3.2.6.jar</td>
+<td style="text-align:left">创建CXF所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">xbean-spring-2.8.jar</td>
+<td style="text-align:left">使用xfire所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">xerces-2.6.2.jar</td>
+<td style="text-align:left">XML解析器</td>
+</tr>
+<tr>
+<td style="text-align:left">xfire-all-1.2.6.jar</td>
+<td style="text-align:left">用于实现WebService</td>
+</tr>
+<tr>
+<td style="text-align:left">XmlSchema-1.1.jar</td>
+<td style="text-align:left">使用xfire所需jar</td>
+</tr>
+<tr>
+<td style="text-align:left">xwork-2.0.7.jar</td>
+<td style="text-align:left">WebWork核心jar</td>
+</tr>
+</tbody>
+</table>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2019/11/25/（转）Java代码审计指南/" rel="next" title="（转）Java代码审计指南">
+          （转）Java代码审计指南
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2019/11/29/Java-SnakeYaml反序列化漏洞/" rel="prev" title="Java SnakeYaml反序列化漏洞">
+            Java SnakeYaml反序列化漏洞
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

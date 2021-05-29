@@ -1,0 +1,412 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Java,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Java代码反反编译对抗思路 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Java代码反反编译对抗思路
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-05-01T04:04:30.000Z">
+        2020-05-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-几种反反编译的方法"><a href="#0x01-几种反反编译的方法" class="headerlink" title="0x01 几种反反编译的方法"></a>0x01 几种反反编译的方法</h2><p>Java代码是可以反编译的，但是很多时候一些Java开发者并不想让其他人知道自己的代码是怎么写的，就会对Java代码进行加密或混淆等操作，一般来说有三个思路：</p>
+<ol>
+<li>将class文件加密，这个是最安全的，但也费事儿，因为要重写classloader来解密class文件；</li>
+<li>使用花指令，使得class文件不能反编译（利用反编译工具漏洞)；安全性一般，还是有花指令破解器；</li>
+<li>代码混淆，提高代码阅读成本；简单易操作，一般采用这种或者与其它方式结合；</li>
+</ol>
+<p>当然，这几种方法都是可以被破解的，只是不同方法的破解成本不一样而已。</p>
+<h2 id="0x02-准备jar包"><a href="#0x02-准备jar包" class="headerlink" title="0x02 准备jar包"></a>0x02 准备jar包</h2><p>新建一个ClassEncode项目，再新建两个类如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String a = <span class="string">"This is Test Class .."</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        System.out.println(a);</span><br><span class="line">        <span class="keyword">new</span> Test2();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">package</span> com.mi1k7ea;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test2</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">Test2</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"This is Test2 Class .."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>接着将该项目打包成jar包。</p>
+<h3 id="IDEA打包jar"><a href="#IDEA打包jar" class="headerlink" title="IDEA打包jar"></a>IDEA打包jar</h3><p>在项目上鼠标右键 –&gt; Open Module Settings：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/1.png" alt=""></p>
+<p>Artifacts –&gt; + –&gt; JAR –&gt; From modules with dependencies：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/2.png" alt=""></p>
+<p>接着是设置Create JAR from Modules：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/3.png" alt=""></p>
+<p>Main Class是这个项目(脚本)的主方法，就是要运行的类，选Test类。</p>
+<p>关于JAR files from libraries的两个选项:</p>
+<ul>
+<li><p>选中第一个的话，打完包后是一个Jar包；</p>
+</li>
+<li><p>选中第二个的话，打完包后是一个Jar包，外带你项目所用的Jar包；</p>
+</li>
+</ul>
+<p>接下来是MF文件的存放目录。注意，<strong>不能使用默认目录，必须自定义目录，不然会运行错误，也不能使用src/main/resources这个目录</strong>。这里设置的是项目根目录下的src目录下来新建resource目录。</p>
+<p>设置完之后，此时应该也必须有META-INF此文件，不然会运行错误。若JAR files from libraries选择src/main/resources目录，是没有META-INF文件的。Output directory是jar包的保存目录：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/4.png" alt=""></p>
+<p>点击Build：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/5.png" alt=""></p>
+<p>然后在out目录中看到生成了Jar包：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/6.png" alt=""></p>
+<p>这时的运行jar包就能执行了：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/7.png" alt=""></p>
+<p>ok，我们就拿这个包作为Demo进行反编译操作。</p>
+<h3 id="手动打包jar"><a href="#手动打包jar" class="headerlink" title="手动打包jar"></a>手动打包jar</h3><p>当然，也可以手动打包jar文件。</p>
+<p>目录结构如下：</p>
+<ul>
+<li><p>com</p>
+<ul>
+<li><p>mi1k7ea</p>
+<p>​    Test.class</p>
+<p>​    Test2.class</p>
+</li>
+</ul>
+</li>
+<li><p>META-INF</p>
+<p>​    MANIFEST.MF</p>
+</li>
+</ul>
+<p>其中MANIFEST.MF中的Main-Class要指定主要的执行类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Manifest-Version: 1.0</span><br><span class="line">Main-Class: com.mi1k7ea.Test</span><br></pre></td></tr></table></figure>
+<p>注意：最后必须要回车空行出来。</p>
+<p>最后在当前目录运行一下命令打包成jar并执行即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">jar cvfm test.jar META-INF\MANIFEST.MF .</span><br><span class="line">java -jar test.jar</span><br></pre></td></tr></table></figure>
+<h2 id="0x03-加密Jar包和class文件"><a href="#0x03-加密Jar包和class文件" class="headerlink" title="0x03 加密Jar包和class文件"></a>0x03 加密Jar包和class文件</h2><h3 id="利用JVMTI实现反反编译"><a href="#利用JVMTI实现反反编译" class="headerlink" title="利用JVMTI实现反反编译"></a>利用JVMTI实现反反编译</h3><p>JVMTI（JVM Tool Interface）是Java虚拟机所提供的native编程接口，可以探查JVM内部状态，并控制JVM应用程序的执行。可实现的功能包括但不限于：调试、监控、线程分析、覆盖率分析工具等。</p>
+<p>JVMTI能够监听class加载事件，因此我们可以使用一套加密算法，对即将发布的Jar包进行字节码加密，然后在JVM加载这些类之前再解密。由于这部分代码最终会以动态库（.dll、.so文件）的形式发布出去，不容易被破解，因此对源代码可以达到较好的保护效果。</p>
+<p>这里用到一个工具：<a href="https://github.com/AloneMonkey/JarEncrypt" target="_blank" rel="noopener">https://github.com/AloneMonkey/JarEncrypt</a></p>
+<p>解压之后得到如下的目录结构及文件：</p>
+<ul>
+<li>JarEncrypt/encrypt：加密库<ul>
+<li>encrypt.cpp</li>
+<li>Makefile</li>
+<li>Encrypt.java（Java加密执行文件）</li>
+</ul>
+</li>
+<li>JarEncrypt/decrypt：解密库<ul>
+<li>decrypt.cpp</li>
+<li>Makefile</li>
+</ul>
+</li>
+</ul>
+<p>打开Encrypt.java文件，修改需要进行加密的类为以”com.mi1k7ea”开头的包下的所有类：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/8.png" alt=""></p>
+<p>然后打开decrypt子目录下的decrypt.cpp文件，修改需要进行解密的类为以”com.mi1k7ea”开头的包下的所有类：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/9.png" alt=""></p>
+<p>接着，进入encrypt目录，执行make，编译生成libencrypt.so：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/10.png" alt=""></p>
+<p>注意，在Linux可能会报找不到jni.h和jni_md.h文件的错误，这里需要通过<code>locate jni.h</code>和<code>locate jni_md.h</code>命令来找到这两个文件所在的路径，然后在Makefile中第一个INCLUDEDIR项中添加进去即可：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/11.png" alt=""></p>
+<p>libdecrypt.so的编译同上：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/12.png" alt=""></p>
+<p>接着，通过<code>javac Encrypt.java</code>命令将该java文件转换为class文件：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/13.png" alt=""></p>
+<p>通过如下命令加密jar包：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.library.path=. -cp . Encrypt -src ClassEncode.jar</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/01/Java代码反反编译思路/14.png" alt=""></p>
+<p>此时用反编译工具是没办法成功反编译的：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/15.png" alt=""></p>
+<p>此时运行肯定是会失败的：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/16.png" alt=""></p>
+<p>使用刚刚的编译生成的解密库来执行就ok了：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> LD_LIBRARY_PATH=<span class="variable">$&#123;LD_LIBRARY_PATH&#125;</span>:/root/jvmti/decrypt</span><br><span class="line">java -agentlib:decrypt -jar ClassEncode_encrypt.jar</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/01/Java代码反反编译思路/17.png" alt=""></p>
+<p>至此，已经通过加密Jar包和class文件实现了反反编译。在发布时候，需要把ClassEncode_encrypt.jar和libdecrypt.so发布出去，执行时候引入libdecrypt即可。</p>
+<h3 id="通过Java-Agent绕过反反编译"><a href="#通过Java-Agent绕过反反编译" class="headerlink" title="通过Java-Agent绕过反反编译"></a>通过Java-Agent绕过反反编译</h3><p>这部分在JavaAgent中会具体说明。</p>
+<p>MainAgent.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.dumpclass;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.lang.instrument.Instrumentation;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MainAgent</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">premain</span><span class="params">(String args, Instrumentation instrumentation)</span> </span>&#123;</span><br><span class="line">        instrumentation.addTransformer(<span class="keyword">new</span> DumpClassTransformer());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>DumpClassTransformer.java：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.dumpclass;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.File;</span><br><span class="line"><span class="keyword">import</span> java.io.FileOutputStream;</span><br><span class="line"><span class="keyword">import</span> java.lang.instrument.ClassFileTransformer;</span><br><span class="line"><span class="keyword">import</span> java.lang.instrument.IllegalClassFormatException;</span><br><span class="line"><span class="keyword">import</span> java.security.ProtectionDomain;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DumpClassTransformer</span> <span class="keyword">implements</span> <span class="title">ClassFileTransformer</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String DUMP_PACKAGE = System.getProperty(<span class="string">"dump_package"</span>);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String OUT_FOLDER = System.getProperty(<span class="string">"dump_out_folder"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">byte</span>[] transform(ClassLoader loader, String className, Class&lt;?&gt; classBeingRedefined, ProtectionDomain protectionDomain, <span class="keyword">byte</span>[] classfileBuffer) <span class="keyword">throws</span> IllegalClassFormatException &#123;</span><br><span class="line">        <span class="keyword">if</span> (className == <span class="keyword">null</span> || className.isEmpty()) &#123;</span><br><span class="line">            <span class="keyword">return</span> classfileBuffer;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (classfileBuffer == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> classfileBuffer;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        String tmpClassName = className.replace(<span class="string">"/"</span>, <span class="string">"."</span>);</span><br><span class="line">        <span class="keyword">if</span> (tmpClassName.startsWith(DUMP_PACKAGE)) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                writeClass(className, classfileBuffer);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> classfileBuffer;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">writeClass</span><span class="params">(String className, <span class="keyword">byte</span>[] classfileBuffer)</span> </span>&#123;</span><br><span class="line">        File file = <span class="keyword">null</span>;</span><br><span class="line">        FileOutputStream fileOutputStream = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            String folder = OUT_FOLDER;</span><br><span class="line">            <span class="keyword">if</span> (!folder.endsWith(File.separator)) &#123;</span><br><span class="line">                folder = folder + File.separator;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            String classPath = className.substring(<span class="number">0</span>, className.lastIndexOf(<span class="string">"/"</span>));</span><br><span class="line">            className = className.substring(className.lastIndexOf(<span class="string">"/"</span>) + <span class="number">1</span>, className.length());</span><br><span class="line"></span><br><span class="line">            String path = OUT_FOLDER + File.separator + classPath;</span><br><span class="line">            file = <span class="keyword">new</span> File(path);</span><br><span class="line">            <span class="keyword">if</span> (!file.exists()) &#123;</span><br><span class="line">                file.mkdirs();</span><br><span class="line">            &#125;</span><br><span class="line">            file = <span class="keyword">new</span> File(path + File.separator + className + <span class="string">".class"</span>);</span><br><span class="line"></span><br><span class="line">            fileOutputStream = <span class="keyword">new</span> FileOutputStream(file);</span><br><span class="line">            fileOutputStream.write(classfileBuffer);</span><br><span class="line"></span><br><span class="line">            fileOutputStream.flush();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (fileOutputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    fileOutputStream.close();</span><br><span class="line">                    fileOutputStream = <span class="keyword">null</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MANIFEST.MF：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Manifest-Version: 1.0</span><br><span class="line">Can-Redefine-Classes: true</span><br><span class="line">Can-Retransform-Classes: true</span><br><span class="line">Premain-Class: com.dumpclass.MainAgent</span><br></pre></td></tr></table></figure>
+<p>打包成ClassEncode_encrypt.jar。</p>
+<p>通过以下命令，指定JavaAgent的jar包，然后在目标jar包主执行类方法执行之前先执行DumpClass.jar中的premain()方法，从而从内存将加密的目标jar类的字节码Dump下来：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Ddump_package=com.mi1k7ea -Ddump_out_folder=/tmp -agentlib:decrypt -javaagent:DumpClass.jar -jar ClassEncode_encrypt.jar</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/05/01/Java代码反反编译思路/18.png" alt=""></p>
+<p>下载下来，此时就能从成功反编译</p>
+<p>获取到加密class文件的内容了：</p>
+<p><img src="/2020/05/01/Java代码反反编译思路/19.png" alt=""></p>
+<h2 id="0x04-Java代码混淆"><a href="#0x04-Java代码混淆" class="headerlink" title="0x04 Java代码混淆"></a>0x04 Java代码混淆</h2><p>参考：<a href="https://www.cnblogs.com/nevermorewang/p/8041548.html" target="_blank" rel="noopener">https://www.cnblogs.com/nevermorewang/p/8041548.html</a></p>
+<p>这种反反编译方法的没啥破解方法，就是代码比较难读而已，花点时间精力就可以搞定。</p>
+<h2 id="0x05-使用花指令"><a href="#0x05-使用花指令" class="headerlink" title="0x05 使用花指令"></a>0x05 使用花指令</h2><p>这部分还未研究，有待补充。。。</p>
+<h2 id="0x06-参考"><a href="#0x06-参考" class="headerlink" title="0x06 参考"></a>0x06 参考</h2><p><a href="http://www.alonemonkey.com/2016/05/25/encrypt-jar-class/" target="_blank" rel="noopener">jar包加密保护解决方案</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-几种反反编译的方法"><span class="toc-text">0x01 几种反反编译的方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-准备jar包"><span class="toc-text">0x02 准备jar包</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#IDEA打包jar"><span class="toc-text">IDEA打包jar</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#手动打包jar"><span class="toc-text">手动打包jar</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-加密Jar包和class文件"><span class="toc-text">0x03 加密Jar包和class文件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#利用JVMTI实现反反编译"><span class="toc-text">利用JVMTI实现反反编译</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#通过Java-Agent绕过反反编译"><span class="toc-text">通过Java-Agent绕过反反编译</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-Java代码混淆"><span class="toc-text">0x04 Java代码混淆</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-使用花指令"><span class="toc-text">0x05 使用花指令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-参考"><span class="toc-text">0x06 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/04/26/浅析EL表达式注入漏洞/" rel="next" title="（先知首发）浅析EL表达式注入漏洞">
+          （先知首发）浅析EL表达式注入漏洞
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/05/03/浅谈JVMTI/" rel="prev" title="浅谈JVMTI">
+            浅谈JVMTI
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

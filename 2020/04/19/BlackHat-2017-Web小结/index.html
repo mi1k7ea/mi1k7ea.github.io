@@ -1,0 +1,506 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,BlackHat,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>BlackHat 2017 Web小结 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        BlackHat 2017 Web小结
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-04-19T06:43:43.000Z">
+        2020-04-19
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/BlackHat/">BlackHat</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>最近整理下BlackHat 2017 Web相关议题，做下学习笔记。</p>
+<h2 id="0x01-WEB-CACHE-DECEPTION-ATTACK（Web缓存欺骗攻击）"><a href="#0x01-WEB-CACHE-DECEPTION-ATTACK（Web缓存欺骗攻击）" class="headerlink" title="0x01 WEB CACHE DECEPTION ATTACK（Web缓存欺骗攻击）"></a>0x01 WEB CACHE DECEPTION ATTACK（Web缓存欺骗攻击）</h2><p>PDF：<a href="https://www.blackhat.com/docs/us-17/wednesday/us-17-Gil-Web-Cache-Deception-Attack.pdf" target="_blank" rel="noopener">https://www.blackhat.com/docs/us-17/wednesday/us-17-Gil-Web-Cache-Deception-Attack.pdf</a></p>
+<p>相关参考：<a href="https://www.freebuf.com/articles/web/187538.html" target="_blank" rel="noopener">一种新型的Web缓存欺骗攻击技术</a></p>
+<h3 id="攻击原理"><a href="#攻击原理" class="headerlink" title="攻击原理"></a>攻击原理</h3><blockquote>
+<p>先简单介绍一下WEB缓存技术，它主要是缓存一些静态的，公开的文件，如CSS文件，JS文件，图片等。缓存分两类，一类是本地缓存，通过在浏览器上缓存实现，缓存之后通过F5刷新是不会重新获取已缓存文件的，通过Ctrl +F5强制刷新才会重新获取。另一类是在服务端实现，也就是在CDN、负载均衡、反向代理（后面统称缓存服务器）上实现，这次介绍的攻击技术就是针对这一种缓存。服务端的缓存原理是：客户端请求一个静态文件，如果缓存服务器没有缓存过这个文件，就会像WEB服务器请求，获取到静态文件返回给客户端，同时将这个文件缓存下来，下次再遇到同样的请求时就直接返回，直到这个缓存文件过期。</p>
+<p>接下来讲一下WEB服务器解析的问题。假设客户端请求<a href="http://www.example.com/home.php/nonexistent.css" target="_blank" rel="noopener">http://www.example.com/home.php/nonexistent.css</a> 这个URL，其中home.php是真实存在的，而nonexistent.css不存在，那WEB服务器会怎么处理呢？针对这种情况的处理跟WEB服务器用的技术以及配置相关，有的会返回404 not found，有的会返回200 OK，然后把home.php返回回来。如果服务器返回200 OK就要注意了，这时缓存服务器拿到的请求是<a href="http://www.example.com/home.php/nonexistent.css，是一个静态页面，而WEB服务器返回给缓存服务器的结果是http://www.example.com/home.php，不是一个静态页面，但是缓存服务器并不知道。" target="_blank" rel="noopener">http://www.example.com/home.php/nonexistent.css，是一个静态页面，而WEB服务器返回给缓存服务器的结果是http://www.example.com/home.php，不是一个静态页面，但是缓存服务器并不知道。</a></p>
+</blockquote>
+<p>攻击原理如图：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/1.png" alt=""></p>
+<ol>
+<li>攻击者引诱已登录的用户（受害者）访问<a href="https://www.bank.com/account.do/logo.png" target="_blank" rel="noopener">https://www.bank.com/account.do/logo.png</a></li>
+<li>受害者请求<a href="https://www.bank.com/account.do/logo.png" target="_blank" rel="noopener">https://www.bank.com/account.do/logo.png</a></li>
+<li>缓存服务器接收到请求，没查到这个页面，于是向WEB服务器请求</li>
+<li>WEB服务器返回<a href="https://www.bank.com/account.do，状态码是200" target="_blank" rel="noopener">https://www.bank.com/account.do，状态码是200</a> OK</li>
+<li>缓存服务器收到结果，由于状态码是200 OK，会认为URL保持不变，然后由于这个URL以.png结尾，认为它是一个静态文件，于是会缓存这个文件</li>
+<li>受害者得到正常结果</li>
+<li>攻击者访问<a href="https://www.bank.com/account.do/logo.png，请求到达缓存服务器，缓存服务器直接返回受害者的缓存账户页面给攻击者，攻击完成。" target="_blank" rel="noopener">https://www.bank.com/account.do/logo.png，请求到达缓存服务器，缓存服务器直接返回受害者的缓存账户页面给攻击者，攻击完成。</a></li>
+</ol>
+<p>防御方法：</p>
+<ol>
+<li>配置缓存服务器根据http header来判断是否缓存页面；</li>
+<li>将所有静态文件放在指定的目录，只缓存这个目录里的文件；</li>
+<li>配置WEB服务器在解析类似<a href="http://www.example.com/home.php/nonexistent.css" target="_blank" rel="noopener">http://www.example.com/home.php/nonexistent.css</a> 这种页面时返回404或者302。</li>
+</ol>
+<p>更多的看参考文章即可。</p>
+<h2 id="0x02-CRACKING-THE-LENS-TARGETING-HTTP’S-HIDDEN-ATTACK-SURFACE（HTTP的隐藏攻击面）"><a href="#0x02-CRACKING-THE-LENS-TARGETING-HTTP’S-HIDDEN-ATTACK-SURFACE（HTTP的隐藏攻击面）" class="headerlink" title="0x02 CRACKING THE LENS: TARGETING HTTP’S HIDDEN ATTACK-SURFACE（HTTP的隐藏攻击面）"></a>0x02 CRACKING THE LENS: TARGETING HTTP’S HIDDEN ATTACK-SURFACE（HTTP的隐藏攻击面）</h2><p>PDF：<a href="https://www.blackhat.com/docs/us-17/wednesday/us-17-Kettle-Cracking-The-Lens-Exploiting-HTTPs-Hidden-Attack-Surface.pdf" target="_blank" rel="noopener">https://www.blackhat.com/docs/us-17/wednesday/us-17-Kettle-Cracking-The-Lens-Exploiting-HTTPs-Hidden-Attack-Surface.pdf</a></p>
+<p>PortSwigger博客参考：<a href="https://portswigger.net/research/cracking-the-lens-targeting-https-hidden-attack-surface" target="_blank" rel="noopener">https://portswigger.net/research/cracking-the-lens-targeting-https-hidden-attack-surface</a></p>
+<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>访问Web站点通常会经过许多隐藏的服务系统（包括反向代理、负载均衡器、后端分析系统等），这些系统主要用来提升用户体验、提取统计数据或提供其他服务等。正因为其隐藏的特点，导致这一层不可见的攻击面被忽略了很久。</p>
+<p>作者使用畸形请求和特殊HTTP头是隐藏系统暴露自己，并打开了攻击内网的大门。其中，作者分享了几个隐藏系统的漏洞案例，包括Yahoo的若干服务器、拦截篡改细腻的英国ISP（BT）、哥伦比亚的ISP，将反射型XSS升级为SSRF的军方服务器等。</p>
+<h3 id="攻击方法"><a href="#攻击方法" class="headerlink" title="攻击方法"></a>攻击方法</h3><h4 id="Listening监听"><a href="#Listening监听" class="headerlink" title="Listening监听"></a>Listening监听</h4><p>隐藏系统本身被设计为隐藏的、外部无感知的，因此无法通过响应报文来识别它们的漏洞。可以通过发送特殊的报文来让这些系统主动连接我们，然后分析产生的DNS lookup和HTTP请求，识别可能存在的漏洞。</p>
+<p>作者使用Burp Collaborator记录了这些请求，但也可以会用自己的DNS服务器，或者使用<a href="https://canarytokens.org/" target="_blank" rel="noopener">CanaryTokens</a>。</p>
+<h4 id="Research-Pipeline"><a href="#Research-Pipeline" class="headerlink" title="Research Pipeline"></a>Research Pipeline</h4><p>作者首先使用简单的Burp匹配/替换规则将硬编码的pingback payload注入到所有浏览器流量中。这种方法以失败告终，因为有效负载造成了如此多的pingback，以致于很难将每个单独的pingback相关联并确定哪个网站触发了它。很快也很明显，某些有效负载会在三分钟，几小时甚至每24小时一次的延迟后引起pinging。</p>
+<p>为了有效地对pingback进行分类，作者写了Collaborator Everywhere，这是一个简单的Burp扩展，它将包含唯一标识符的payload注入所有代理流量中，并使用它们自动将pingback与相应的攻击相关联。如下图，Netflix在作者访问其网站四个小时后访问了Referer标头中指定的URL，并假装是在x86 CPU上运行的iPhone：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/2.png" alt=""></p>
+<h4 id="Scaling-up扩大攻击面"><a href="#Scaling-up扩大攻击面" class="headerlink" title="Scaling up扩大攻击面"></a>Scaling up扩大攻击面</h4><p>测试目标域名和IP地址是从合法的漏洞奖励计划网站中筛选的。</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/3.png" alt=""></p>
+<p>为使发出的报文尽可能触发漏洞，HTTP头处理如下：</p>
+<ul>
+<li>Host头带多个hostname；</li>
+<li>设置X-Forwarded-Proto头，标识Client与代理服务器之间使用的协议；</li>
+<li>设置Cache-Control头为no-transform，禁止中间代理服务器处理请求报文；</li>
+<li>设置Max-Forwards最大转发次数；</li>
+</ul>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/4.png" alt=""></p>
+<h3 id="案例——Misrouting-Requests"><a href="#案例——Misrouting-Requests" class="headerlink" title="案例——Misrouting Requests"></a>案例——Misrouting Requests</h3><p>攻击者通过特殊的Host头来操控反向代理服务器向攻击者指定的目标发送请求，可以理解为使SSRF的变种。</p>
+<p>反向代理服务器在组网中用于连接外网和内网，这就导致其有被SSRF利用的风险。</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/5.png" alt=""></p>
+<h4 id="Invalid-Host"><a href="#Invalid-Host" class="headerlink" title="Invalid Host"></a>Invalid Host</h4><p>触发回调的最简单方法是发送不正确的HTTP Host标头：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET / HTTP/1.1</span><br><span class="line">Host: uniqid.burpcollaborator.net</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>成功利用的案例：</p>
+<ul>
+<li>27 DoD servers</li>
+<li>ats-vm.lorax.bf1.yahoo.com</li>
+<li>My ISP</li>
+<li>Colombian ISP doing DNS poisoning</li>
+</ul>
+<p>这里看下作者对ats-vm.lorax.bf1.yahoo.com的利用</p>
+<p>一开始还不清楚服务端运行的是什么应用软件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET / HTTP/1.1</span><br><span class="line">Host: XX.X.XXX.XX:8082</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/6.png" alt=""></p>
+<p>接着，通过HELP命令得知了服务端运行的应用软件信息：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">HELP / HTTP/1.1</span><br><span class="line">Host: XX.X.XXX.XX:8082</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/7.png" alt=""></p>
+<p>来自服务器的众多“Unknown Command”将请求的每一行解释为单独的命令-它使用的是换行符终止的协议，这将使通过经典SSRF进行利用变得极为困难或不可能。</p>
+<p>但幸运的是，基于路由的SSRF更加灵活，能够使用包含选择的命令的POST样式的主体发出GET请求：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">GET / HTTP/1.1</span><br><span class="line">Host: XX.X.XXX.XX:8082</span><br><span class="line">Content-Length: 34</span><br><span class="line"></span><br><span class="line">GET proxy.config.alarm_email</span><br><span class="line"></span><br><span class="line">HTTP/1.1 200 Connection Established</span><br><span class="line">Date: Tue, 07 Feb 2017 16:57:02 GMT</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Connection: keep alive</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/8.png" alt=""></p>
+<p>之后，再使用SET命令就可以对Yahoo的负载均衡器池进行广泛的配置更改，包括启用SOCKS代理并授予我的IP地址权限，以将项目直接推送到其缓存中。</p>
+<h4 id="Handling-input-permutation"><a href="#Handling-input-permutation" class="headerlink" title="Handling input permutation"></a>Handling input permutation</h4><p>作者在测试中遇到个别服务器收到下面这个请求后：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET / HTTP/1.1</span><br><span class="line">Host: burpcollaborator.net</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>会转发出这样的请求，即Host值放入URL中拼接两次作为URL Path，同时Host值加了outage前缀：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET /burpcollaborator.net/burpcollaborator.net HTTP/1.1</span><br><span class="line">Host: outage.burpcollaborator.net</span><br><span class="line">Via: o2-b.ycpi.tp2.yahoo.net</span><br></pre></td></tr></table></figure>
+<p>如何利用？——注册域名到内网地址，实现向内网发送请求。此外，还有vcap.me，这是一个公开的域名，其所有子域名都会被解析为127.0.0.1，再利用<code>../</code>跨路径，实现对内网<code>http://127.0.0.1</code>的访问。</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/9.png" alt=""></p>
+<p>那么，构造的利用请求报文如下即可：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/10.png" alt=""></p>
+<p>服务端在归一化处理后得到的请求为<code>http://outage.vcap.me/?x=.vcap.me</code>，等同于<code>http://127.0.0.1/</code>的访问。</p>
+<h4 id="Host-overriding"><a href="#Host-overriding" class="headerlink" title="Host overriding"></a>Host overriding</h4><p>在URI中的Host可以替换为Host头的值。</p>
+<p>有些服务器会对Host头的值进行校验，但会忽视利用URI也可以传递Host头值并且比Header的优先级更高。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET http://internal-website.mil/ HTTP/1.1</span><br><span class="line">Host: xxxxxxx.mil</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<h4 id="Ambiguous-requests"><a href="#Ambiguous-requests" class="headerlink" title="Ambiguous requests"></a>Ambiguous requests</h4><p>含糊不清的请求，即会引起歧义的请求。</p>
+<p>通过<code>username:pass@domainname</code>的形式来混淆域名，incapsula防火墙通过端口号来提取域名，如下面的Host头的值，防火墙认为端口号是80，域名为incapsula-client.net（合法），但实际请求转发到目标服务器后解析获取的URL为burp-collaborator.net：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET / HTTP/1.1</span><br><span class="line">Host: incapsula-client.net:80@burp-collaborator.net</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<h4 id="Breaking-expectations"><a href="#Breaking-expectations" class="headerlink" title="Breaking expectations"></a>Breaking expectations</h4><p>还可以在URI中传递不以<code>/</code>开头、包含<code>@</code>的路径来混淆URL。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">Url backendURL = &quot;http://public-backend/&quot;;</span><br><span class="line">String uri = ctx.getRequest().getRawUri();</span><br><span class="line"></span><br><span class="line">URI proxyUri;</span><br><span class="line">try &#123;</span><br><span class="line">proxyUri = new URIBuilder(uri)</span><br><span class="line">        .setHost(backendURL.getHost())</span><br><span class="line">        .setPort(backendURL.getPort())</span><br><span class="line">        .setScheme(backendURL.getScheme())</span><br><span class="line">        .build();</span><br><span class="line">&#125; catch (URISyntaxException e) &#123;</span><br><span class="line">    Util.sendError(ctx, 400, INVALID_REQUEST_URL);</span><br><span class="line">    return;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对上述处理，使用下面请求报文，实际得到的URL域名被攻击者替换为了<code>http://public-backend@burp-collaborator.net</code>：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET @burp-collaborator.net/ HTTP/1.1</span><br><span class="line">Host: newrelic.com</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<h4 id="Tunnels"><a href="#Tunnels" class="headerlink" title="Tunnels"></a>Tunnels</h4><p>去掉@后的URL变形，观察会不会有服务器向xyz.burpcollaborator.net发送请求：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET xyz.burpcollaborator.net:80/bar HTTP/1.1</span><br><span class="line">Host: demo.globaleaks.org</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>收到了globaleaks.org服务器怪异的请求，多次pingback：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">xYZ.BurpcoLLABoRaTOR.neT.    from 89.234.157.254</span><br><span class="line">Xyz.burPColLABorAToR.nET.    from 62.210.18.16 </span><br><span class="line">xYz.burpColLaBorATOR.net.    from 91.224.149.254</span><br></pre></td></tr></table></figure>
+<p>经分析发现，跟globaleaks使用的Tor2web做隐匿请求的处理有关。</p>
+<h3 id="案例——Targeting-auxiliary-systems"><a href="#案例——Targeting-auxiliary-systems" class="headerlink" title="案例——Targeting auxiliary systems"></a>案例——Targeting auxiliary systems</h3><p>此外，还可以关注相关备用系统的利用。</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/12.png" alt=""></p>
+<h4 id="Gathering-information"><a href="#Gathering-information" class="headerlink" title="Gathering information"></a>Gathering information</h4><p>收集信息。除了Host头，其他头字段也能被利用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">GET / HTTP/1.1</span><br><span class="line">Host: store.starbucks.ca</span><br><span class="line">X-Forwarded-For: a.burpcollaborator.net</span><br><span class="line">True-Client-IP: b.burpcollaborator.net</span><br><span class="line">Referer: http://c.burpcollaborator.net/</span><br><span class="line">X-WAP-Profile: http://d.burpcollaborator.net/wap.xml</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>具体几个头字段的利用看作者博客即可。</p>
+<h4 id="Pre-emptive-caching"><a href="#Pre-emptive-caching" class="headerlink" title="Pre-emptive caching"></a>Pre-emptive caching</h4><p>预缓存。</p>
+<p>看个将反射型XSS提升至SSRF的案例。一个军方的服务器有预缓存的行为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET / HTTP/1.1</span><br><span class="line">Host: burpcollaborator.net</span><br></pre></td></tr></table></figure>
+<p>随后收到如下请求：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GET /jquery.js HTTP/1.1</span><br><span class="line">GET /abrams.jpg HTTP/1.1</span><br></pre></td></tr></table></figure>
+<p>缓存服务器收到<code>&lt;img src=&quot;/a.jpg&quot;/&gt;</code>这样的内容时，会拿Host头发出这样的请求来预加载资源：<code>http://burpcollaborator.net/a.jpg</code></p>
+<p>作者在后端应用中找到一个反射型XSS，注入一段访问内网服务器上的图片的语句：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">POST /xss.cgi HTTP/1.1</span><br><span class="line">Content-Length: 103</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">xss=&lt;img src=&quot;http://internal-server.mil/index.php/fake.jpg&quot;/&gt;</span><br></pre></td></tr></table></figure>
+<p>然后缓存服务器将缓存它并可从外网访问：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET /index.php/fake.jpg</span><br><span class="line">Host: internal-server.mil</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>整个攻击过程如图：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/11.png" alt=""></p>
+<h2 id="0x03-JSON-ATTACKS"><a href="#0x03-JSON-ATTACKS" class="headerlink" title="0x03 JSON ATTACKS"></a>0x03 JSON ATTACKS</h2><p>PDF：<a href="https://www.blackhat.com/docs/us-17/thursday/us-17-Munoz-Friday-The-13th-Json-Attacks.pdf" target="_blank" rel="noopener">https://www.blackhat.com/docs/us-17/thursday/us-17-Munoz-Friday-The-13th-Json-Attacks.pdf</a></p>
+<h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>本次议题讲的就是JSON库反序列化漏洞及其Gadgets的内容。其中包括Fastjson、Jackson等反序列化漏洞的研究，基本原理这些这里不再赘述，只对一些JSON反序列化Tips进行记录即可。</p>
+<p>JSON如果只传递简单对象，一般是安全的。但是如果传递的是Java对象或者.NET对象，则会容易存在安全问题。</p>
+<p>Java反序列化和.NET BinaryFormat反序列化容易被攻击，这是因为它们在处理过程中会调用一系列的回调函数，而这些回调函数如果存在危险调用或操作则就造成了反序列化漏洞的存在。<strong>整个攻击可归结为攻击者能够控制反序列化对象图中的对象类型，而该类型的反序列化回调逻辑可以被利用来执行任意代码。</strong></p>
+<p>反序列化对象图，类似于HTML页面的DOM树，DOM树包含一系列的标签，标签间有层次关系。要反序列化的对象可能继承于某个类型、可以有多种类型的成员变量，这些被包含的对象又有类型的结构，展开就像DOM树一样也是一张图，被称为对象图。</p>
+<p>反序列化攻击中，攻击者要能控制对象图中某个对象，注入Gadgets类型来实现攻击。而Gadgets类型就是在其反序列化回调过程中可以注入恶意代码并被执行的类，比如JDK的TemplatesImpl类。因此，<strong>反序列化漏洞研究的思路可以归结为两点：如何控制对象类型和寻找Gadgets类型</strong>。</p>
+<h3 id="JSON反序列化过程"><a href="#JSON反序列化过程" class="headerlink" title="JSON反序列化过程"></a>JSON反序列化过程</h3><p>JSON反序列化就是JSON unmarshaller根据JSON数据（字符串）重新构造出对象（Object）。</p>
+<p>其中，最常见的几种实现方法如下：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/13.png" alt=""></p>
+<h4 id="通过默认构造函数与反射实现"><a href="#通过默认构造函数与反射实现" class="headerlink" title="通过默认构造函数与反射实现"></a>通过默认构造函数与反射实现</h4><p>Java的JSON-IO库、经典的.NET deserializer（当反序列化类型有@Serializable注解但没有实现ISerializable接口）。这些JSON反序列化过程会调用一些函数，而如果这些函数中存在危险操作则存在反序列化漏洞的风险：</p>
+<ul>
+<li>析构函数，如Finalize()，对象被垃圾回收时触发；</li>
+<li>一些类型不能通过反射来构建，例如.NET的Hashtable，hash值需要重新计算，因此很多方法如HashCode()、Equal()、Compare()等可能被调用；</li>
+<li>其他可能调用到的方法，如异常处理器调用toString()；</li>
+</ul>
+<h4 id="通过默认构造函数与setters实现"><a href="#通过默认构造函数与setters实现" class="headerlink" title="通过默认构造函数与setters实现"></a>通过默认构造函数与setters实现</h4><p>与前一个方法类似，但不使用反射，而使用property/field的set方法（setters）来操作对象的fields。</p>
+<p>通常这样的反序列化器只处理public的property/field，比前一个方法限制多一些。尽管如此，大部分的反序列化器使用这种方案。但是，某些情况下，反序列化器会通过反射调用private setter。</p>
+<p>因为标准库和三方库中普遍存在自定义setter，因此Gadgets类型的范围非常广，这也是为啥Jackson和Fastjson不断爆出新的绕过黑名单的Gadgets CVE的原因（通过对Fastjson和Jackson的分析，这些库对于Map、Collection类型的数据支持通过getter方法设置值，等同于setter）。</p>
+<h4 id="通过特殊构造函数-类型转换器-回调函数实现"><a href="#通过特殊构造函数-类型转换器-回调函数实现" class="headerlink" title="通过特殊构造函数/类型转换器/回调函数实现"></a>通过特殊构造函数/类型转换器/回调函数实现</h4><p>Java和.NET的反序列化回调方法，比如Json.NET的OnError属性，Java的readObject()，.NET中ISerializable的特殊构造函数，.NET中OnDeserialized和OnDeserializing注解的方法，XmlSerializer中IXmlSerializable的ReadXml()等。</p>
+<p>JSON库的反序列化器提供注解的反序列化回调函数的情况很少见，一些库会调用到Java/.NET的反序列化回调。</p>
+<p><strong>由此可见，JSON反序列化过程没有调用Object deserialization（Java原生反序列化）的callbacks，因此Java反序列化的Gadgets类型大多数对JSON反序列化是没用的。</strong></p>
+<p>当然，也有个别方法在JSON反序列化过程中被调用，可以根据此启动Gadget链：</p>
+<ul>
+<li>Non-default constructor</li>
+<li>Setters</li>
+<li>Type Converters（.NET特有）</li>
+</ul>
+<p>作者发现大多数JSON库都调用setter方法来处理对象成员，因此关注点应该放在那些会导致任意代码执行的setter方法中（大多数Gadget类型的特性）。</p>
+<p><strong>JSON库判断field是否存在、如何确定setter方法，不同的库有各自的实现，这两点如果处理不好就导致漏洞的存在，同时这两点也是分析反序列化新Gadget的重点。</strong></p>
+<h3 id="RCE-Gadgets"><a href="#RCE-Gadgets" class="headerlink" title="RCE Gadgets"></a>RCE Gadgets</h3><p>作者提及的几个Gadgets。</p>
+<p>注意：JDK8u121默认禁止了通过JNDI对象Factory来加载远程Class，但不影响LDAP的利用方式。具体参考JNDI注入的文章。</p>
+<h4 id="org-hibernate-jmx-StatisticsService"><a href="#org-hibernate-jmx-StatisticsService" class="headerlink" title="org.hibernate.jmx.StatisticsService"></a>org.hibernate.jmx.StatisticsService</h4><p>setSessionFactoryJNDIName() -&gt; JNDI lookup    </p>
+<h4 id="com-atomikos-icatch-jta-RemoteClientUserTransaction"><a href="#com-atomikos-icatch-jta-RemoteClientUserTransaction" class="headerlink" title="com.atomikos.icatch.jta.RemoteClientUserTransaction"></a>com.atomikos.icatch.jta.RemoteClientUserTransaction</h4><p>toString() -&gt; JNDI lookup    </p>
+<h4 id="com-sun-rowset-JdbcRowSetImpl"><a href="#com-sun-rowset-JdbcRowSetImpl" class="headerlink" title="com.sun.rowset.JdbcRowSetImpl"></a>com.sun.rowset.JdbcRowSetImpl</h4><p>setAutoCommit() -&gt; JNDI lookup，JDK自带</p>
+<h4 id="org-antlr-stringtemplate-StringTemplate"><a href="#org-antlr-stringtemplate-StringTemplate" class="headerlink" title="org.antlr.stringtemplate.StringTemplate"></a>org.antlr.stringtemplate.StringTemplate</h4><p>toString()，可以被利用来和其他Gadget类形成Gadget利用链，比如TemplatesImpl.getOutputProperties() </p>
+<h3 id="各种JSON库的安全性与漏洞模式"><a href="#各种JSON库的安全性与漏洞模式" class="headerlink" title="各种JSON库的安全性与漏洞模式"></a>各种JSON库的安全性与漏洞模式</h3><p>Default：默认支持类型指定；Configuration：通过配置可支持类型指定。</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/14.png" alt=""></p>
+<h4 id="Jackson"><a href="#Jackson" class="headerlink" title="Jackson"></a>Jackson</h4><p>通过ObjectMapper.enableDefaultTyping()全局使能动态类型指定（当然还有注解的方式即<code>@JsontypeInfo</code>），并且支持通过参数限定哪些类型的成员变量支持动态类型，包括：</p>
+<ul>
+<li>JAVA_LANG_OBJECT：仅影响Object.class类型的属性；</li>
+<li>OBJECT_AND_NON_CONCRETE：影响Object.class和所有non-concrete类型（抽象类、接口等）；</li>
+<li>NON_CONCRETE_AND_ARRAYS：同时，另加所有数组类型（元素均为Object.class和所有non-concrete类型）；</li>
+<li>NON_FINAL：影响所有不声明为final的类型，以及元素中为non_final类型的数组；</li>
+</ul>
+<p><strong>Jackson反序列化过程中会调用被反序列化类的setter方法，并没有进行任何的类型检查。</strong></p>
+<h4 id="Genson"><a href="#Genson" class="headerlink" title="Genson"></a>Genson</h4><p>通过useRuntimeType()开关使能动态类型绑定，这点和Jackson的enableDefaultTyping()类似。</p>
+<p>Genson有对象图的类型检查，因此要实现RCE需要在反序列化的类型中找到入口点。</p>
+<p><strong>同样，Genson反序列化过程中会调用被反序列化类的setter方法。</strong></p>
+<h4 id="JSON-IO"><a href="#JSON-IO" class="headerlink" title="JSON-IO"></a>JSON-IO</h4><p>JSON-IO的反序列化：</p>
+<ul>
+<li>调用反射设置值，不调用setter方法；</li>
+<li>反序列化过程中出现异常时会调用待反序列化的类的toString()方法；</li>
+</ul>
+<p>攻击者可以故意在某个成员的赋值时触发异常，在toString()函数中注入恶意代码实现攻击。</p>
+<h4 id="FlexSON"><a href="#FlexSON" class="headerlink" title="FlexSON"></a>FlexSON</h4><p>默认配置下就支持动态类型的反序列化，并且没有类型检查。</p>
+<p><strong>同样，FlexSON反序列化过程中会调用被反序列化类的setter方法。</strong></p>
+<h3 id="对类型检查防御的Bypass思路"><a href="#对类型检查防御的Bypass思路" class="headerlink" title="对类型检查防御的Bypass思路"></a>对类型检查防御的Bypass思路</h3><p>一些库做类型检查的方式是探测（inspect）将要反序列化的类型的对象图（得到其所有field及其类型），仅允许与成员变量的类型匹配（assignable）的赋值。</p>
+<p><strong>此时若想实现RCE，需要找到对象图上的一个入口点，这个点仍能指定为Gadget类型。</strong></p>
+<p>比如：</p>
+<ul>
+<li>若对象图中有成员变量是java.lang.Object类型或者泛型类型（如<code>Message&lt;T&gt;</code>），那么可以将其当做入口点；</li>
+<li>若对象图中有成员变量的类型是T，T的子类中有成员变量是Object类型。比如java.lang.Exception的子类javax.management.InvalidApplicationException；</li>
+</ul>
+<p>注意：Jackson、Fastjson是使用黑名单禁止反序列化Gadgets类的，这种只能通过新Gadget来Bypass。</p>
+<h2 id="0x04-A-NEW-ERA-OF-SSRF-EXPLOITING-URL-PARSER-IN-TRENDING-PROGRAMMING-LANGUAGES-（利用URL解析器进行SSRF攻击）"><a href="#0x04-A-NEW-ERA-OF-SSRF-EXPLOITING-URL-PARSER-IN-TRENDING-PROGRAMMING-LANGUAGES-（利用URL解析器进行SSRF攻击）" class="headerlink" title="0x04 A NEW ERA OF SSRF - EXPLOITING URL PARSER IN TRENDING PROGRAMMING LANGUAGES!（利用URL解析器进行SSRF攻击）"></a>0x04 A NEW ERA OF SSRF - EXPLOITING URL PARSER IN TRENDING PROGRAMMING LANGUAGES!（利用URL解析器进行SSRF攻击）</h2><p>PDF：<a href="https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf" target="_blank" rel="noopener">https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf</a></p>
+<h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>议题的重点是Protocol Smuggling，主要是HTTP请求走私。</p>
+<p>作者展示了Python、PHP、Curl中各个Library对特殊形式HTTP请求处理的差异，并利用这些差异实现SSRF。</p>
+<p>出现该问题的原因在于，HTTP URI的标准有处理建议，但并非强制要求，并且对不符合标准结构的特殊情况没有规定如何处理，因此不同的库都会有自己的实现方式。</p>
+<p>因此，协议走私可以简单理解为二义性问题，即特殊形式的请求报文在不同的解析器下有不同的理解，这种差异结果可被攻击者利用来绕过安全检查或者实现某种攻击如SSRF等。</p>
+<h3 id="基本概念与原理"><a href="#基本概念与原理" class="headerlink" title="基本概念与原理"></a>基本概念与原理</h3><p>作者对于本议题的研究灵感来源于<code>CVE-2016-8624：invalid URL parsing with &#39;#&#39;</code>。</p>
+<p>作者对所有语言的Library进行了测试，各个库的处理情况如下：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/15.png" alt=""></p>
+<p>注意：Port注入类似<code>http://127.0.0.1:12345:80</code>；Host注入类似<code>http://a.com#@evil.com</code>；Path注入类似<code>http://a.com/test/../info</code>等。</p>
+<p>利用这种解析的二义性，就能进行如SSRF的攻击。</p>
+<h3 id="技术点"><a href="#技术点" class="headerlink" title="技术点"></a>技术点</h3><h4 id="SNI注入"><a href="#SNI注入" class="headerlink" title="SNI注入"></a>SNI注入</h4><p>SNI（Server Name Indication，服务器名称指示）定义在RFC 4366，是一项用于改善SSL/TLS的技术，在SSLv3/TLSv1中被启用。它允许客户端发起SSL握手请求时（具体说是客户端发出SSL请求中的ClientHello阶段）就提交请求的Host信息，使得服务器能够切换到正确的域并返回对应的证书。</p>
+<p>注意：SNI是明文传输。</p>
+<p>因此，HTTPS的SNI存在Host头一样的走私方法，如下图CRLF注入：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/17.png" alt=""></p>
+<h4 id="Node-JS"><a href="#Node-JS" class="headerlink" title="Node.JS"></a>Node.JS</h4><p>大写N（U+FF2E）的宽字节形式可以代替<code>..</code>使用。</p>
+<p>Unicode字符<code>U+FF0D U+FF0A</code>可以作为CRLF字符使用。</p>
+<h4 id="glibc-NSS特性"><a href="#glibc-NSS特性" class="headerlink" title="glibc NSS特性"></a>glibc NSS特性</h4><p>gethostbyname()支持十进制数表示Hsot。</p>
+<p>Linux getaddrinfo()会忽略Host中空格之后的内容，很多库的实现依赖该函数，而有些库会进行两次URL解码。</p>
+<p>HTTPConnection.puthreader()禁止CRLF后面的空白，但可以在前面加上空白来绕过。这可以绕过Python CVE-2016-5699补丁的限制。</p>
+<h4 id="遵循的标准不同"><a href="#遵循的标准不同" class="headerlink" title="遵循的标准不同"></a>遵循的标准不同</h4><p>URL parser和URL requester遵循的IDNA标准不同时也会导致解析差异。</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/16.png" alt=""></p>
+<h2 id="0x05-DON’T-TRUST-THE-DOM-BYPASSING-XSS-MITIGATIONS-VIA-SCRIPT-GADGETS（利用Script-Gadgets绕过XSS缓解措施）"><a href="#0x05-DON’T-TRUST-THE-DOM-BYPASSING-XSS-MITIGATIONS-VIA-SCRIPT-GADGETS（利用Script-Gadgets绕过XSS缓解措施）" class="headerlink" title="0x05 DON’T TRUST THE DOM: BYPASSING XSS MITIGATIONS VIA SCRIPT GADGETS（利用Script Gadgets绕过XSS缓解措施）"></a>0x05 DON’T TRUST THE DOM: BYPASSING XSS MITIGATIONS VIA SCRIPT GADGETS（利用Script Gadgets绕过XSS缓解措施）</h2><p>PDF：<a href="https://www.blackhat.com/docs/us-17/thursday/us-17-Lekies-Dont-Trust-The-DOM-Bypassing-XSS-Mitigations-Via-Script-Gadgets.pdf" target="_blank" rel="noopener">https://www.blackhat.com/docs/us-17/thursday/us-17-Lekies-Dont-Trust-The-DOM-Bypassing-XSS-Mitigations-Via-Script-Gadgets.pdf</a></p>
+<h3 id="基本概念与原理-1"><a href="#基本概念与原理-1" class="headerlink" title="基本概念与原理"></a>基本概念与原理</h3><p>XSS Mitigation即XSS缓解措施，该机制是通过识别并阻止恶意的标签或属性来缓解XSS攻击。常见的XSS MITIGATIONS机制有浏览器的CSP机制、XSS Auditor、XSS Filter、WAF的过滤器等。</p>
+<p>当今Web应用都普遍使用JavaScript框架，而JavaScript框架通常是用到了DOM操纵技术，即从DOM中读取数据、修改DOM的结构等。在实现上是使用selector（选择器），通过某种形式的语法来选取DOM中特定的单个或多个标签，来读写器属性或文本。</p>
+<p>那么是否可以通过JS框架的script来绕过XSS Mitigation机制呢？——使用Script Gadget来绕过。</p>
+<p>什么是Script Gadget？——简单地说，Script Gadget就是在当前页面中可被利用来绕过XSS Mitigation机制的JS代码。</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/19.png" alt=""></p>
+<p>页面上通过selector读取标签属性的JS脚本片段，使用了会导致脚本执行的API（比如上图的html()）来处理读取的数据。这里注入的XSS数据时一段HTML代码，没有script和on事件等恶意标签或属性，恶意脚本藏在data-text的值中，且该值不受XSS Mitigation机制的限制；当经过正文JS脚本中selector的处理后，data-text的值就被放入buttons.html() API中使用，进而放入DOM中导致恶意脚本被执行。这整个过程就是使用无害的JS库的API来绕过XSS Mitigation机制的。</p>
+<p>注意：注入的数据经过了HTML编码，但是仍然能够执行XSS，这是因为注入的内容在div标签中，会先被HTML解析器进行HTML解码。</p>
+<p>针对Gadgets的研究，作者做了充分的实验测试，具体的可参考PDF连接文档。</p>
+<p>具体的Script Gadget PoC都在：<a href="https://github.com/google/security-research-pocs" target="_blank" rel="noopener">https://github.com/google/security-research-pocs</a></p>
+<h3 id="研究结论"><a href="#研究结论" class="headerlink" title="研究结论"></a>研究结论</h3><p>除了React库外，其他库都存在Script Gadget可以绕过特定的XSS Mitigation，其中Emberjs仅在开发者版本中存在绕过风险：</p>
+<p><img src="/2020/04/19/BlackHat-2017-Web小结/18.png" alt=""></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-WEB-CACHE-DECEPTION-ATTACK（Web缓存欺骗攻击）"><span class="toc-text">0x01 WEB CACHE DECEPTION ATTACK（Web缓存欺骗攻击）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#攻击原理"><span class="toc-text">攻击原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-CRACKING-THE-LENS-TARGETING-HTTP’S-HIDDEN-ATTACK-SURFACE（HTTP的隐藏攻击面）"><span class="toc-text">0x02 CRACKING THE LENS: TARGETING HTTP’S HIDDEN ATTACK-SURFACE（HTTP的隐藏攻击面）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#攻击方法"><span class="toc-text">攻击方法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Listening监听"><span class="toc-text">Listening监听</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Research-Pipeline"><span class="toc-text">Research Pipeline</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Scaling-up扩大攻击面"><span class="toc-text">Scaling up扩大攻击面</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#案例——Misrouting-Requests"><span class="toc-text">案例——Misrouting Requests</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Invalid-Host"><span class="toc-text">Invalid Host</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Handling-input-permutation"><span class="toc-text">Handling input permutation</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Host-overriding"><span class="toc-text">Host overriding</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Ambiguous-requests"><span class="toc-text">Ambiguous requests</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Breaking-expectations"><span class="toc-text">Breaking expectations</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Tunnels"><span class="toc-text">Tunnels</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#案例——Targeting-auxiliary-systems"><span class="toc-text">案例——Targeting auxiliary systems</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Gathering-information"><span class="toc-text">Gathering information</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Pre-emptive-caching"><span class="toc-text">Pre-emptive caching</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-JSON-ATTACKS"><span class="toc-text">0x03 JSON ATTACKS</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-1"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JSON反序列化过程"><span class="toc-text">JSON反序列化过程</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#通过默认构造函数与反射实现"><span class="toc-text">通过默认构造函数与反射实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#通过默认构造函数与setters实现"><span class="toc-text">通过默认构造函数与setters实现</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#通过特殊构造函数-类型转换器-回调函数实现"><span class="toc-text">通过特殊构造函数/类型转换器/回调函数实现</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RCE-Gadgets"><span class="toc-text">RCE Gadgets</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#org-hibernate-jmx-StatisticsService"><span class="toc-text">org.hibernate.jmx.StatisticsService</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#com-atomikos-icatch-jta-RemoteClientUserTransaction"><span class="toc-text">com.atomikos.icatch.jta.RemoteClientUserTransaction</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#com-sun-rowset-JdbcRowSetImpl"><span class="toc-text">com.sun.rowset.JdbcRowSetImpl</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#org-antlr-stringtemplate-StringTemplate"><span class="toc-text">org.antlr.stringtemplate.StringTemplate</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#各种JSON库的安全性与漏洞模式"><span class="toc-text">各种JSON库的安全性与漏洞模式</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Jackson"><span class="toc-text">Jackson</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Genson"><span class="toc-text">Genson</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#JSON-IO"><span class="toc-text">JSON-IO</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#FlexSON"><span class="toc-text">FlexSON</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对类型检查防御的Bypass思路"><span class="toc-text">对类型检查防御的Bypass思路</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-A-NEW-ERA-OF-SSRF-EXPLOITING-URL-PARSER-IN-TRENDING-PROGRAMMING-LANGUAGES-（利用URL解析器进行SSRF攻击）"><span class="toc-text">0x04 A NEW ERA OF SSRF - EXPLOITING URL PARSER IN TRENDING PROGRAMMING LANGUAGES!（利用URL解析器进行SSRF攻击）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#简介-2"><span class="toc-text">简介</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基本概念与原理"><span class="toc-text">基本概念与原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#技术点"><span class="toc-text">技术点</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#SNI注入"><span class="toc-text">SNI注入</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Node-JS"><span class="toc-text">Node.JS</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#glibc-NSS特性"><span class="toc-text">glibc NSS特性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#遵循的标准不同"><span class="toc-text">遵循的标准不同</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-DON’T-TRUST-THE-DOM-BYPASSING-XSS-MITIGATIONS-VIA-SCRIPT-GADGETS（利用Script-Gadgets绕过XSS缓解措施）"><span class="toc-text">0x05 DON’T TRUST THE DOM: BYPASSING XSS MITIGATIONS VIA SCRIPT GADGETS（利用Script Gadgets绕过XSS缓解措施）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#基本概念与原理-1"><span class="toc-text">基本概念与原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#研究结论"><span class="toc-text">研究结论</span></a></li></ol></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/04/12/Python安全小工具之脚本提权扫描/" rel="next" title="Python安全小工具之脚本提权扫描">
+          Python安全小工具之脚本提权扫描
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/04/20/BlackHat-2018-Web小结/" rel="prev" title="BlackHat 2018 Web小结">
+            BlackHat 2018 Web小结
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

