@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.mi1k7ea.com/"/>
-  <updated>2021-05-29T08:19:11.963Z</updated>
+  <updated>2021-06-20T05:49:45.915Z</updated>
   <id>https://www.mi1k7ea.com/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>浅析Jetty URI路径限制绕过漏洞</title>
+    <link href="https://www.mi1k7ea.com/2021/06/20/%E6%B5%85%E6%9E%90Jetty-URI%E9%99%90%E5%88%B6%E7%BB%95%E8%BF%87%E6%BC%8F%E6%B4%9E/"/>
+    <id>https://www.mi1k7ea.com/2021/06/20/浅析Jetty-URI限制绕过漏洞/</id>
+    <published>2021-06-20T04:32:40.000Z</published>
+    <updated>2021-06-20T05:49:45.915Z</updated>
+    
+    <content type="html"><![CDATA[<p>发布于公众号98KSec：</p><p><a href="https://mp.weixin.qq.com/s/-uBTlGNJn9kHuHMqeCq_yw" target="_blank" rel="noopener">浅析Jetty URI路径限制绕过漏洞（CVE-2021-28164）</a></p><p><a href="https://mp.weixin.qq.com/s/hLgdpMc1eKIz_bIcdWXPRA" target="_blank" rel="noopener">浅析Jetty Servlets URI路径限制绕过漏洞（CVE-2021-28169）</a></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;发布于公众号98KSec：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://mp.weixin.qq.com/s/-uBTlGNJn9kHuHMqeCq_yw&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;浅析Jetty URI路径限制绕过漏洞（CVE-2
+      
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>浅谈SDL与DevSecOps</title>
@@ -491,30 +513,6 @@
     
     
       <category term="渗透测试" scheme="https://www.mi1k7ea.com/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>基于SqlDataSourceEnumerator探测内网存活主机</title>
-    <link href="https://www.mi1k7ea.com/2021/03/06/%E5%9F%BA%E4%BA%8ESqlDataSourceEnumerator%E6%8E%A2%E6%B5%8B%E5%86%85%E7%BD%91%E5%AD%98%E6%B4%BB%E4%B8%BB%E6%9C%BA/"/>
-    <id>https://www.mi1k7ea.com/2021/03/06/基于SqlDataSourceEnumerator探测内网存活主机/</id>
-    <published>2021-03-06T06:24:00.000Z</published>
-    <updated>2021-03-06T06:24:37.353Z</updated>
-    
-    <content type="html"><![CDATA[<h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>参考Micro8系列第五十课：<a href="https://micro8.gitbook.io/micro8/contents-1/41-50/50-ji-yu-sqldatasourceenumerator-fa-xian-nei-wang-cun-huo-zhu-ji" target="_blank" rel="noopener">https://micro8.gitbook.io/micro8/contents-1/41-50/50-ji-yu-sqldatasourceenumerator-fa-xian-nei-wang-cun-huo-zhu-ji</a></p><h2 id="0x01-基于SqlDataSourceEnumerator探测内网存活主机"><a href="#0x01-基于SqlDataSourceEnumerator探测内网存活主机" class="headerlink" title="0x01 基于SqlDataSourceEnumerator探测内网存活主机"></a>0x01 基于SqlDataSourceEnumerator探测内网存活主机</h2><p>从Windows XP开始，默认就带有.NET Framework，而在PowerShell出现之后，其调用更为简便。</p><p>System.Data.SqlClient命名空间是用于SQL Server的.NET数据提供程序。在.NET Framework 2.0中新增加SqlDataSourceEnumerator类，其提供了一种枚举本地网络内的所有可用SQL Server实例机制。</p><p>微软官方是这样解释的：<a href="https://docs.microsoft.com/zh-CN/dotnet/api/system.data.sql.sqldatasourceenumerator?view=netframework-4.8&amp;viewFallbackFrom=netcore-3.0" target="_blank" rel="noopener">https://docs.microsoft.com/zh-CN/dotnet/api/system.data.sql.sqldatasourceenumerator?view=netframework-4.8&amp;viewFallbackFrom=netcore-3.0</a></p><blockquote><p>SQL Server 使应用程序能够确定当前网络中是否存在其实例。 SqlDataSourceEnumerator类向应用程序开发人员公开此信息，并提供 DataTable 包含有关所有可用服务器的信息。 此返回的表包含与用户尝试创建新连接时提供的列表匹配的服务器实例的列表，并且在 Connection Properties 对话框中展开包含所有可用服务器的下拉列表。</p></blockquote><p>调用示例：</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">PowerShell -Command </span><br><span class="line"><span class="string">"[System.Data.Sql.SqlDataSourceEnumerator]::Instance.GetDataSources()"</span></span><br></pre></td></tr></table></figure><p>该方法在实战中不留文件痕迹并且信息准确，同时可以进行主机发现。可应对目前主流安全防御产品。</p>]]></content>
-    
-    <summary type="html">
-    
-      已完结.
-    
-    </summary>
-    
-      <category term="渗透测试基础" scheme="https://www.mi1k7ea.com/categories/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95%E5%9F%BA%E7%A1%80/"/>
-    
-    
-      <category term="渗透测试" scheme="https://www.mi1k7ea.com/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/"/>
-    
-      <category term="内网渗透" scheme="https://www.mi1k7ea.com/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/"/>
     
   </entry>
   
